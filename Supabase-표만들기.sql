@@ -58,11 +58,23 @@ create table if not exists students (
   ach         int default 0,
   war         int default 0,
   wb_dmg      bigint default 0,
+  home_stage  int default 0,             -- 페어에게 보여 줄 거처 현황
+  home_late   boolean default false,
+  run_ward    text default '',           -- 페어에게 보여 줄 의뢰 현황
+  run_stage   int default 0,
+  run_left    int default 0,
+  run_kills   int default 0,
   updated_at  timestamptz default now()
 );
 
 -- 이미 표를 만든 뒤라면, 아래 한 줄이 빠진 칸을 채워 줍니다.
-alter table students add column if not exists wb_dmg bigint default 0;
+alter table students add column if not exists wb_dmg     bigint  default 0;
+alter table students add column if not exists home_stage int     default 0;
+alter table students add column if not exists home_late  boolean default false;
+alter table students add column if not exists run_ward   text    default '';
+alter table students add column if not exists run_stage  int     default 0;
+alter table students add column if not exists run_left   int     default 0;
+alter table students add column if not exists run_kills  int     default 0;
 
 -- ── 1-2. 채팅 ───────────────────────────────────────────────
 create table if not exists messages (

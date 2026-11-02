@@ -53,6 +53,13 @@ function myRecord(){
     quest:S.quests.cleared||0, dexp:(typeof dexScore==="function"?dexScore():0),
     ach:(S.ach||[]).length, war:S.war.mine||0,
     wb_dmg:(S.wb&&S.wb.dmg)||0,
+    /* 페어에게 보여 줄 현황 */
+    home_stage:(S.home&&S.home.stage)||0,
+    home_late:(typeof rentLate==="function") ? !!rentLate() : false,
+    run_ward:(S.run&&!S.run.done) ? (S.run.q.ward.n||"") : "",
+    run_stage:(S.run&&!S.run.done) ? (S.run.q.stage||0) : 0,
+    run_left:(S.run&&!S.run.done) ? Math.max(0,Math.round(S.run.left)) : 0,
+    run_kills:(S.run&&!S.run.done) ? (S.run.kills||0) : 0,
     updated_at:new Date().toISOString()
   };
 }
@@ -199,11 +206,11 @@ function claimRoom(r){
   achCheck&&achCheck(); renderTop(); renderNav(); save(); syncUp(true);
 }
 
-/* ═══════════ 화면 — 함께 가기 ═══════════ */
+/* ═══════════ 함께 가기 (의뢰 화면 안) ═══════════ */
 let TKIND="tower";
-VIEWS.together=()=>{
-  if(!sbOn()) return head("합동 출발",ic("handshake")+" 함께 가기","공유 기록이 연결되지 않았습니다")+`
-    <div class="card pad" style="border-color:var(--gold2)">
+/* 함께 가기 — 의뢰 화면 안에 들어갑니다 (예전 「함께 가기」 탭 자리) */
+function togetherBody(){
+  if(!sbOn()) return `<div class="card pad" style="border-color:var(--gold2)">
       <div class="tiny muted" style="line-height:1.9">
         다른 학생과 함께 탑을 오르려면 모두의 기록이 한곳에 모여야 합니다.
         설정(${ic("gear",13)})의 <b>공유 기록 연결</b>에 주소와 키를 넣어 주세요.
@@ -241,9 +248,7 @@ VIEWS.together=()=>{
       </div></div>`;
   };
 
-  return head("합동 출발",ic("handshake")+" 함께 가기", `${sbStateChip()} · 열린 방 ${rooms.length}개`)+`
-  ${buffStrip()}
-  <div class="card pad" style="margin-bottom:12px">
+  return `<div class="card pad" style="margin-bottom:12px">
     <div class="spread"><div class="sect-t" style="margin:0">방 만들기</div>
       <button class="btn sm ghost" onclick="syncRooms(true)">새로 고침</button></div>
     <div class="tiny muted" style="margin:6px 0 10px">방을 열면 다른 학생이 들어옵니다. 방장이 「지금 출발」을 누르면
@@ -272,7 +277,7 @@ VIEWS.together=()=>{
         <td class="tiny muted">${(r.result.members||[]).map(m=>esc(m.name)).join(" · ")}</td>
         <td style="text-align:right"><span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span></td></tr>`).join("")}
     </table></div>`:""}`;
-};
+}
 function roomMake(){
   const k=TKIND, K=RKIND[k];
   const suggest = k==="tower" ? (S.tower||0)+1 : k==="guard" ? (S.tower2||0)+1 : Math.min(200,S.quests.cleared+1);
@@ -487,8 +492,7 @@ openSettings=function(){
 };
 
 /* ═══════════ 내비 ═══════════ */
-(()=>{ const g=NAVDEF.find(x=>x.id==="war");
-  if(g && !g.sub.some(s=>s.id==="together")) g.sub.splice(1,0,{id:"together",n:"함께 가기",bd:"합동"});
+(()=>{ /* 함께 가기는 의뢰 화면 안으로 들어갔습니다 — 따로 탭을 두지 않습니다 */
   const s=NAVDEF.find(x=>x.id==="soc");
   if(s && !s.sub.some(x=>x.id==="roster")) s.sub.unshift({id:"roster",n:"학생 명부"}); })();
 
@@ -878,4 +882,83 @@ pairName = function(){
   if(!sbOn() || !P.mine) return "";
   const o=pairOther(P.mine);
   return o.nick ? `${o.name} (${o.nick})` : o.name;
+};
+
+/* ═══════════════════════════════════════════════════
+   페어와 나누는 현황 — 거처와 의뢰
+   서로의 명부 기록에서 읽어 옵니다. 페어가 아니면 보이지 않습니다.
+   ═══════════════════════════════════════════════════ */
+function pairRow(){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return null;
+  const o=pairOther(P.mine);
+  const r=(S.sb.roster||[]).find(x=>String(x.id)===String(o.id));
+  return r ? Object.assign({}, r, {_nick:o.nick}) : null;
+}
+function pairTitle(r){
+  return `<b style="color:var(--gold)">${esc(r.name||"")}</b>`
+       + (r._nick?` <span class="tiny muted">· ${esc(r._nick)}</span>`:"");
+}
+function pairSeen(r){
+  const d=(Date.now()-new Date(r.updated_at).getTime())/60000;
+  return d<5 ? `<span class="tag g">접속 중</span>`
+             : `<span class="tiny muted">${d<60?Math.floor(d)+"분 전":d<1440?Math.floor(d/60)+"시간 전":Math.floor(d/1440)+"일 전"}</span>`;
+}
+/* ─── 거처 현황 ─── */
+function pairHomeHTML(){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return "";
+  const r=pairRow();
+  if(!r) return `<div class="card pad" style="margin-top:14px">
+    <div class="sect-t">페어의 거처</div>
+    <div class="tiny muted">아직 명부에 올라오지 않았습니다. 상대가 한 번 접속하면 보입니다.</div></div>`;
+  const h=homeOf(r.hall), dorm=(r.hall==="dorm");
+  const top=dorm?4:5, st=clamp(r.home_stage||0,0,top);
+  const fac=HOMESTAGE[st]||0;
+  return `<div class="card pad" style="margin-top:14px;border-color:var(--gold2)">
+    <div class="spread"><div class="sect-t" style="margin:0">페어의 거처</div>${pairSeen(r)}</div>
+    <div class="spread" style="margin-top:4px">
+      <div>${pairTitle(r)} <span class="tiny muted">· ${esc(h.n)} ${esc(h.h)}</span>
+        <div class="tiny muted">${dorm?"방 꾸미기":"집 짓기"} ${st} / ${top} 단계
+          ${r.home_late?'· <span style="color:var(--red)">월세 미납</span>':dorm?"· 월세 없음":"· 월세 내는 중"}</div></div>
+      <span class="tag" style="border-color:${h.c};color:${h.c}">혜택 ${Math.round((r.home_late?0:fac)*100)}%</span></div>
+    <div class="bar" style="margin-top:8px"><i style="width:${st/top*100}%"></i></div>
+    <div class="tiny muted" style="margin-top:6px">${esc(h.b)}</div>
+  </div>`;
+}
+const _hallvPair=VIEWS.hallv;
+VIEWS.hallv=()=>_hallvPair()+pairHomeHTML();
+
+/* ─── 의뢰 현황 ─── */
+function pairRunHTML(){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return "";
+  const r=pairRow();
+  if(!r) return "";
+  const out=(r.run_stage||0)>0;
+  return `<div class="card pad" style="margin-bottom:14px;${out?"border-color:var(--gold2)":""}">
+    <div class="spread"><div class="sect-t" style="margin:0">페어의 의뢰</div>${pairSeen(r)}</div>
+    ${out?`<div class="spread" style="margin-top:4px">
+        <div>${pairTitle(r)}
+          <div class="tiny muted">${esc(r.run_ward||"")} <b>${r.run_stage}단계</b> 진행 중
+            · 처치 ${nf(r.run_kills||0)}체</div></div>
+        <div class="tiny muted">${hhmm(r.run_left||0)} 남음</div></div>
+       <div class="tiny muted" style="margin-top:6px">같이 가고 싶으면 아래에서 방을 열어 부르세요.</div>`
+      :`<div class="tiny muted" style="margin-top:4px">${pairTitle(r)} 님은 지금 의뢰에 나가 있지 않습니다.</div>`}
+  </div>`;
+}
+
+/* ─── 함께 가기를 의뢰 화면 안으로 ─── */
+const _questTogether=VIEWS.quest;
+VIEWS.quest=()=>{
+  let h=_questTogether();
+  if(!sbOn()) return h;
+  const rooms=(S.sb.rooms||[]).filter(r=>r.status!=="done");
+  return h + pairRunHTML() + `
+  <div class="card pad" style="margin:14px 0 0;border-color:var(--line2)">
+    <div class="spread"><div class="sect-t" style="margin:0">
+      ${ic("handshake",15)} 함께 가기 <span class="muted">· 열린 방 ${rooms.length}개</span></div>
+      <span class="tiny muted">${sbStateChip()}</span></div>
+    <div class="tiny muted" style="margin:4px 0 10px">석탑·결계의 탑·의뢰를 다른 러너와 함께 갑니다.</div>
+  </div>` + togetherBody();
 };

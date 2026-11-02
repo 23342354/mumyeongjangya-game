@@ -1746,7 +1746,7 @@ function setPos(p){ S.quests.room.pos=p; renderMain(); }
 function inviteParty(){
   const r=S.quests.room; if(r.party.length>=3){ toast("자리가 다 찼습니다.","bad"); return; }
   const pool=S.friends.map(f=>f.n);
-  if(!pool.length){ toast("함께 갈 사람이 없습니다. 「함께 가기」에서 방을 열어 보세요.","bad"); return; }
+  if(!pool.length){ toast("함께 갈 사람이 없습니다. 의뢰 화면 아래 「함께 가기」에서 방을 열어 보세요.","bad"); return; }
   r.party.push({n:pick(pool), pos:pick(["선봉","후열","지원"]), lv:rnd(1,7)});
   renderMain(); toast("동행 요청을 수락했습니다.");
 }

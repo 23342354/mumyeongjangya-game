@@ -520,7 +520,7 @@ VIEWS.rank=()=>{
           <td><b style="color:var(--gold)">${esc(S.name)}</b></td>
           <td style="text-align:right"><b>${S.tower||0}층</b></td></tr>
       </table>
-      <div class="tiny muted" style="margin-top:6px">「함께 가기」로 다른 러너와 오르면 그 기록이 함께 올라갑니다.</div>
+      <div class="tiny muted" style="margin-top:6px">의뢰 화면의 「함께 가기」로 다른 러너와 오르면 그 기록이 함께 올라갑니다.</div>
     </div>
   </div>
   <div class="grid g3" style="margin-top:14px">
