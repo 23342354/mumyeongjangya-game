@@ -9,6 +9,7 @@ function ensureV6(){
   if(!S.sb) S.sb={url:"", key:"", id:"", on:false, state:"idle", err:"",
                   roster:[], rosterAt:0, rooms:[], roomsAt:0, myRoom:null, claimed:[], upAt:0};
   if(!S.sb.claimed) S.sb.claimed=[];
+  if(S.sb.chatId===undefined) S.sb.chatId=0;
   if(!S.sb.id) S.sb.id = "S"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   // 운영진이 config.js에 적어 둔 값을 그대로 씁니다 (러너는 입력할 필요 없음)
   const CF=window.MMJY_CONFIG||{};
@@ -513,7 +514,8 @@ openSettings=function(){
 
 const _boot6=boot;
 boot=function(){ _boot6(); ensureV6(); renderNav(); renderMain();
-  if(sbOn()){ syncUp(true).then(()=>{ syncRoster(true); syncRooms(true); }); } };
+  if(sbOn()){ syncUp(true).then(()=>{ syncRoster(true); syncRooms(true); });
+              chatPull(true); chatTick(); } };
 
 /* ═══════════ 접속자 · 지금 사무전에 있는 사람 ═══════════
    모브 학생은 없습니다. 공유 기록이 연결됐을 때,
@@ -576,4 +578,142 @@ wbMyRank = function(){
   const sorted=[...S.sb.roster].filter(r=>(r.wb_dmg||0)>0).sort((a,b)=>(b.wb_dmg||0)-(a.wb_dmg||0));
   const i=sorted.findIndex(r=>r.id===S.sb.id);
   return i>=0 ? `${i+1}위 / ${sorted.length}명` : "—";
+};
+
+/* ═══════════════════════════════════════════════════
+   실시간 채팅 — 러너끼리 주고받습니다.
+   전체·숙사·계통은 범위가 같은 사람끼리, 페어·1:1 은 두 사람만 봅니다.
+   교사·직원의 한마디는 각자 화면에만 뜨는 분위기 글이라 서버로 보내지 않습니다.
+   ═══════════════════════════════════════════════════ */
+function pairKey(a,b){ return [String(a||""),String(b||"")].sort().join("|"); }
+function chatScope(tab){
+  if(tab==="숙사")  return S.hall||"";
+  if(tab==="계통")  return S.line||"";
+  if(tab==="페어"){ const p=(S.rel||[]).find(r=>r.a==="페어"); return p?pairKey(S.name,p.n):""; }
+  if(tab==="1:1")   return S.dmWith ? pairKey(S.sb.id, S.dmWith.id) : "";
+  return "";
+}
+/* 지금 탭에서 보여 줄 글인지 — 채널 범위까지 따집니다 */
+chatVisible = function(m){
+  if(m.tab!==S.chatTab) return false;
+  if(m.local) return true;                       // 교사 한마디 등 내 화면 전용
+  const need=chatScope(S.chatTab);
+  if(["숙사","계통","페어","1:1"].includes(S.chatTab)) return (m.scope||"")===need;
+  return true;
+};
+
+const CHATMS_ON=3000, CHATMS_OFF=15000;
+let CHATTICK=null, CHATBUSY=false;
+function chatRows(rows){
+  if(!rows||!rows.length){ if(S.chatSkip) S.chatSkip=0; return 0; }
+  /* 기록을 비운 직후에는 서버에 남아 있던 예전 글을 가져오지 않고
+     "여기서부터" 표식만 찍습니다. 채팅은 비운 시점부터 다시 시작합니다. */
+  if(S.chatSkip){
+    rows.forEach(r=>{ if(r.id>(S.sb.chatId||0)) S.sb.chatId=r.id; });
+    S.chatSkip=0; save(); return 0;
+  }
+  let added=0;
+  rows.forEach(r=>{
+    if(r.id>(S.sb.chatId||0)) S.sb.chatId=r.id;
+    if(String(r.from_id)===String(S.sb.id)) return;          // 내가 보낸 건 이미 화면에 있습니다
+    if(S.msgs.some(m=>m.sid===r.id)) return;
+    const d=new Date(r.created_at||Date.now());
+    const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
+    S.msgs.push({sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
+      c:r.color||"var(--violetL)", title:r.title||"", mode:r.mode||"RP",
+      ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`});
+    added++;
+  });
+  if(S.msgs.length>400) S.msgs=S.msgs.slice(-400);
+  return added;
+}
+function chatPull(first){
+  if(!sbOn() || CHATBUSY) return Promise.resolve(0);
+  CHATBUSY=true;
+  const q = first || !S.sb.chatId
+    ? "messages?select=*&order=id.desc&limit=100"
+    : "messages?select=*&id=gt."+S.sb.chatId+"&order=id.asc&limit=200";
+  return sbGet(q)
+    .then(rows=>{ if(first||!S.sb.chatId) rows=(rows||[]).slice().reverse();
+                  const n=chatRows(rows); if(n) renderChat(); return n; })
+    .catch(()=>0)
+    .then(n=>{ CHATBUSY=false; return n; });
+}
+function chatPush(tab, body, mode){
+  if(!sbOn()) return Promise.resolve();
+  return sbSend("POST","messages",[{
+    tab, scope:chatScope(tab), from_id:S.sb.id, who:S.name,
+    body, color:S.color, title:(S.course||1)+"과정", mode:mode||"RP"
+  }],"return=minimal").catch(sbErr);
+}
+function chatTick(){
+  if(CHATTICK) clearInterval(CHATTICK);
+  const ms = document.hidden ? CHATMS_OFF : CHATMS_ON;
+  CHATTICK=setInterval(chatPull, ms);
+}
+document.addEventListener("visibilitychange",()=>{ chatTick(); if(!document.hidden) chatPull(); });
+
+/* 내가 보낸 말을 서버로 */
+const _sendChatSb = sendChat;
+sendChat = function(){
+  const i=document.getElementById("chatinput");
+  const raw = i ? i.value.trim() : "";
+  if(!raw) return;
+  if(sbOn() && S.chatTab==="1:1" && !S.dmWith){
+    toast("먼저 대화할 사람을 고르세요.","bad"); return;
+  }
+  _sendChatSb();
+  if(sbOn()) chatPush(S.chatTab, fmtChat(raw), S.chatMode==="RP"?"RP":"오너");
+};
+/* 교사 한마디는 내 화면에만 */
+const _npcChatSb = npcChat;
+npcChat = function(tab){
+  _npcChatSb(tab);
+  const m=S.msgs[S.msgs.length-1]; if(m) m.local=true;
+};
+
+/* ─── 1:1 상대 고르기 · 연결 상태 알림 ─── */
+function dmPick(id){
+  const r=(S.sb.roster||[]).find(x=>x.id===id);
+  S.dmWith = r ? {id:r.id, name:r.name} : null;
+  S.chatTab="1:1"; renderChat();
+}
+const _renderChatSb = renderChat;
+renderChat = function(){
+  _renderChatSb();
+  const row=document.querySelector("#chatcol .row");
+  if(!row) return;
+  // 연결 안 됐으면 혼자 쓰는 중이라고 알려 줍니다
+  if(!sbOn()){
+    const w=document.createElement("span");
+    w.className="tiny"; w.style.cssText="margin-left:auto;color:var(--warn)";
+    w.textContent="혼자 보는 중 · 공유 기록을 연결하면 함께 이야기합니다";
+    const old=row.querySelector(".tiny.muted"); if(old) old.remove();
+    row.appendChild(w);
+    return;
+  }
+  if(S.chatTab==="1:1"){
+    const list=(S.sb.roster||[]).filter(r=>r.id!==S.sb.id);
+    const bar=document.createElement("div");
+    bar.className="row"; bar.style.cssText="padding:0 10px 6px;gap:6px";
+    bar.innerHTML = list.length
+      ? `<select onchange="dmPick(this.value)" style="flex:1;min-width:0">
+           <option value="">— 대화할 사람 —</option>
+           ${list.map(r=>`<option value="${r.id}" ${S.dmWith&&S.dmWith.id===r.id?"selected":""}>${esc(r.name||"이름 없음")}</option>`).join("")}
+         </select>`
+      : `<span class="tiny muted">명부에 다른 러너가 없습니다.</span>`;
+    row.parentNode.insertBefore(bar, row.nextSibling);
+  }
+  if(S.chatTab==="페어" && !chatScope("페어")){
+    const n=document.createElement("div");
+    n.className="tiny muted"; n.style.cssText="padding:0 10px 6px";
+    n.textContent="페어를 맺으면 둘만의 자리가 열립니다.";
+    row.parentNode.insertBefore(n, row.nextSibling);
+  }
+};
+/* 명부에서 이름을 누르면 1:1 로 */
+dmTo = function(n){
+  const r=(S.sb.roster||[]).find(x=>x.name===n);
+  if(r){ dmPick(r.id); toast(`${n} 학생과의 1:1 창을 열었습니다.`); }
+  else { S.chatTab="1:1"; S.dmWith=null; renderChat(); toast("명부에 없는 학생입니다.","bad"); }
 };

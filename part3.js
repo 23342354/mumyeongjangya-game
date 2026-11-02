@@ -967,7 +967,7 @@ renderChat=function(){
   const log=document.getElementById("chatlog");
   if(!log) return;
   const dm=S.dmTab||"전체";
-  const list=S.msgs.filter(m=>m.tab==="1:1").filter(m=>dm==="전체"||(m.mode||"RP")===dm).slice(-120);
+  const list=S.msgs.filter(chatVisible).filter(m=>dm==="전체"||(m.mode||"RP")===dm).sort(chatSort).slice(-120);
   log.innerHTML=list.map(m=>{
     const owner=(m.mode==="오너");
     return `<div class="cmsg" style="${owner?"justify-content:flex-end":""}">

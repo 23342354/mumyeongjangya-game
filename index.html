@@ -723,7 +723,7 @@ function newState(){
     pass:3, passNext:720, outing:{done:{}, souv:[]},
     fest:{marks:0, todayMarks:0, basket:0, visits:0, stamps:[], souv:null, total:265000},
     rel:[], friends:[],
-    msgs:[], chatTab:"전체", chatMode:"RP",
+    msgs:[], chatReset:2, chatSkip:0, chatTab:"전체", chatMode:"RP",
     news:[], notes:[],
     place:"plaza", examHist:{},
     dayStamp:0, playFrom:Date.now(),
@@ -733,6 +733,9 @@ function save(){ try{ S.lastReal=Date.now(); localStorage.setItem(SAVEKEY, JSON.
 function load(){
   try{ const r=localStorage.getItem(SAVEKEY); if(!r) return null;
        const o=JSON.parse(r); const base=newState();
+       /* 채팅 기록 비우기 — 표식을 올리면 그 다음 접속 때 한 번 더 비웁니다.
+          chatSkip 은 서버에 남아 있는 예전 글까지 건너뛰게 합니다. */
+       if((o.chatReset||0) < 2){ o.msgs=[]; o.chatReset=2; o.chatSkip=1; }
        if(o.av && ICLEGACY[o.av]) o.av=ICLEGACY[o.av];
        if(o.av && !ICONS[o.av]) o.av="lantern";
        return Object.assign(base,o, {sub:Object.assign(base.sub,o.sub||{}), res:Object.assign(base.res,o.res||{})});
@@ -1107,7 +1110,7 @@ function go(v){
 /* ── 채팅 ── */
 const CHATTABS=["전체","숙사","계통","페어","1:1"];
 function renderChat(){
-  const list=S.msgs.filter(m=>m.tab===S.chatTab).slice(-120);
+  const list=S.msgs.filter(chatVisible).sort(chatSort).slice(-120);
   $("#chatcol").innerHTML=`
   <div class="card">
     <div class="chat-tabs">
@@ -1137,10 +1140,16 @@ function renderChat(){
 function setChatTab(t){ S.chatTab=t; renderChat(); }
 function setChatMode(m){ S.chatMode=m; renderChat(); }
 function fmtChat(s){ return esc(s).replace(/\*([^*]+)\*/g,"<em>$1</em>"); }
-function addMsg(tab,who,body,c,title){
-  S.msgs.push({tab,who,body,c,title,time:cal().str.replace(/^(오전|오후) /,"")});
+function addMsg(tab,who,body,c,title,extra){
+  const m=Object.assign({tab,who,body,c,title,ts:Date.now(),
+    time:cal().str.replace(/^(오전|오후) /,"")}, extra||{});
+  S.msgs.push(m);
   if(S.msgs.length>400) S.msgs.shift();
+  return m;
 }
+/* 이 글을 지금 탭에서 보여 줄지 — part6 가 채널 범위까지 따져 덮어씁니다 */
+function chatVisible(m){ return m.tab===S.chatTab; }
+function chatSort(a,b){ return (a.ts||0)-(b.ts||0); }
 function sendChat(){
   const i=$("#chatinput"); if(!i||!i.value.trim()) return;
   addMsg(S.chatTab, S.name, fmtChat(i.value.trim()), S.color, S.course+"과정");
