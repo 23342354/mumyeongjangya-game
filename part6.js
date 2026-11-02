@@ -51,6 +51,7 @@ function myRecord(){
     tower:S.tower||0, guard:S.tower2||0, arena_best:S.arena.best||0,
     quest:S.quests.cleared||0, dexp:(typeof dexScore==="function"?dexScore():0),
     ach:(S.ach||[]).length, war:S.war.mine||0,
+    wb_dmg:(S.wb&&S.wb.dmg)||0,
     updated_at:new Date().toISOString()
   };
 }
@@ -513,3 +514,66 @@ openSettings=function(){
 const _boot6=boot;
 boot=function(){ _boot6(); ensureV6(); renderNav(); renderMain();
   if(sbOn()){ syncUp(true).then(()=>{ syncRoster(true); syncRooms(true); }); } };
+
+/* ═══════════ 접속자 · 지금 사무전에 있는 사람 ═══════════
+   모브 학생은 없습니다. 공유 기록이 연결됐을 때,
+   최근 4분 안에 기록을 올린 러너만 「접속 중」으로 셉니다.
+   (각자 90초마다 자기 기록을 올리므로 4분이면 넉넉합니다.) */
+const ONLINE_MS = 4*60*1000;
+function onlineList(){
+  if(!sbOn()) return [];
+  const now = Date.now();
+  return (S.sb.roster||[]).filter(r=>{
+    const t = Date.parse(r.updated_at||"");
+    return t && (now - t) < ONLINE_MS;
+  });
+}
+onlineChip = function(){
+  if(!sbOn()) return "";
+  const n = onlineList().length;
+  if(!n) return `<span class="tiny muted">● 접속 확인 중</span>`;
+  return `<span style="color:var(--ok)">● 접속 ${n}명</span>`;
+};
+hereHTML = function(){
+  if(!sbOn()) return `<div class="card pad" style="margin-top:14px">
+    <div class="sect-t">사무전에 함께 있는 학생</div>
+    <div class="tiny muted">공유 기록이 연결되면 지금 접속해 있는 러너가 여기에 보입니다.</div></div>`;
+  const list = onlineList().filter(r=>r.id!==S.sb.id);
+  if(!list.length) return `<div class="card pad" style="margin-top:14px">
+    <div class="sect-t">사무전에 함께 있는 학생</div>
+    <div class="tiny muted">지금은 혼자입니다. 다른 러너가 들어오면 여기에 보입니다.</div></div>`;
+  return `<div class="card pad" style="margin-top:14px">
+    <div class="sect-t">사무전에 함께 있는 학생 ${list.length}명</div>
+    <div class="grid g4">
+      ${list.slice(0,12).map(r=>{
+        const h=HALLS.find(x=>x.id===r.hall);
+        return `<div class="spread" style="background:#1f0b31;border:1px solid var(--line);border-radius:7px;padding:6px 10px">
+          <div><b style="font-size:12.5px">${esc(r.name||"이름 없음")}</b>
+          <div class="tiny muted">${h?esc(h.n):"숙사 미정"} · ${r.course||1}과정</div></div>
+          ${S.friends.find(f=>f.n===r.name)?'<span class="tag g">인연</span>'
+            :`<button class="btn sm ghost" onclick="addFriend('${esc(r.name||"").replace(/'/g,"")}')">동행 신청</button>`}
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="tiny muted" style="margin-top:8px">최근 4분 안에 접속한 러너만 보입니다.</div>
+  </div>`;
+};
+/* 명부를 자주 받아 와야 접속자 수가 맞습니다 */
+const _stepOnline = step;
+step = function(m){ _stepOnline(m); if(sbOn() && Math.random()<0.02) syncRoster(); };
+
+/* 업귀 피해 순위를 실제 러너로 */
+wbBoard = function(){
+  if(!sbOn() || !(S.sb.roster||[]).length) return S.wb.dmg>0 ? [[S.name, S.wb.dmg, true]] : [];
+  return [...S.sb.roster]
+    .filter(r=>(r.wb_dmg||0)>0)
+    .sort((a,b)=>(b.wb_dmg||0)-(a.wb_dmg||0))
+    .slice(0,12)
+    .map(r=>[r.name||"이름 없음", r.wb_dmg||0, r.id===S.sb.id]);
+};
+wbMyRank = function(){
+  if(!sbOn() || !(S.sb.roster||[]).length) return S.wb.dmg>0 ? "기록 있음" : "—";
+  const sorted=[...S.sb.roster].filter(r=>(r.wb_dmg||0)>0).sort((a,b)=>(b.wb_dmg||0)-(a.wb_dmg||0));
+  const i=sorted.findIndex(r=>r.id===S.sb.id);
+  return i>=0 ? `${i+1}위 / ${sorted.length}명` : "—";
+};

@@ -95,9 +95,10 @@ const CLUBS=[
  {id:"cl3", n:"필사회",     e:ic("scroll"), d:"서고의 낡은 기록을 베껴 쓰는 모임.",           b:"수업 효율 +6%"},
 ];
 /* ─── 연무제 대진 ─── */
+/* 연무장에 올라오는 상대 — 모브 학생이 아니라 업귀와 교관입니다. */
 const ARENAFOES=[
- "노아 벨","미라 손","테오 카브","시엔","루카 페르","하나 이브","다리우스 크로","엘라 미스트",
- "오르와 렌","세레나 볼","펠릭스 조교","강시 경비","여와","양귀비 교사","항아 교관"];
+ "잿빛 손","쇠사슬 늑대","불 붙은 인형","업귀 잔해","개조 의체 괴한","영혼 밀매상","마녀의 사역물",
+ "목소리 없는 군중","종을 삼킨 것","찢긴 장의 주인","삼장 보건 교사","강시 경비","여와","양귀비 교사","항아 교관"];
 const ARENALINE=[
  "\"가볍게 가자. 다치면 삼장 선생님한테 혼나.\"","\"지난번은 운이 좋았을 뿐이야.\"","\"네 파장, 소문대로네.\"",
  "\"……시작하지.\"","\"손속에 정은 없다.\"","\"재밌겠다!\"","\"교본대로 하지 않으면 진다.\"","\"눈을 감지 마.\"",
@@ -454,7 +455,6 @@ function fishHook(){
   const F=FISHGAME; clearInterval(F.timer); F.state="idle";
   const hit=F.bar>=F.target && F.bar<=F.target+16;
   const perfect=hit && Math.abs(F.bar-(F.target+8))<4;
-  S.t+=12;
   if(!hit){
     drawFish2();
     document.getElementById("fres").innerHTML=`<div class="tiny" style="color:var(--red)">빈 바늘입니다. 수면에 파문만 남았습니다.</div>`;
@@ -532,7 +532,7 @@ function rollMarket(){
   S.market.list=Array.from({length:14},()=>{
     const it=mkGear(rnd(Math.max(1,lv-6),lv+8));
     it.isNew=false;
-    return {it, price:Math.round(gearScore(it)*(1.2+Math.random()*1.1)+it.lv*120), seller:pick(FAKENAMES), left:rnd(600,4000)};
+    return {it, price:Math.round(gearScore(it)*(1.2+Math.random()*1.1)+it.lv*120), seller:"사무전 중개소", left:rnd(600,4000)};
   }).sort((a,b)=>gearScore(b.it)-gearScore(a.it));
   S.market.next=240;
 }
@@ -887,7 +887,6 @@ function climbTower(chain){
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
-  S.t+=Math.max(2,gained)*2;
   if(gained){ gainRin(rin); S.sari+=sari; drops.forEach(d=>S.bag.push(d)); gainExp(260*gained); addMark(6*Math.min(5,gained)); }
   damageHP(rnd(4,14)); damageSN(rnd(3,10));
   modal("석탑",`
@@ -947,7 +946,6 @@ function climbGuard(chain){
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
-  S.t+=Math.max(2,gained);
   if(gained){ gainRin(rin); drops.forEach(d=>S.bag.push(d)); gainExp(220*gained); addMark(6*Math.min(5,gained)); }
   damageHP(rnd(5,16));
   modal("결계의 탑",`<div class="log">${logs.join("<br>")}</div>
@@ -965,8 +963,7 @@ VIEWS.wboss=()=>{
   const p=clamp(S.wb.total/goal*100,0,100);
   const c=C();
   const mine=Math.round(c.dps*30*(1+mod("boss")||0));
-  const board=[["이매",9400000000],["야차샤",3300000000],["실라스 바레타",2960000000],["스카렛 에버니",2930000000],
-               ["케렌",1980000000],["이비키",1740000000]];
+  const board=wbBoard();   /* 모브 없음 — 연결되면 실제 러너, 아니면 나 혼자 */
   return head("종소리가 멎기 전에",ic("oni")+" 업귀 토벌", `이번 주 · ${6-(cal().day%7)}일 남음`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
@@ -990,14 +987,15 @@ VIEWS.wboss=()=>{
   </div>
   <div class="card pad">
     <div class="spread"><div class="sect-t" style="margin:0">업귀 피해 순위</div>
-      <span class="tiny muted">내 순위 ${S.wb.dmg>0?Math.max(1,280-Math.floor(S.wb.dmg/40000000)):"—"}위</span></div>
+      <span class="tiny muted">내 순위 ${wbMyRank()}</span></div>
     <div class="tiny muted" style="margin-bottom:6px">이번 주(월요일 KST 0시~) 업귀에 입힌 피해 합계입니다. 같은 기록이면 먼저 달성한 학생이 앞섭니다.</div>
     <table class="t">
-      ${board.map((r,i)=>`<tr><td style="width:30px">${i+1}</td><td>${r[0]}</td>
+      ${board.map((r,i)=>`<tr${r[2]?' style="background:#270e3c"':""}><td style="width:30px">${i+1}</td>
+        <td>${r[2]?`<b style="color:var(--gold)">${esc(r[0])}</b>`:esc(r[0])}</td>
         <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      ${S.wb.dmg>0?`<tr style="background:#270e3c"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
-        <td style="text-align:right"><b>${nf(S.wb.dmg)}</b></td></tr>`:""}
+      ${board.length?"":`<tr><td colspan="3" class="tiny muted" style="text-align:center">아직 업귀에 입힌 피해가 없습니다</td></tr>`}
     </table>
+    ${sbOn&&sbOn()?"":`<div class="tiny muted" style="margin-top:6px">공유 기록을 연결하면 다른 러너의 피해량과 함께 줄을 섭니다.</div>`}
   </div>`;
 };
 function hitBoss(){
@@ -1007,7 +1005,7 @@ function hitBoss(){
   const dmg=Math.round(c.dps*30*(0.92+Math.random()*0.18));
   S.wb.dmg+=dmg; S.wb.total+=dmg;
   const rin=gainRin(Math.round(dmg/3000)+400), ex=gainExp(600);
-  addMark(10); S.t+=5;
+  addMark(10);
   if(Math.random()<.35) S.pets.eggs++;
   modal("업귀 토벌",`
     <div style="text-align:center;padding:8px 0">
@@ -1080,7 +1078,7 @@ function arenaGo(mode){
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
   const sust=c.hp*c.heal/Math.max(1,fdps*mit*(mode==="hold"?1.5:1));
   const win = mode==="kill" ? (sec<=45 && sust>=Math.min(45,sec)) : (sust>=45 || sec<=45);
-  S.t+=15; damageHP(rnd(4,14)); damageSN(rnd(3,10));
+  damageHP(rnd(4,14)); damageSN(rnd(3,10));
   let rew="";
   if(win){
     S.arena.round++; S.arena.best=Math.max(S.arena.best,r);
@@ -1509,3 +1507,7 @@ VIEWS.plaza=()=>{
 /* ═══════════ 부팅 ═══════════ */
 const _boot=boot;
 boot=function(){ ensureV2(); _boot(); };
+
+/* 업귀 피해 순위 — 모브 없이, 연결되면 실제 러너로 채웁니다(part6). */
+function wbBoard(){ return S.wb.dmg>0 ? [[S.name, S.wb.dmg, true]] : []; }
+function wbMyRank(){ return S.wb.dmg>0 ? "기록 있음" : "—"; }

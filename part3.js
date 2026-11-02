@@ -241,7 +241,7 @@ function aucOpen(){
     for(let i=0;i<5;i++){
       const it=mkGear(t.lv+rnd(-3,5), t.g); it.isNew=false; it.bound=true;
       S.auc.lots.push({tier:ti, tn:t.n, it,
-        bid:Math.round(gearScore(it)*(0.25+ti*0.08)), by:null, npc:pick(FAKENAMES)});
+        bid:Math.round(gearScore(it)*(0.25+ti*0.08)), by:null, npc:"다른 응찰"});
     }
   });
   S.auc.phase="live"; S.auc.left=60;
@@ -269,7 +269,7 @@ function aucTick(m){
         const step=Math.max(100,Math.round(L.bid*0.12));
         if(L.by==="me"){ S.rin+=L.myPaid||0; L.myPaid=0;
           toast(`${L.npc}이(가) 「${L.it.name}」에 더 높은 값을 불렀습니다. 맡긴 륜을 돌려받았습니다.`); }
-        L.bid+=step; L.by=null; L.npc=pick(FAKENAMES);
+        L.bid+=step; L.by=null; L.npc="다른 응찰";
       }
     });
     if(S.auc.left<=0) aucClose();
@@ -505,36 +505,32 @@ function titleHow(i){
 }
 
 VIEWS.rank=()=>{
-  const board=[["시드",219000],["이바르 슈율",177000],["츠루마츠 센야",172000],["스칼렛 에보니",163000],
-    ["세실리아",158000],["킬리안 아르티네크",151000],["베이론",144000],["클레어 웰스프링",139000],["비비",136000],["애쉬",134000]];
+  /* 모브 학생은 없습니다. 공유 기록을 연결하기 전에는 내 기록만 보입니다. */
   const my=power();
-  const myRank=Math.max(1, 340-Math.floor(my/900));
-  const teams=[["재무학회 1팀",198],["보리차파티",179],["앞서는 빛",179],["별 따러 가자",167],["봄여름가을겨울",161],
-    ["행전원정대",158],["진 카르마의 팀",149],["섭종까지 등반",147],["마천우의 팀",145],["부부등산모임",141]];
-  return head("사무전의 기록",ic("medal")+" 랭킹", `학생 1,527명`)+`
+  const myRank="—";
+  return head("사무전의 기록",ic("medal")+" 랭킹", `공유 기록을 연결하면 다른 러너의 기록이 함께 보입니다`)+`
   <div class="grid g2">
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">전투력 순위</div>
         <span class="tiny muted">내 순위 ${myRank}위</span></div>
       <div class="tiny muted" style="margin-bottom:8px">법구·능력치를 반영한 전투력입니다. 물약·요리 같은 시간제 효과는 순위에서 제외합니다.</div>
       <table class="t">
-        ${board.map((r,i)=>`<tr><td style="width:26px">${i+1}</td>
-          <td>${r[0]} <span class="tiny muted">${5+(i%3)}과정 · Lv ${70+i*2}</span></td>
-          <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-        <tr><td colspan="3" class="tiny muted" style="text-align:center">…</td></tr>
-        <tr style="background:#270e3c"><td>${myRank}</td>
+        <tr style="background:#270e3c"><td style="width:26px">—</td>
           <td><b style="color:var(--gold)">${esc(S.name)}</b> <span class="tiny muted">${S.course}과정 · Lv ${S.lvl}</span></td>
           <td style="text-align:right"><b>${nf(my)}</b></td></tr>
       </table>
+      <div class="tiny muted" style="margin-top:6px">공유 기록을 연결하면 다른 러너와 함께 줄을 섭니다.</div>
     </div>
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">이번 주 석탑 팀 순위</div>
         <span class="tiny muted">내 기록 ${S.tower||0}층</span></div>
       <div class="tiny muted" style="margin-bottom:8px">이번 주(월요일 KST 0시~) 등록된 팀이 오른 가장 높은 층입니다.</div>
       <table class="t">
-        ${teams.map((t,i)=>`<tr><td style="width:26px">${i+1}</td><td>${t[0]}</td>
-          <td style="text-align:right">${t[1]}층</td></tr>`).join("")}
+        <tr style="background:#270e3c"><td style="width:26px">—</td>
+          <td><b style="color:var(--gold)">${esc(S.name)}</b></td>
+          <td style="text-align:right"><b>${S.tower||0}층</b></td></tr>
       </table>
+      <div class="tiny muted" style="margin-top:6px">「함께 가기」로 다른 러너와 오르면 그 기록이 함께 올라갑니다.</div>
     </div>
   </div>
   <div class="grid g3" style="margin-top:14px">
