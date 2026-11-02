@@ -1,0 +1,2672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>無明長夜 · 사무전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* 자체 호스팅용 사본 — 구글 폰트가 막힌 환경에서 대신 쓰입니다 */
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-ExtraLight.woff') format('woff');font-weight:200;font-display:swap}
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-Light.woff') format('woff');font-weight:300;font-display:swap}
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-Regular.woff') format('woff');font-weight:normal;font-display:swap}
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-Text.woff') format('woff');font-weight:450;font-display:swap}
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-Medium.woff') format('woff');font-weight:500;font-display:swap}
+@font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-SemiBold.woff') format('woff');font-weight:600;font-display:swap}
+:root{
+  --ink:#0a0812; --ink2:#120f1e; --ink3:#1a1630; --ink4:#221d3c;
+  --line:#2f2949; --line2:#443b66;
+  --tx:#e9e3d6; --dim:#9b93ac; --dim2:#6f6885;
+  --gold:#caa548; --gold2:#8e7330;
+  --red:#d2563f; --red2:#8e2f27;
+  --jade:#4fb3a3; --violet:#9d7fd0; --blue:#6f8fd0;
+  --ok:#5fae7a; --warn:#d8a44a;
+  --glow:0 0 18px rgba(202,165,72,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink); color:var(--tx);
+  font-family:'IBM Plex Sans KR','IbmPlexSans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  font-size:14px; line-height:1.72; letter-spacing:-.003em;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(1200px 500px at 15% -5%, rgba(157,127,208,.10), transparent 60%),
+    radial-gradient(900px 420px at 95% 0%, rgba(210,86,63,.09), transparent 60%);
+  background-attachment:fixed;
+}
+button{font-family:inherit; cursor:pointer}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2c2745;border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:#3b3460}
+
+/* ── 상단바 ───────────────────────── */
+#topbar{position:sticky;top:0;z-index:60;background:linear-gradient(180deg,#120f1ef2,#0d0a18f2);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.tb1{display:flex;align-items:center;gap:14px;padding:9px 16px}
+.seal{width:34px;height:34px;border-radius:50%;border:1px solid var(--gold2);
+  display:grid;place-items:center;font-size:15px;color:var(--gold);
+  background:radial-gradient(circle at 35% 30%,#2a2340,#15111f);box-shadow:var(--glow);flex:none}
+.me-name{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.me-sub{font-size:11.5px;color:var(--dim)}
+.res-wrap{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.res{display:flex;align-items:center;gap:6px;background:#17132a;border:1px solid var(--line);
+  border-radius:7px;padding:4px 10px;font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.res b{font-weight:600;letter-spacing:0}
+.res .ri{font-size:12px;opacity:.95}
+.tb2{display:flex;align-items:center;gap:10px;padding:5px 16px 8px;font-size:11.5px;color:var(--dim);
+  border-top:1px solid #1d1932;flex-wrap:wrap}
+.buffchip{display:inline-flex;align-items:center;gap:5px;background:#17132a;border:1px solid #2b2545;
+  border-radius:20px;padding:2px 9px;color:#bdb4cd}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+
+/* ── 레이아웃 ─────────────────────── */
+#app{display:grid;grid-template-columns:208px minmax(0,1fr) 300px;gap:16px;
+  max-width:1560px;margin:0 auto;padding:16px;align-items:start}
+@media(max-width:1180px){
+  #app{grid-template-columns:184px minmax(0,1fr)}
+  #chatcol{grid-column:1/-1;position:static;order:3}
+  #chatcol .chat-log{height:300px}
+}
+@media(max-width:780px){#app{grid-template-columns:1fr;padding:10px} #navcol{order:2} #chatcol{order:3}}
+
+.card{background:linear-gradient(180deg,#141127,#100d1e);border:1px solid var(--line);border-radius:10px}
+.pad{padding:14px 16px}
+.sect-t{font-size:11px;color:var(--dim2);letter-spacing:.1em;margin:0 0 8px;font-weight:600}
+
+/* 좌측 내비 */
+.nav-g{margin-bottom:4px}
+.nav-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;color:var(--tx);
+  font-size:13.5px;cursor:pointer;user-select:none}
+.nav-h:hover{background:#191430}
+.nav-h.on{background:linear-gradient(90deg,#241d42,#1a1630);color:#f1e9d8;box-shadow:inset 2px 0 0 var(--gold)}
+.nav-h .ic{width:16px;text-align:center;opacity:.85;font-size:13px}
+.nav-h .ar{margin-left:auto;font-size:10px;color:var(--dim2)}
+.nav-sub{overflow:hidden;max-height:0;transition:max-height .22s ease;pointer-events:none}
+.nav-sub.open{max-height:300px;pointer-events:auto}
+.nav-i{padding:7px 12px 7px 38px;font-size:13px;color:var(--dim);border-radius:7px;cursor:pointer}
+.nav-i:hover{background:#17132c;color:var(--tx)}
+.nav-i.on{color:var(--gold);background:#1b1733}
+.nav-i .bd{float:right;font-size:10px;color:var(--red);}
+
+/* 내 정보 패널 */
+.mini-stat{display:flex;justify-content:space-between;font-size:12.5px;padding:2.5px 0;color:var(--dim);font-variant-numeric:tabular-nums}
+.mini-stat b{color:var(--tx);font-weight:600}
+.bar{height:5px;background:#201b38;border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:4px;transition:width .4s}
+.bar.hp>i{background:linear-gradient(90deg,#8e2f27,#d2563f)}
+.bar.sn>i{background:linear-gradient(90deg,#4a3b86,#9d7fd0)}
+.bar.jd>i{background:linear-gradient(90deg,#2f6f66,#4fb3a3)}
+
+/* 공통 UI */
+.btn{background:#1e1938;border:1px solid var(--line2);color:var(--tx);border-radius:7px;
+  padding:7px 14px;font-size:12.5px;transition:.15s}
+.btn:hover{background:#2a2350;border-color:#5b4f87}
+.btn.pri{background:linear-gradient(180deg,#b8902f,#8e6c20);border-color:#d8b35a;color:#1a1408;font-weight:600}
+.btn.pri:hover{filter:brightness(1.12)}
+.btn.red{background:#4a1f1c;border-color:#8e2f27;color:#f0c6bd}
+.btn.red:hover{background:#5e2723}
+.btn.sm{padding:4px 10px;font-size:11.5px}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.ghost{background:transparent}
+.tag{display:inline-block;font-size:10.5px;padding:1.5px 7px;border-radius:5px;border:1px solid var(--line2);color:var(--dim)}
+.tag.g{border-color:var(--gold2);color:var(--gold)}
+.tag.r{border-color:var(--red2);color:var(--red)}
+.tag.j{border-color:#2f6f66;color:var(--jade)}
+.tag.v{border-color:#4a3b86;color:var(--violet)}
+h1.page{font-size:25px;margin:2px 0 3px;font-weight:600;letter-spacing:-.01em}
+.page-kicker{font-size:11px;color:var(--gold2);letter-spacing:.16em;font-weight:500}
+.page-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+  padding-bottom:12px;border-bottom:1px solid var(--line)}
+.page-head .rt{margin-left:auto;font-size:12px;color:var(--dim);text-align:right}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:980px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.muted{color:var(--dim)}
+.tiny{font-size:11.5px}
+.hr{height:1px;background:var(--line);margin:12px 0;border:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+
+/* 광장 */
+.scene{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  height:236px;background:linear-gradient(180deg,#140f24 0%,#1d1430 45%,#241530 100%)}
+.scene svg{position:absolute;inset:0;width:100%;height:100%}
+.scene .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+  padding:10px 12px;font-size:11.5px}
+.sbadge{background:#0c0916cc;border:1px solid #37304f;border-radius:6px;padding:3px 9px;
+  display:inline-flex;gap:8px;align-items:center;color:#cdc5d8}
+.story-card{background:linear-gradient(135deg,#2a2033,#1d1728);border:1px solid #4a3b50;border-radius:10px;padding:14px 16px}
+.pips{display:flex;gap:4px}
+.pips i{width:7px;height:7px;border-radius:50%;background:#4a4160;display:block}
+.pips i.on{background:var(--gold)}
+.ticker{overflow:hidden}
+.ticker-row{display:flex;gap:9px;align-items:center;font-size:12.5px;padding:4px 0}
+
+/* 과목/연구 카드 */
+.sub{background:#15122a;border:1px solid var(--line);border-radius:9px;padding:11px 12px;position:relative}
+.sub:hover{border-color:var(--line2)}
+.sub.active{border-color:var(--gold2);box-shadow:var(--glow)}
+.sub h4{margin:0 0 2px;font-size:14px;font-weight:600}
+.sub .lv{color:var(--gold);font-weight:600}
+.starbtn{position:absolute;right:10px;top:9px;background:none;border:0;color:#4a4160;font-size:14px;padding:0}
+.starbtn.on{color:var(--gold)}
+.quote{border-left:2px solid var(--line2);padding:4px 0 4px 10px;color:var(--dim);font-size:11.5px;letter-spacing:.01em;line-height:1.8}
+
+/* 테이블 */
+table.t{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.t th,table.t td{padding:6px 8px;border-bottom:1px solid #221d38;text-align:left}
+table.t th{color:var(--dim2);font-weight:600;font-size:11px;letter-spacing:.08em}
+
+/* 채팅 */
+#chatcol{position:sticky;top:96px}
+.chat-tabs{display:flex;gap:2px;padding:7px 8px 0;flex-wrap:wrap}
+.ctab{font-size:12px;padding:4px 9px;border-radius:6px 6px 0 0;color:var(--dim);cursor:pointer}
+.ctab.on{background:#1e1938;color:var(--gold)}
+.chat-log{height:430px;overflow-y:auto;padding:8px 10px;font-size:12px;line-height:1.55;border-top:1px solid var(--line)}
+.cmsg{display:flex;gap:6px;padding:3px 0;align-items:flex-start}
+.ctime{color:#5a5370;font-size:10.5px;flex:none;width:34px;padding-top:1px}
+.cname{font-weight:600;flex:none}
+.cbody em{color:#b9aed0;font-style:italic}
+.ctitle{font-size:9.5px;border:1px solid #3a3358;border-radius:4px;padding:0 4px;color:#8e86a6;flex:none}
+.chat-in{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+.chat-in input{flex:1;background:#120f22;border:1px solid var(--line);border-radius:6px;
+  color:var(--tx);padding:7px 9px;font-size:12px;outline:none}
+.chat-in input:focus{border-color:var(--line2)}
+
+/* 모달 */
+.mask{position:fixed;inset:0;background:#05040ad9;z-index:200;display:flex;align-items:center;
+  justify-content:center;padding:18px;backdrop-filter:blur(3px)}
+.modal{background:linear-gradient(180deg,#171329,#110e20);border:1px solid var(--line2);
+  border-radius:12px;width:min(640px,100%);max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px #000a}
+.modal.wide{width:min(900px,100%)}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.mhead h3{margin:0;font-size:17px;font-weight:600}
+.mbody{padding:16px 18px}
+.tabs{display:flex;gap:4px;padding:0 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{padding:7px 12px;font-size:12.5px;color:var(--dim);cursor:pointer;border-radius:7px 7px 0 0}
+.tab.on{background:#241d42;color:var(--gold)}
+label.f{display:block;font-size:11.5px;color:var(--dim);margin:10px 0 4px;letter-spacing:.06em}
+.inp{width:100%;background:#120f22;border:1px solid var(--line);border-radius:7px;color:var(--tx);
+  padding:8px 10px;font-size:13px;outline:none}
+.inp:focus{border-color:var(--line2)}
+textarea.inp{min-height:76px;resize:vertical}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{background:#15122a;border:0;color:var(--dim);padding:5px 11px;font-size:11.5px}
+.seg button.on{background:#2d2550;color:var(--gold)}
+
+/* 학생증 */
+.idcard{border-radius:12px;padding:16px;border:1px solid var(--gold2);position:relative;overflow:hidden;
+  background:radial-gradient(500px 220px at 20% 0%,#2e2450,#171028)}
+.idcard .av{width:70px;height:70px;border-radius:50%;border:2px solid #d8b35a;display:grid;place-items:center;
+  font-size:27px;background:#0f0c1c;flex:none}
+
+/* 토스트 */
+#toasts{position:fixed;right:16px;bottom:16px;z-index:400;display:flex;flex-direction:column;gap:8px;max-width:330px}
+.toast{background:#1c1734;border:1px solid var(--line2);border-left:3px solid var(--gold);
+  border-radius:8px;padding:9px 13px;font-size:12.5px;box-shadow:0 10px 30px #000a;animation:tin .25s}
+.toast.bad{border-left-color:var(--red)} .toast.good{border-left-color:var(--ok)}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}}
+
+/* 로그 */
+.log{background:#0d0b18;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  font-size:12.5px;max-height:300px;overflow-y:auto;line-height:1.75;font-variant-numeric:tabular-nums}
+.log .d{color:var(--gold)} .log .h{color:var(--red)} .log .s{color:var(--jade)}
+.log .turn{color:var(--dim2);border-top:1px dashed #2a2444;margin-top:6px;padding-top:5px;font-size:11px;letter-spacing:.1em}
+
+/* 지도 */
+.mapwrap{position:relative;background:linear-gradient(160deg,#141026,#0f0c1d);
+  border:1px solid var(--line);border-radius:10px;height:380px}
+.node{position:absolute;transform:translate(-50%,-50%);text-align:center;cursor:pointer;width:84px}
+.node .nd{width:26px;height:26px;margin:0 auto 3px;border-radius:7px;border:1px solid var(--line2);
+  background:#1b1733;display:grid;place-items:center;font-size:13px;transition:.15s}
+.node:hover .nd{border-color:var(--gold);background:#2b2350}
+.node.here .nd{border-color:var(--gold);background:#3a2f5e;box-shadow:var(--glow)}
+.node.lock{opacity:.35;cursor:not-allowed}
+.node span{font-size:10.5px;color:var(--dim);display:block;line-height:1.3}
+.node.here span{color:var(--gold)}
+
+/* 미니게임 */
+.booth{background:#15122a;border:1px solid var(--line);border-radius:9px;padding:13px 14px}
+.booth h4{margin:0 0 4px;font-size:14.5px}
+.target{position:relative;height:150px;background:radial-gradient(circle,#2a2140,#14101f);
+  border:1px solid var(--line);border-radius:9px;overflow:hidden;cursor:crosshair}
+.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #4a3f6e}
+.shot{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--red);
+  transform:translate(-50%,-50%);box-shadow:0 0 8px var(--red)}
+.fish{font-size:22px;position:absolute;animation:sw 4s ease-in-out infinite}
+@keyframes sw{0%,100%{transform:translateX(0)}50%{transform:translateX(26px)}}
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<div id="app">
+  <div id="navcol"></div>
+  <div id="main"></div>
+  <div id="chatcol"></div>
+</div>
+<div id="toasts"></div>
+<div id="modalroot"></div>
+
+<script>
+"use strict";
+/* ═══════════════════════════════════════════════════
+   無明長夜 · 사무전   —  데이터
+   ═══════════════════════════════════════════════════ */
+
+const NPC = {
+  염라:{n:"염라",h:"閻羅",role:"이사장",c:"#caa548",line:["홍홍홍 ♬","업은 재단하는 것이 아니라 관조하는 것이다.","차 한 잔 하고 가겠느냐."]},
+  강시:{n:"강시",h:"僵屍",role:"경비",c:"#6f8fd0",line:["그거뭐야?","통금은 오전 2시다. 늦지 마라.","분실물은 경비실에 있다."]},
+  여와:{n:"여와",h:"女媧",role:"매점 관리인",c:"#4fb3a3",line:["앗, 죄송해요! 방금 건 못 본 걸로…","이번 탕약은 배합을 조금 바꿔 봤어요.","파장 반응이 예상보다 격렬해서…"]},
+  양귀비:{n:"양귀비",h:"楊貴妃",role:"담임 교사",c:"#d2563f",line:["오늘은 무얼 할 거니.","파장이 조금 흔들리는구나.","거짓말은 금세 티가 난단다."]},
+  항아:{n:"항아",h:"姮娥",role:"전투 교관",c:"#9d7fd0",line:["허접~♡","의뢰서 몇 줄로 판단하지 마라.","한 바퀴 더. 아직 숨 붙어 있잖아?"]},
+  삼장:{n:"삼장",h:"三藏",role:"보건 교사",c:"#5fae7a",line:["상처부터 보자꾸나.","급할수록 호흡을 고르거라.","만두를 빚는 것도 훌륭한 수행이다."]},
+};
+
+/* 5스탯 */
+const STATS = [
+  {k:"atk", n:"공격",     d:"물리적 피해와 공격 능력"},
+  {k:"def", n:"방어",     d:"공격을 막아 내고 견디는 능력"},
+  {k:"agi", n:"민첩",     d:"행동 속도와 반사 신경"},
+  {k:"men", n:"정신력",   d:"공포와 광기를 견디는 능력"},
+  {k:"res", n:"공명 적성", d:"파장을 조율해 공명을 이루는 능력"},
+];
+const STATCAP = {atk:[10,14,19,24,30,36,44], def:[10,14,19,24,30,36,44], agi:[10,14,19,24,30,36,44],
+                 men:[6,9,12,15,19,23,28],   res:[10,14,19,24,30,36,44]};
+
+/* 20과목 — 세계관 수업 목록 */
+const SUBJECTS = [
+ {id:"s1", n:"무기 전투 실습", st:"atk", pf:"항아",   d:"장인과 무기가 기본 공격 자세와 무기 운용법을 익히는 실전 수업.", q:"손이 기억할 때까지. 머리는 그 다음이다."},
+ {id:"s2", n:"공명 타격술",   st:"atk", pf:"항아",   d:"파장을 공격 순간에 응축해 상대에게 전달하는 기술을 훈련한다.", q:"세게 치지 말고, 제때 쳐라."},
+ {id:"s3", n:"업귀 해체학",   st:"atk", pf:"양귀비", d:"업귀의 구조와 약점을 식별해 핵심만 절단하는 법을 배운다.", q:"어디를 베느냐보다, 무엇을 끊느냐."},
+ {id:"s4", n:"악인 제압 실전", st:"atk", pf:"항아",  d:"저항하는 악인을 신속히 무력화하고 주변 피해를 줄이는 모의 전투.", q:"골목은 좁다. 한 번에 끝내."},
+ {id:"s5", n:"영혼 방벽술",   st:"def", pf:"삼장",   d:"파장을 일정한 형태로 유지해 공격과 간섭을 막아 낸다.", q:"막는 것도 하나의 호흡이다."},
+ {id:"s6", n:"호법진 실습",   st:"def", pf:"삼장",   d:"부적과 법구로 방어 진을 구축해 자신과 민간인을 보호한다.", q:"진은 급히 그리면 반드시 샌다."},
+ {id:"s7", n:"피해 분산 훈련", st:"def", pf:"항아",  d:"충격을 정면으로 받지 않고 흘리거나 분산하는 협동 방어.", q:"버티지 마라. 흘려라."},
+ {id:"s8", n:"현장 생존학·방호", st:"def", pf:"강시", d:"붕괴 건물과 지하 통로 등 명계의 위험 환경에서 살아남는 법.", q:"위를 봐라. 늘 위에서 떨어진다."},
+ {id:"s9", n:"경신보법",      st:"agi", pf:"항아",   d:"담장과 지붕, 전선을 이용해 명계의 지형을 빠르게 이동한다.", q:"바닥만 길이라고 누가 그러더냐."},
+ {id:"s10",n:"추적 및 잠행술", st:"agi", pf:"강시",  d:"흔적과 파장의 잔향을 좇고, 기척을 감추어 접근한다.", q:"소리를 죽이기 전에 숨부터 죽여라."},
+ {id:"s11",n:"순간 공명 전환", st:"agi", pf:"양귀비",d:"무기화와 해제, 자세 전환을 지체 없이 수행한다.", q:"반 박자. 그것이 생사를 가른다."},
+ {id:"s12",n:"현장 생존학·기동", st:"agi",pf:"강시", d:"구조가 달라지는 골목과 고층 건축물에서의 제한 시간 이동 훈련.", q:"어제의 지도는 오늘 쓸모없다."},
+ {id:"s13",n:"무명 관조",     st:"men", pf:"염라",   d:"공포와 집착, 분노를 억누르지 않고 바라보는 수행.", q:"외면한 것은 반드시 뒤에서 자란다."},
+ {id:"s14",n:"죄업 기록학",   st:"men", pf:"양귀비", d:"과거 악인과 저승차사의 기록을 읽고 선택의 결과를 분석한다.", q:"죄를 읽되, 심판하지 말 것."},
+ {id:"s15",n:"악몽 내성 훈련", st:"men", pf:"삼장",  d:"환각과 정신 공격 속에서 판단을 유지하는 법을 익힌다.", q:"무섭다고 눈을 감으면 거기서 끝이다."},
+ {id:"s16",n:"공명 윤리학",   st:"men", pf:"염라",   d:"타인의 내면을 침범하지 않으며 공명하는 원칙을 배운다.", q:"건지려 하지 말라. 다만 함께 보라."},
+ {id:"s17",n:"파장 감응학",   st:"res", pf:"양귀비", d:"자신과 타인의 파장을 감지하고 성질의 차이를 구분한다.", q:"눈을 감아야 보이는 것이 있다."},
+ {id:"s18",n:"파장 조율 실습", st:"res", pf:"양귀비",d:"상대를 바꾸지 않고 자신을 맞추어 손실을 줄인다.", q:"맞추는 쪽은 언제나 나다."},
+ {id:"s19",n:"연속 공명 훈련", st:"res", pf:"항아",  d:"파장의 왕복이 끊어지지 않도록 호흡과 집중을 맞춘다.", q:"끊기지만 마라. 그거면 된다."},
+ {id:"s20",n:"불협화음 교정", st:"res", pf:"삼장",   d:"흐트러진 공명을 폭주 전에 해제하거나 다시 조율한다.", q:"어긋남을 부끄러워하지 마라."},
+];
+
+/* 7과정 */
+const COURSES = [
+ {lv:1, n:"파장의 기초",        subs:["s17","s5","s13"],  need:4,  line:64},
+ {lv:2, n:"체술과 실전",        subs:["s1","s9","s7"],    need:6,  line:64},
+ {lv:3, n:"영혼과 공명",        subs:["s18","s19","s11"], need:9,  line:64},
+ {lv:4, n:"구호의 판단",        subs:["s14","s6","s15"],  need:12, line:64},
+ {lv:5, n:"업귀 해체",          subs:["s3","s2","s8"],    need:16, line:64},
+ {lv:6, n:"마녀의 결계",        subs:["s16","s20","s10"], need:20, line:64},
+ {lv:7, n:"무명의 장야 앞에서",  subs:["s4","s12","s13"],  need:25, line:70},
+];
+
+/* 수행(연구) */
+const RESEARCH = [
+ {id:"r1", n:"파장 증폭",     max:60, d:"파장 재생 +6%",           e:"단계마다 파장 재생 +6%",   mana:1.25, know:.9,  t:34},
+ {id:"r2", n:"영력 저장고",   max:8,  d:"파장 한도 +3시간분",       e:"단계마다 파장 저장 한도 +3시간분", mana:1.1, know:.6, t:28},
+ {id:"r3", n:"속독 수행",     max:50, d:"수업 효율 +2%",           e:"단계마다 수업 효율 +2%",   mana:1.2, know:1.3, t:40},
+ {id:"r4", n:"전투 교본",     max:80, d:"공격력 +4%",              e:"단계마다 공격력 +4%",      mana:1.0, know:.8,  t:26},
+ {id:"r5", n:"호법 문양학",   max:80, d:"생명력 +4%, 방어력 +2%",   e:"단계마다 생명력 +4%, 방어 +2%", mana:1.0, know:.7, t:26},
+ {id:"r6", n:"명계 상술",     max:50, d:"륜 획득 +4%",             e:"단계마다 륜 획득 +4%",     mana:1.15, know:1.0, t:44},
+ {id:"r7", n:"집중 명상",     max:50, d:"지식 획득 +4%",           e:"단계마다 지식 획득 +4%",   mana:1.15, know:1.0, t:38},
+ {id:"r8", n:"실전 경험록",   max:50, d:"경험치 +4%",              e:"단계마다 경험치 +4%",      mana:1.2, know:1.1, t:42},
+ {id:"r9", n:"업연의 실",     max:30, d:"전리품 확률 +2.5%",        e:"단계마다 전리품 확률 +2.5%", mana:1.5, know:1.6, t:60},
+ {id:"r10",n:"공명 효율",     max:20, d:"공명 배율 +0.1",           e:"단계마다 공명 배율 +0.1",  mana:1.8, know:2.0, t:70},
+ {id:"r11",n:"바랑 확장",     max:10, d:"소지품 칸 +5",             e:"단계마다 소지품 칸 +5",    mana:1.0, know:.8,  t:30},
+ {id:"r12",n:"부적 각인술",   max:10, d:"강화 성공률 +3%",          e:"단계마다 강화 성공률 +3%", mana:1.6, know:1.8, t:66, req:4},
+ {id:"r13",n:"심연 연구",     max:999,d:"공격력·생명력 +2%",        e:"단계마다 공격력·생명력 +2%", mana:2.4, know:2.6, t:90, req:5},
+];
+
+/* 죄업 기록 서고 (고서 열람실) */
+const BOOKS = [
+ {id:"b1", n:"참회도",            e:"공격 +8%",              k:"atkP", v:.08, cat:"전투"},
+ {id:"b2", n:"수호 문양 도감",     e:"생명력 +10%, 방어 +5%", k:"defP", v:.05, cat:"전투"},
+ {id:"b3", n:"영혼 공학 개론",     e:"공명 위력 +10%",        k:"resP", v:.10, cat:"전투"},
+ {id:"b4", n:"도법 비전서",        e:"기술 위력 +10%",        k:"skillP",v:.10,cat:"전투"},
+ {id:"b5", n:"급소 해부학",        e:"치명타 확률 +5%",       k:"crit", v:.05, cat:"전투"},
+ {id:"b6", n:"업귀 사냥 기록",     e:"보스 피해 +10%",        k:"boss", v:.10, cat:"전투"},
+ {id:"b7", n:"수행 요령서",        e:"수업 효율 +8%",         k:"study",v:.08, cat:"성장"},
+ {id:"b8", n:"실전 수기",          e:"경험치 +10%",           k:"exp",  v:.10, cat:"성장"},
+ {id:"b9", n:"파장 순환론",        e:"파장 재생 +15%",        k:"mana", v:.15, cat:"생활"},
+ {id:"b10",n:"명계 상인 장부",     e:"륜 획득 +15%",          k:"gold", v:.15, cat:"생활"},
+ {id:"b11",n:"의뢰 기록집",        e:"전리품 확률 +8%",       k:"loot", v:.08, cat:"생활"},
+ {id:"b12",n:"부적 장인의 비망록", e:"양조 효율 +15%",        k:"brew", v:.15, cat:"생활"},
+ {id:"b13",n:"사역귀 사육 일지",   e:"부화 효율 +15%",        k:"pet",  v:.15, cat:"생활"},
+];
+
+/* 7구역 */
+const WARDS = [
+ {id:1, n:"제1구역", t:"향 냄새 나는 죄", c:"#caa548", req:1,
+  d:"사무전과 가장 가까운 생활권. 넓은 대로와 고급 주거지, 데슐랭 식당가와 사치품 상점이 몰려 있다.",
+  ev:["데슐랭에 오른 식당 앞 대기열","파장에 따라 색이 변하는 장신구 가게","전자 천도 서비스를 광고하는 장례식장","값비싼 보석상 뒷문으로 드나드는 사람"]},
+ {id:2, n:"제2구역", t:"벽이 많은 동네", c:"#9d7fd0", req:1,
+  d:"그래피티와 홀로그램 벽. 화가와 음악가, 불법 방송 제작자들의 작업실이 밤새 불을 밝힌다.",
+  ev:["감응 안료로 그린 벽화","옥상에서 피어오르는 거대한 연꽃 홀로그램","새벽까지 이어지는 골목 공연","안료 캡슐을 들고 뛰어가는 사내"]},
+ {id:3, n:"제3구역", t:"몸을 바꾸는 거리", c:"#4fb3a3", req:2,
+  d:"의체 제작자와 해커, 데이터 브로커의 구역. 석불 무릎 위에 공유기가 놓여 있다.",
+  ev:["전자 목탁 소리가 울리는 방화벽 시연","무허가 의체 수리소의 호객","의안을 통해 시야를 훔치는 해커","천수관음 시스템 광고판"]},
+ {id:4, n:"제4구역", t:"가짜 낮", c:"#d8a44a", req:2,
+  d:"일륜日輪이 떠 있는 발전 구역. 명계에서 유일하게 빛이 있는 곳.",
+  ev:["일륜광 집광판을 닦는 노동자","법륜을 본뜬 거대 터빈","지도에 없는 폐쇄 터널 입구","정전 경보가 울리는 변전 시설"]},
+ {id:5, n:"제5구역", t:"게시판의 거리", c:"#d2563f", req:3,
+  d:"용병들의 거리. 술집 벽에 현상수배서와 전적이 쉴 새 없이 바뀐다.",
+  ev:["향을 꽂고 나가는 용병","현상금 중개소의 흥정","벽에 걸린 누군가의 무기","전적을 자랑하는 취객"]},
+ {id:6, n:"제6구역", t:"바닥의 아래", c:"#8e8ba0", req:4,
+  d:"빈민촌이자 범죄 구역. 무료 급식소와 조직의 표식이 같은 골목에 있다.",
+  ev:["무허가 진료소 앞의 줄","골목 입구에 새겨진 조직 표식","아이들에게 밥을 사 주는 조직원","십 년째 마지막 글자만 깜빡이는 간판"]},
+ {id:7, n:"제7구역", t:"검은 바다", c:"#6f8fd0", req:5,
+  d:"도시가 끝나고 바다가 시작되는 곳. 명계에 아침은 없지만 여기엔 새벽 시장이 있다.",
+  ev:["전자 범종이 울리는 새벽 부두","파장에 반응하는 갑각류 좌판","바다에 띄우는 전자 연등","출항을 포기하고 돌아서는 늙은 어부"]},
+];
+
+/* 의뢰 등급 */
+const RANKS = [
+ {r:"Ⅰ", n:"경미",  c:"#5fae7a", hp:[0,3],   sn:[0,2],  mul:1.0},
+ {r:"Ⅱ", n:"주의",  c:"#4fb3a3", hp:[2,8],   sn:[1,5],  mul:1.35},
+ {r:"Ⅲ", n:"위험",  c:"#d8a44a", hp:[6,18],  sn:[4,12], mul:1.85},
+ {r:"Ⅳ", n:"고위험",c:"#d2563f", hp:[14,32], sn:[9,22], mul:2.6},
+ {r:"Ⅴ", n:"재해",  c:"#9d7fd0", hp:[24,48], sn:[18,38],mul:3.8},
+];
+
+/* 의뢰 제목 재료 */
+const QT_A=["골목의","폐공장의","수로 아래","옥상 위","새벽 시장의","고가도로 밑","봉인된 창고의","무너진 법당의","폐쇄된 터널의","홍등가 끝"];
+const QT_B=["실종자 수색","파장 이상 조사","영혼 밀매소 폐쇄","업귀 토벌","폭주 무기 확보","약물 유통망 추적","결계 봉쇄","주민 구조","증거 회수","악인 체포"];
+
+/* 매점 품목 */
+const SHOP = [
+ {id:"p1", n:"응급 부적",     c:120, d:"체력 30 회복",        type:"heal", v:30},
+ {id:"p2", n:"안신향",       c:140, d:"이성 30 회복",        type:"san",  v:30},
+ {id:"p3", n:"월병",         c:90,  d:"식사 · 경험치 +5% (6시간)", type:"buff", key:"exp", v:.05, dur:360, tag:"식사"},
+ {id:"p4", n:"집중의 탕약",   c:300, d:"수업 효율 +24% (4시간)",   type:"buff", key:"study", v:.24, dur:240, tag:"물약"},
+ {id:"p5", n:"투지의 탕약",   c:320, d:"공격 +20% (4시간)",        type:"buff", key:"atkP", v:.20, dur:240, tag:"물약"},
+ {id:"p6", n:"수호의 탕약",   c:320, d:"방어 +20% (4시간)",        type:"buff", key:"defP", v:.20, dur:240, tag:"물약"},
+ {id:"p7", n:"보이차",       c:200, d:"파장 재생 +20% (4시간)",   type:"buff", key:"mana", v:.20, dur:240, tag:"물약"},
+ {id:"p8", n:"숙면의 차",     c:260, d:"체력·이성 회복 +100% (8시간)", type:"buff", key:"rest", v:1.0, dur:480, tag:"물약"},
+ {id:"p9", n:"호신 부적",     c:450, d:"다음 의뢰 피해 50% 감소",  type:"ward"},
+];
+
+/* 칭호 */
+const TITLES = ["첫 번째 밤","무명의 관조자","골목의 저승차사","법륜을 세는 자","잠들지 않는 등","여섯 구역을 걸은 자","파장을 맞추는 손","업을 읽는 눈","귀향제의 손님","종소리를 들은 자"];
+
+/* 숙사 */
+const HALLS = [
+ {id:"h1", n:"무명당", h:"無明堂", c:"#9d7fd0", b:"공격력 +12% · 생명력 +5%",            d:"창이 없는 동. 등불 하나로 밤을 난다."},
+ {id:"h2", n:"법륜당", h:"法輪堂", c:"#caa548", b:"지식 획득 +15% · 수업 효율 +5%",       d:"수행실이 붙어 있어 밤에도 독경 소리가 샌다."},
+ {id:"h3", n:"연화당", h:"蓮華堂", c:"#d2563f", b:"사역귀 파견 보상 +25% · 파장 재생 +10%", d:"안뜰에 연못이 있다. 사역귀를 풀어 두기 좋다."},
+ {id:"h4", n:"수월당", h:"水月堂", c:"#4fb3a3", b:"륜 획득 +15% · 전리품 +10% · 수수료 낮음", d:"수면에 비친 달만 보이는 동. 가장 조용해 셈하기 좋다."},
+];
+
+/* 관계 종류 */
+const RELKIND = ["페어","단짝","친구","라이벌","앙숙","선배·후배","후배·선배","스승·제자","제자·스승","룸메이트","파트너","가족"];
+
+/* 명계력 */
+const MONTHS=["무명달","향월달","연화달","수월달","업화달","법륜달","홍등달","귀향달","재월달","명월달","심연달","종월달"];
+const WEATHERS=[
+ {n:"비",       i:"🌧", d:"지식 획득 +10%",    k:"know", v:.10},
+ {n:"짙은 안개", i:"🌫", d:"의뢰 전리품 -10%",  k:"loot", v:-.10},
+ {n:"홍월",     i:"🔴", d:"공명 위력 +12%",    k:"resP", v:.12},
+ {n:"잿비",     i:"🌑", d:"이성 회복 -20%",    k:"rest", v:-.20},
+ {n:"네온 역류", i:"⚡", d:"파장 재생 +15%",   k:"mana", v:.15},
+ {n:"무풍",     i:"🌙", d:"수업 효율 +6%",     k:"study",v:.06},
+];
+
+/* 소식 */
+const NEWSPOOL=[
+ "[석탑] 제{w}구역에서 비정상 파장이 감지되어 등급 {r} 의뢰가 생성되었습니다.",
+ "[경비] 강시가 분실물 보관함을 정리했습니다. 주인을 찾습니다.",
+ "[매점] 여와의 신제품 시연 중 소규모 폭발이 있었습니다. 부상자는 없습니다.",
+ "[보건] 삼장이 야간 수행자들에게 취침을 권고했습니다.",
+ "[훈련장] 항아가 대련 신청을 받고 있습니다. \"허접~♡\"",
+ "[이사장실] 염라의 분화 하나가 꽃을 피웠습니다.",
+ "[치안] 제{w}구역 순찰이 강화되었습니다.",
+ "[게시] 제5구역 현상금 게시판에 새 이름이 올랐습니다.",
+ "[학생] {s} 학생이 {c}과정 승급 시험을 {g}등급으로 통과했습니다.",
+ "[의뢰] 등급 {r} 의뢰가 접수되었습니다. 참여 인원을 모집합니다.",
+];
+const FAKENAMES=["서하","윤경","이비","케렌","도윤","설아","하진","묘운","백로","연오","청하","시월","해랑","무영","소윤","라온","단우","제이","현서","유란"];
+
+/* 염라제 기념품 */
+const SOUVENIRS=[{id:"sv1",n:"염라 인형",e:"🧸"},{id:"sv2",n:"금붕어 자수 복주머니",e:"🪭"},{id:"sv3",n:"작은 유리 풍경",e:"🎐"}];
+const BOOTHS=[
+ {id:"shoot", n:"염라 님을 맞혀라", kw:"사격",   e:"🎯", d:"염라의 얼굴을 본뜬 과녁을 장난감 총으로 쏜다. 세 턴에 걸쳐 세 발씩."},
+ {id:"fish",  n:"달빛 금붕어 건지기", kw:"금붕어", e:"🐠", d:"뜰채가 찢어지기 전에 멈출지, 한 번 더 건질지 판단한다."},
+ {id:"food",  n:"사무전 야시장",     kw:"먹거리", e:"🏮", d:"음식과 함께 짧은 상황을 받는다."},
+ {id:"photo", n:"오늘의 기념사진",   kw:"사진관", e:"📷", d:"소품과 촬영 상황을 뽑는다."},
+ {id:"walk",  n:"축제 한 바퀴",     kw:"축제돌발",e:"🎊", d:"우연한 상황을 마주친다."},
+];
+const FOODS=["달빛 탕후루","연등 모양 호떡","검은깨 경단","홍등 꼬치구이","연꽃 만두","잿물 식혜(이름만 그렇다)","월병","금붕어 모양 빵"];
+const FOODSIT=["한 입 베어 물자 생각보다 뜨거워 눈가가 붉어진다.","가게 주인이 덤을 하나 더 얹어 준다.","손에 들고 걷다 보니 어느새 절반이 사라졌다.","옆 사람이 한 입 달라는 눈빛을 보낸다.","너무 달아서 혀끝이 잠시 멍해진다.","생각보다 맛있어서 하나 더 살지 고민한다."];
+const PHOTOPROP=["종이 연꽃 머리띠","염라 가면","금붕어 뜰채","작은 등롱","토끼 귀 머리띠","목검 소품"];
+const PHOTOSIT=["눈을 감아 버려 한 장 더 찍기로 한다.","셔터가 내려가는 순간 등 뒤로 폭죽이 터진다.","사진사가 \"조금만 더 가까이\"라고 말한다.","표정이 너무 굳어 다시 찍는다.","찍고 보니 뒤에 강시가 찍혀 있다.","완벽하게 잘 나왔다. 아주 드문 일이다."];
+const WALKSIT=["길 잃은 아이가 소매를 붙잡는다.","하늘로 연등이 한꺼번에 떠오른다.","낯선 학생이 잔을 건넨다.","어디선가 음 이탈한 노랫소리가 들린다. 강시다.","발밑에서 금붕어 모양 풍선이 굴러온다.","염라가 지나가며 과자를 쥐어 준다.","제비뽑기에서 꽝이 나온다. 세 번 연속으로.","누군가 떨어뜨린 도장 카드를 줍는다."];
+
+/* ═══════════════════════════════════════════════════
+   상태 · 저장 · 엔진
+   ═══════════════════════════════════════════════════ */
+const SAVEKEY="mmjy_game_v1";
+let S=null;            // 상태
+let VIEW="plaza";      // 현재 화면
+let NAVOPEN={};
+
+function newState(){
+  const sub={}; SUBJECTS.forEach(s=>sub[s.id]={lv:0,p:0,fav:false});
+  const res={}; RESEARCH.forEach(r=>res[r.id]=0);
+  return {
+    made:false, v:1,
+    name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"",
+    hall:"h1", title:"첫 번째 별", intro:"", bio:"", color:"#caa548", av:"🏮", avImg:null, avSrc:"",
+    base:{atk:3,def:3,agi:3,men:2,res:2},
+    bonus:{atk:0,def:0,agi:0,men:0,res:0},
+    course:1, exp:0, lvl:1,
+    hp:100, sn:100,
+    mana:1200, know:240, rin:1800, sari:3, lotus:0,
+    t:0,              // 명계 분
+    lastReal:Date.now(),
+    speed:1,
+    weather:0, wNext:360,
+    sub, res,
+    lesson:null,      // {plan:[id..], idx, left}
+    plans:[ {n:"시간표 1", list:["s17","s17","s5","s5"]}, {n:"기초 수행", list:["s13","s13","s17","s5"]}, null,null,null,null ],
+    study:null,       // {id, left, total}
+    book:null,        // {id, left}
+    inv:{},           // 상점 품목 보유
+    buffs:[],         // {key,v,left,n}
+    ward:false,
+    quests:{cleared:0, log:[], room:null},
+    pass:0, passNext:720, outing:{done:{}, souv:[]},
+    fest:{marks:0, todayMarks:0, basket:0, visits:0, stamps:[], souv:null, total:265000},
+    rel:[], friends:[],
+    msgs:[], chatTab:"전체", chatMode:"RP",
+    news:[], notes:[],
+    place:"plaza", examHist:{},
+    dayStamp:0, playFrom:Date.now(),
+  };
+}
+function save(){ try{ S.lastReal=Date.now(); localStorage.setItem(SAVEKEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ const r=localStorage.getItem(SAVEKEY); if(!r) return null;
+       const o=JSON.parse(r); const base=newState();
+       return Object.assign(base,o, {sub:Object.assign(base.sub,o.sub||{}), res:Object.assign(base.res,o.res||{})});
+  }catch(e){ return null; }
+}
+function resetAll(){ if(confirm("모든 기록을 지우고 처음부터 시작할까요?")){ localStorage.removeItem(SAVEKEY); location.reload(); } }
+
+/* ── 유틸 ───────────────────────── */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const nf=n=>{ n=Math.floor(n);
+  if(n>=100000000) return (n/100000000).toFixed(2).replace(/\.?0+$/,"")+"억";
+  if(n>=10000) return (n/10000).toFixed(n>=100000?0:2).replace(/\.?0+$/,"")+"만";
+  return n.toLocaleString("ko-KR"); };
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function d5(n){ let t=0; for(let i=0;i<n;i++) t+=rnd(1,5); return t; }
+
+function toast(msg,kind=""){
+  const d=document.createElement("div"); d.className="toast "+kind; d.innerHTML=msg;
+  $("#toasts").appendChild(d);
+  setTimeout(()=>{ d.style.transition=".3s"; d.style.opacity=0; d.style.transform="translateX(16px)"; setTimeout(()=>d.remove(),320); },3400);
+}
+
+/* ── 시간 ───────────────────────── */
+function cal(){
+  const total=Math.floor(S.t);
+  const day=Math.floor(total/1440);
+  const min=total%1440;
+  const y=1024+Math.floor(day/360);
+  const m=Math.floor((day%360)/30);
+  const dd=(day%30)+1;
+  const h=Math.floor(min/60), mm=min%60;
+  const ap=h<12?"오전":"오후"; const h12=h%12===0?12:h%12;
+  return {y,m:MONTHS[m],dd,h,mm,str:`${ap} ${h12}:${String(mm).padStart(2,"0")}`,
+          date:`명계력 ${y}년 ${MONTHS[m]} ${dd}일`, day, min};
+}
+function hhmm(mins){ mins=Math.max(0,Math.ceil(mins));
+  const h=Math.floor(mins/60), m=mins%60;
+  return h>0 ? `${h}시간 ${m}분` : `${m}분`; }
+
+/* ── 능력치 / 보정 ───────────────── */
+function stat(k){ return S.base[k]+S.bonus[k]; }
+function statCap(k){ return STATCAP[k][clamp(S.course-1,0,6)]; }
+function hallBonus(k){
+  const h=S.hall;
+  if(h==="h1"&&k==="men") return 1;
+  if(h==="h4"&&k==="res") return 1;
+  return 0;
+}
+function effStat(k){
+  let v=stat(k)+hallBonus(k);
+  const hpR=S.hp/100, snR=S.sn/100;
+  if(k==="atk"||k==="def"){ if(hpR<=.2) v*=.5; else if(hpR<=.5) v*=.8; }
+  if(k==="agi"){ if(snR<=.2) v*=.5; else if(snR<=.5) v*=.8; }
+  if(k==="atk") v*=1+mod("atkP");
+  if(k==="def") v*=1+mod("defP");
+  return Math.max(1,Math.round(v));
+}
+/* 누적 보정치: 연구 + 버프 + 서고 + 날씨 + 숙사 */
+function mod(key){
+  let v=0;
+  const R=S.res;
+  if(key==="mana")  v+=R.r1*.06;
+  if(key==="study") v+=R.r3*.02;
+  if(key==="atkP")  v+=R.r4*.04;
+  if(key==="defP")  v+=R.r5*.02;
+  if(key==="hpP")   v+=R.r5*.04;
+  if(key==="gold")  v+=R.r6*.04;
+  if(key==="know")  v+=R.r7*.04;
+  if(key==="exp")   v+=R.r8*.04;
+  if(key==="loot")  v+=R.r9*.025;
+  if(key==="crit")  v+=R.r12*.03;
+  if(key==="atkP")  v+=R.r13*.02;
+  if(key==="hpP")   v+=R.r13*.02;
+  if(key==="know"&&S.hall==="h2") v+=.08;
+  if(key==="rest"&&S.hall==="h3") v+=.25;
+  S.buffs.forEach(b=>{ if(b.key===key) v+=b.v; });
+  if(S.book){ const b=BOOKS.find(x=>x.id===S.book.id); if(b&&b.k===key) v+=b.v; }
+  const w=WEATHERS[S.weather]; if(w.k===key) v+=w.v;
+  return v;
+}
+function manaRate(){ return (18 + S.course*8 + S.lvl*0.6)*(1+mod("mana")); }
+function maxMana(){ return Math.round(manaRate()*60*(8 + S.res.r2*4)); }
+function power(){
+  let p=0;
+  p+=effStat("atk")*120+effStat("def")*100+effStat("agi")*90+effStat("men")*80+effStat("res")*110;
+  let sl=0; SUBJECTS.forEach(s=>sl+=S.sub[s.id].lv); p+=sl*34;
+  let rl=0; RESEARCH.forEach(r=>rl+=S.res[r.id]); p+=rl*58;
+  p+=S.course*900 + S.lvl*40;
+  return Math.round(p*(1+mod("atkP")*.5));
+}
+function expNeed(){ return Math.round(260*Math.pow(1.11,S.lvl-1)); }
+function gainExp(n){
+  n=Math.round(n*(1+mod("exp")));
+  S.exp+=n;
+  let up=0;
+  while(S.exp>=expNeed()){ S.exp-=expNeed(); S.lvl++; up++; }
+  if(up) toast(`수행 단계 상승 · <b>Lv ${S.lvl}</b>`,"good");
+  return n;
+}
+function gainRin(n){ n=Math.round(n*(1+mod("gold"))); S.rin+=n; return n; }
+function gainKnow(n){ n=Math.round(n*(1+mod("know"))); S.know+=n; return n; }
+
+function damageHP(n){ S.hp=Math.max(1,S.hp-n);
+  if(S.hp<=1){ toast("체력이 바닥났습니다. 전투 불능 상태로 퇴장합니다.","bad"); } }
+function damageSN(n){ S.sn=Math.max(1,S.sn-n);
+  if(S.sn<=1){ toast("이성이 바닥났습니다. 정상적인 판단이 어렵습니다.","bad"); } }
+
+/* ── 메인 틱 ─────────────────────── */
+let TICK=null;
+function startTick(){ if(TICK) clearInterval(TICK); TICK=setInterval(()=>step(3*S.speed),1000); }
+function step(mins){
+  if(!S.made) return;
+  S.t+=mins;
+
+  // 파장 회복
+  S.mana=Math.min(maxMana(), S.mana+manaRate()*mins);
+
+  // 체력/이성 회복
+  const rr=1+mod("rest");
+  S.hp=Math.min(100,S.hp+0.055*mins*rr);
+  S.sn=Math.min(100,S.sn+0.045*mins*rr);
+
+  // 버프 감소
+  let bch=false;
+  S.buffs.forEach(b=>b.left-=mins);
+  if(S.buffs.some(b=>b.left<=0)){ S.buffs=S.buffs.filter(b=>b.left>0); bch=true; }
+  if(S.book){ S.book.left-=mins; if(S.book.left<=0){ toast(`「${BOOKS.find(b=>b.id===S.book.id).n}」 열람 효과가 끝났습니다.`); S.book=null; } }
+
+  // 날씨
+  S.wNext-=mins;
+  if(S.wNext<=0){ S.weather=rnd(0,WEATHERS.length-1); S.wNext=rnd(240,480);
+    pushNews(`[석탑] 명계의 기상이 「${WEATHERS[S.weather].n}」로 바뀌었습니다.`); }
+
+  // 통행패
+  S.passNext-=mins;
+  if(S.passNext<=0){ if(S.pass<3){ S.pass++; toast("통행패 1장이 발급되었습니다."); } S.passNext=720; }
+
+  // 수업
+  if(S.lesson){
+    S.lesson.left-=mins;
+    while(S.lesson && S.lesson.left<=0){
+      finishPeriod();
+    }
+  }
+  // 수행(연구)
+  if(S.study){
+    S.study.left-=mins;
+    if(S.study.left<=0) finishResearch();
+  }
+  // 하루 경계
+  const d=cal().day;
+  if(d!==S.dayStamp){ S.dayStamp=d; onNewDay(); }
+
+  // 자동 소식/채팅
+  if(Math.random()<0.012*mins) pushNews(makeNews());
+  if(Math.random()<0.010*mins) npcChat();
+
+  renderTop(); renderNav();
+  if(["plaza","class","research","exam","quest"].includes(VIEW)) renderMain(true);
+  if(Math.random()<0.02) save();
+}
+function onNewDay(){
+  S.fest.basket=0; S.fest.visits=0; S.fest.todayMarks=0;
+  S.outing.done={};
+  pushNews("[경비] 새 날이 열렸습니다. 문 앞 공양 바구니가 교체되었습니다.");
+  toast("새 날입니다. 공양 바구니와 나들이 이야기가 갱신되었습니다.");
+}
+function pushNews(t){ S.news.unshift({t, time:cal().str}); if(S.news.length>40) S.news.pop(); }
+function makeNews(){
+  let s=pick(NEWSPOOL);
+  return s.replace("{w}",rnd(1,7)).replace("{r}",pick(RANKS).r)
+          .replace("{s}",pick(FAKENAMES)).replace("{c}",rnd(1,6)).replace("{g}",pick(["S","A","B"]));
+}
+
+/* 오프라인 진행 */
+function offline(){
+  const el=Math.min(Date.now()-(S.lastReal||Date.now()), 8*3600*1000);
+  const mins=Math.floor(el/1000*3);
+  if(mins>20){
+    const chunk=120; let left=mins;
+    while(left>0){ const c=Math.min(chunk,left); step(c); left-=c; }
+    toast(`자리를 비운 동안 <b>${hhmm(mins)}</b>이 흘렀습니다.`,"good");
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   상단바 · 내비 · 채팅
+   ═══════════════════════════════════════════════════ */
+function renderTop(){
+  const c=cal(), w=WEATHERS[S.weather];
+  const buffs=S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"#9d7fd0"}"></span>${esc(b.n)} <span style="color:#7d7592">${hhmm(b.left)}</span></span>`).join("");
+  const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:#7d7592">${hhmm(S.book.left)}</span></span>`:"";
+  $("#topbar").innerHTML=`
+  <div class="tb1">
+    <div class="seal">輪</div>
+    ${avatarHTML(34)}
+    <div>
+      <div class="me-name">${esc(S.name)} <span class="muted tiny">·</span></div>
+      <div class="me-sub">${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
+    </div>
+    <div class="res-wrap">
+      <div class="res" title="파장 — 수행에 쓰입니다. 한도까지만 모입니다"><span class="ri">💧</span><b style="color:#6f8fd0">파장</b> ${nf(S.mana)}<span style="color:#6f6885">/${nf(maxMana())}</span></div>
+      <div class="res" title="륜 — 명계의 화폐"><span class="ri">🪙</span><b style="color:#caa548">륜</b> ${nf(S.rin)}</div>
+      <div class="res" title="지식 — 수업으로 모읍니다"><span class="ri">📖</span><b style="color:#4fb3a3">지식</b> ${nf(S.know)}</div>
+      <div class="res" title="사리 — 정화된 영혼의 결정"><span class="ri">🔮</span><b style="color:#9d7fd0">사리</b> ${nf(S.sari)}</div>
+      <div class="res" title="연등 — 축제와 업적"><span class="ri">🏮</span><b style="color:#d2563f">연등</b> ${nf(S.lotus)}</div>
+      <button class="btn sm ghost" onclick="openMe()" title="내 정보">👤</button>
+      <button class="btn sm ghost" onclick="openSettings()" title="설정">⚙</button>
+    </div>
+  </div>
+  <div class="tb2">
+    <span>${c.date}</span>
+    <span>${w.i} ${w.n} <span style="color:#5f586f">· ${w.d}</span></span>
+    <span style="color:#5fae7a">● 접속 ${240+ (c.day%17)*3}명</span>
+    ${bookChip}${buffs}
+    <span style="margin-left:auto;color:#5f586f">${c.str}</span>
+    <span class="seg">
+      ${[1,4,16].map(v=>`<button class="${S.speed===v?"on":""}" onclick="setSpeed(${v})">×${v}</button>`).join("")}
+    </span>
+  </div>`;
+}
+function setSpeed(v){ S.speed=v; startTick(); renderTop(); }
+
+const NAVDEF=[
+ {id:"plaza", ic:"⛩", n:"사무전 광장"},
+ {id:"study", ic:"📖", n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
+ {id:"war",   ic:"⚔", n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"duel",n:"대련"},{id:"tower",n:"석탑"}]},
+ {id:"life",  ic:"🏮", n:"생활",      sub:[{id:"shop",n:"매점"},{id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
+ {id:"soc",   ic:"🕯", n:"교류",      sub:[{id:"map",n:"지도"},{id:"rel",n:"인연·관계"}]},
+ {id:"rec",   ic:"📜", n:"기록",      sub:[{id:"record",n:"기록·성적"}]},
+];
+function renderNav(){
+  const hpP=S.hp, snP=S.sn;
+  const navHTML=NAVDEF.map(g=>{
+    if(!g.sub) return `<div class="nav-g"><div class="nav-h ${VIEW===g.id?"on":""}" onclick="go('${g.id}')"><span class="ic">${g.ic}</span>${g.n}</div></div>`;
+    const open=navOpen(g);
+    return `<div class="nav-g">
+      <div class="nav-h ${g.sub.some(s=>s.id===VIEW)?"on":""}" onclick="toggleNav('${g.id}')">
+        <span class="ic">${g.ic}</span>${g.n}<span class="ar">${open?"▾":"▸"}</span></div>
+      <div class="nav-sub ${open?"open":""}">
+        ${g.sub.map(s=>`<div class="nav-i ${VIEW===s.id?"on":""}" onclick="go('${s.id}')">${s.n}${s.bd?`<span class="bd">${s.bd}</span>`:""}</div>`).join("")}
+      </div></div>`;
+  }).join("");
+
+  const sRow=k=>{const c=statCap(k),v=stat(k),e=effStat(k);
+    return `<div class="mini-stat" title="수업으로 오른 값 ${v} (한계 ${c}) · 분배·숙사·법구 포함 ${e}">
+      <span>${STATS.find(s=>s.k===k).n}</span>
+      <b>${e} <span class="muted tiny">수업 ${v}/${c}</span></b></div>`;};
+
+  $("#navcol").innerHTML=`
+  <div class="card pad" style="margin-bottom:12px">
+    <div class="sect-t">안내도</div>${navHTML}
+  </div>
+  <div class="card pad">
+    <div class="spread" style="margin-bottom:6px">
+      <div class="sect-t" style="margin:0">내 정보</div>
+      <button class="btn sm ghost" onclick="openMe()">열기</button>
+    </div>
+    <div class="row" style="gap:9px;margin-bottom:7px">
+      ${avatarHTML(40)}
+      <div><div style="font-weight:600;font-size:14px">${esc(S.name)}</div>
+        <div class="tiny muted">${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div></div>
+    </div>
+    <div class="tiny muted">수행 ${nf(S.exp)} / ${nf(expNeed())}</div>
+    <div class="bar" style="margin:3px 0 8px"><i style="width:${(S.exp/expNeed()*100).toFixed(1)}%"></i></div>
+    <div class="tiny muted">체력 ${Math.floor(hpP)} / 100 ${hpP<=20?"<span style='color:#d2563f'>· 중상</span>":hpP<=50?"<span style='color:#d8a44a'>· 부상</span>":""}</div>
+    <div class="bar hp" style="margin:3px 0 6px"><i style="width:${hpP}%"></i></div>
+    <div class="tiny muted">이성 ${Math.floor(snP)} / 100 ${snP<=20?"<span style='color:#d2563f'>· 광기</span>":snP<=50?"<span style='color:#d8a44a'>· 동요</span>":""}</div>
+    <div class="bar sn" style="margin:3px 0 10px"><i style="width:${snP}%"></i></div>
+    <hr class="hr">
+    <div class="mini-stat"><span>전투력</span><b style="color:var(--gold)">${nf(power())}</b></div>
+    ${STATS.map(s=>sRow(s.k)).join("")}
+    <hr class="hr">
+    <div class="tiny muted">${HALLS.find(h=>h.id===S.hall).n} 혜택 · ${typeof hallBenefitText==="function"?hallBenefitText(S.hall):HALLS.find(h=>h.id===S.hall).b}</div>
+  </div>`;
+}
+function navOpen(g){ return NAVOPEN[g.id]!==undefined ? NAVOPEN[g.id] : g.sub.some(s=>s.id===VIEW); }
+function toggleNav(id){ const g=NAVDEF.find(x=>x.id===id); NAVOPEN[id]=!navOpen(g); renderNav(); }
+function go(v){
+  VIEW=v;
+  const g=NAVDEF.find(x=>x.sub&&x.sub.some(s=>s.id===v));
+  if(g) NAVOPEN[g.id]=true;
+  renderNav(); renderMain(); window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ── 채팅 ── */
+const CHATTABS=["전체","숙사","계통","페어","1:1"];
+function renderChat(){
+  const list=S.msgs.filter(m=>m.tab===S.chatTab).slice(-120);
+  $("#chatcol").innerHTML=`
+  <div class="card">
+    <div class="chat-tabs">
+      ${CHATTABS.map(t=>`<div class="ctab ${S.chatTab===t?"on":""}" onclick="setChatTab('${t}')">${t}</div>`).join("")}
+    </div>
+    <div class="row" style="padding:4px 10px 6px">
+      <span class="seg">
+        <button class="${S.chatMode==="RP"?"on":""}" onclick="setChatMode('RP')">RP</button>
+        <button class="${S.chatMode==="사담"?"on":""}" onclick="setChatMode('사담')">사담</button>
+      </span>
+      <span class="tiny muted" style="margin-left:auto">${S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="숙사"?HALLS.find(h=>h.id===S.hall).n:"전원"}</span>
+    </div>
+    <div class="chat-log" id="chatlog">
+      ${list.map(m=>`<div class="cmsg">
+        <span class="ctime">${m.time}</span>
+        ${m.title?`<span class="ctitle">${esc(m.title)}</span>`:""}
+        <span class="cname" style="color:${m.c||"#b9b1c6"}">${esc(m.who)}</span>
+        <span class="cbody">${m.body}</span></div>`).join("")||`<div class="tiny muted" style="padding:14px 2px">아직 오간 말이 없습니다.</div>`}
+    </div>
+    <div class="chat-in">
+      <input id="chatinput" placeholder="대사를 입력하고 *행동*은 별표 사이에" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="btn pri sm" onclick="sendChat()">보내기</button>
+    </div>
+  </div>`;
+  const l=$("#chatlog"); if(l) l.scrollTop=l.scrollHeight;
+}
+function setChatTab(t){ S.chatTab=t; renderChat(); }
+function setChatMode(m){ S.chatMode=m; renderChat(); }
+function fmtChat(s){ return esc(s).replace(/\*([^*]+)\*/g,"<em>$1</em>"); }
+function addMsg(tab,who,body,c,title){
+  S.msgs.push({tab,who,body,c,title,time:cal().str.replace(/^(오전|오후) /,"")});
+  if(S.msgs.length>400) S.msgs.shift();
+}
+function sendChat(){
+  const i=$("#chatinput"); if(!i||!i.value.trim()) return;
+  addMsg(S.chatTab, S.name, fmtChat(i.value.trim()), S.color, S.course+"과정");
+  i.value=""; renderChat();
+  setTimeout(()=>{ if(Math.random()<.7){ npcChat(S.chatTab); renderChat(); } }, rnd(1200,3400));
+}
+const CHATPOOL={
+ RP:["*창밖을 본다.* 오늘도 해가 없네.","의뢰 다녀온 사람? 3구역 쪽 어땠어.","*부적을 접다 말고 고개를 든다.*","다친 데 있으면 보건실 가. 삼장 선생 계셔.","공명 조율이 영 안 맞아. 손실이 너무 커.","*동전을 세어 본다.* 이번 주 륜이 벌써 바닥이야.","야시장 갈 사람. 혼자는 좀 그래서.","어제 꿈에 모르는 골목이 나왔어. 또.","석탑 종 울린 거 들었어? 몇 구역이래?","*가볍게 목을 돌린다.* 몸이 무겁다.","페어 어디 갔는지 본 사람 있어?","수업 하나 더 들을까 하다가 그냥 왔어."],
+ 사담:["오늘 수업 효율 왜 이럼","탕약 가격 또 올랐더라","의뢰 Ⅲ등급부터 체감 확 다름","연구는 진짜 시간 싸움임","파장 재생 먼저 올리는 게 맞는 듯","정신력은 5에서 막혀서 애매함","시험 이론 점수 과목 평균으로 채점됨 참고","나들이 통행패 모아뒀다가 한 번에 쓰는 중","공명 적성 올리면 확실히 체감됨","강시 노래 진짜 못함 ㅋㅋㅋ"],
+};
+let RECENTLINES=[];
+function freshLine(pool){
+  for(let i=0;i<12;i++){ const l=pick(pool); if(!RECENTLINES.includes(l)){ RECENTLINES.push(l); if(RECENTLINES.length>14)RECENTLINES.shift(); return l; } }
+  return pick(pool);
+}
+function npcChat(tab){
+  tab=tab||pick(["전체","전체","숙사","계통"]);
+  if(Math.random()<.22){
+    const k=pick(Object.keys(NPC)), n=NPC[k];
+    addMsg(tab, n.n, fmtChat(freshLine(n.line)), n.c, n.role);
+  }else{
+    addMsg(tab, pick(FAKENAMES), fmtChat(freshLine(CHATPOOL[S.chatMode])), pick(["#b9b1c6","#9db8c9","#c9b1a8","#aec0a8","#c0a8c9"]), rnd(1,7)+"과정");
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   메인 화면 디스패치
+   ═══════════════════════════════════════════════════ */
+const VIEWS={};
+function renderMain(soft){
+  const ae=document.activeElement;
+  if(soft && ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+  const sc=window.scrollY;
+  const f=VIEWS[VIEW]||VIEWS.plaza;
+  $("#main").innerHTML=f();
+  if(soft) window.scrollTo(0,sc);
+}
+function head(kicker,title,right){
+  return `<div class="page-head"><div>
+    <div class="page-kicker">${kicker}</div><h1 class="page">${title}</h1>
+  </div>${right?`<div class="rt">${right}</div>`:""}</div>`;
+}
+
+/* ───────────── 사무전 광장 ───────────── */
+VIEWS.plaza=()=>{
+  const c=cal(), w=WEATHERS[S.weather];
+  const cs=COURSES[S.course-1];
+  const lessonBox=S.lesson?(()=>{
+    const sb=SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx]);
+    return `<div class="spread" style="background:#15122a;border:1px solid var(--line);border-radius:8px;padding:10px 12px">
+      <div><span class="tag j">수업</span> <b>${sb.n}</b>
+        <div class="tiny muted">${S.lesson.idx+1}교시 / ${S.lesson.plan.length} · ${hhmm(S.lesson.left)} 남음</div></div>
+      <button class="btn sm" onclick="stopLesson()">중단</button></div>`;
+  })():`<div class="tiny muted" style="padding:8px 2px">듣고 있는 수업이 없습니다. <a style="color:var(--gold);cursor:pointer" onclick="go('class')">강의실로 →</a></div>`;
+
+  const festDays=Math.max(0, 6 - (c.day%10));
+  return head("명계력 "+c.y+"년 "+c.m+" "+c.dd+"일","⛩ 사무전 광장",
+    `${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정`)+`
+
+  <div class="story-card" style="margin-bottom:12px">
+    <div class="spread">
+      <div class="tiny" style="color:#b9aed0">${S.course}과정 이야기 · ${cs.n}</div>
+      <div class="pips">${[0,1,2,3,4,5].map(i=>`<i class="${i<S.course?"on":""}"></i>`).join("")}</div>
+    </div>
+    <h3 style="margin:6px 0 4px;font-size:18px">두 번째 음절</h3>
+    <div class="muted tiny" style="max-width:640px">압수한 업귀의 잔해 바닥에 누군가 글자를 긁어 두었다. 목줄에 달린 패에도, 또 그 글자가 있었다. 지난번과는 조금 다른 모양으로.</div>
+    <div class="row" style="margin-top:10px">
+      <span class="tag ${examReady()?"g":"r"}">${examReady()?`${S.course}과정 시험 응시 가능`:`응시 자격 미충족 · ${COURSES[S.course-1].subs.filter(id=>S.sub[id].lv<COURSES[S.course-1].need).map(id=>SUBJECTS.find(s=>s.id===id).n+" Lv"+COURSES[S.course-1].need).join(", ")}`}</span>
+      <span class="tiny muted">보상 연등 10</span>
+      <div style="margin-left:auto"></div>
+      <button class="btn sm" onclick="go('record')">장면 보기</button>
+      <button class="btn pri sm" onclick="go('exam')">하러 가기</button>
+    </div>
+  </div>
+
+  <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
+    <div class="spread">
+      <div><b>염라제</b> 진행 중 <span class="muted tiny">· 축제 표식 ${S.fest.marks}개</span></div>
+      <div class="tiny muted">${festDays}일 ${23-c.h}시간 남음 · <a style="color:var(--gold);cursor:pointer" onclick="go('fest')">부스 보러 가기 →</a></div>
+    </div>
+  </div>
+
+  <div class="scene" style="margin-bottom:12px">
+    ${sceneSVG()}
+    <div class="ov">
+      <div class="spread">
+        <span class="sbadge">${c.str} · ${w.i} ${w.n}</span>
+        <span class="sbadge" style="color:var(--gold)">✦ ${w.d}</span>
+      </div>
+      <div class="spread">
+        <span class="sbadge">통행패 ${S.pass}/3 <span style="color:#6f6885">· 다음 ${hhmm(S.passNext)}</span></span>
+        <span class="sbadge" style="cursor:pointer" onclick="go('map')">지도 열기 ›</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:12px">
+    <span class="tiny muted">바로 가기</span>
+    <button class="btn sm" onclick="go('quest')">의뢰 접수대</button>
+    <button class="btn sm" onclick="go('shop')">여와의 매점</button>
+    <button class="btn sm" onclick="go('duel')">연무장</button>
+    <button class="btn sm" onclick="go('outing')">구역 나들이</button>
+  </div>
+
+  ${S.news.length?`<div class="card pad" style="margin-bottom:12px;padding:8px 14px">
+    <div class="ticker">${S.news.slice(0,3).map(n=>`<div class="ticker-row"><span class="tag">소식</span>
+      <span style="flex:1">${esc(n.t)}</span><span class="tiny muted">${n.time}</span></div>`).join("")}</div>
+  </div>`:""}
+
+  <div class="grid g2">
+    <div class="card pad">
+      <div class="sect-t">시간표</div>
+      ${lessonBox}
+    </div>
+    <div class="card pad">
+      <div class="sect-t">오늘의 사무전</div>
+      <div class="spread"><div><b>석탑의 종</b> <span class="tiny muted">· ${240+(c.day%17)*3}명 · KST 자정 초기화</span></div></div>
+      <div class="tiny muted" style="margin:4px 0 6px">${S.fest.todayMarks<100?"오늘의 활동이 기록되고 있습니다":"오늘의 표식을 모두 모았습니다"} · 표식 ${S.fest.todayMarks}/100</div>
+      <div class="bar jd"><i style="width:${S.fest.todayMarks}%"></i></div>
+      <hr class="hr">
+      <div class="spread"><span class="tiny muted">수행(연구) 자리</span>
+        <span class="tiny">${S.study?`${RESEARCH.find(r=>r.id===S.study.id).n} · ${hhmm(S.study.left)}`:"비어 있음"}</span></div>
+      <div class="spread"><span class="tiny muted">열람 중인 고서</span>
+        <span class="tiny">${S.book?`${BOOKS.find(b=>b.id===S.book.id).n} · ${hhmm(S.book.left)}`:"없음"}</span></div>
+    </div>
+  </div>`;
+};
+function sceneSVG(){
+  const w=WEATHERS[S.weather];
+  const rain=w.n==="비"||w.n==="잿비";
+  return `<svg viewBox="0 0 900 236" preserveAspectRatio="xMidYMax slice">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#140f24"/><stop offset=".6" stop-color="#241733"/><stop offset="1" stop-color="#2d1830"/>
+      </linearGradient>
+      <radialGradient id="moon"><stop offset="0" stop-color="#e05a47"/><stop offset="1" stop-color="#8e2f27" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="900" height="236" fill="url(#sky)"/>
+    <circle cx="730" cy="52" r="58" fill="url(#moon)" opacity=".75"/>
+    <circle cx="730" cy="52" r="20" fill="#e8705c" opacity=".9"/>
+    <!-- 원경 빌딩 -->
+    <g fill="#190f28" opacity=".85">
+      ${Array.from({length:22},(_,i)=>{const x=i*42-10,h=28+((i*37)%70);return `<rect x="${x}" y="${150-h}" width="34" height="${h+90}"/>`}).join("")}
+    </g>
+    <!-- 석탑 -->
+    <g transform="translate(450,0)">
+      ${[0,1,2,3,4].map(i=>{const y=60+i*22,wd=28+i*13;return `<rect x="${-wd/2}" y="${y}" width="${wd}" height="14" fill="#241a36" stroke="#3a2b50"/>
+        <rect x="${-wd/2-7}" y="${y-4}" width="${wd+14}" height="5" fill="#2e2143"/>`}).join("")}
+      <rect x="-5" y="34" width="10" height="28" fill="#241a36"/>
+      <circle cx="0" cy="30" r="6" fill="#caa548" opacity=".9"/>
+      <circle cx="0" cy="30" r="12" fill="#caa548" opacity=".16"/>
+    </g>
+    <!-- 본전 지붕 -->
+    <g>
+      <path d="M150 196 L300 196 L320 178 L130 178 Z" fill="#2a1a2e"/>
+      <path d="M120 178 Q225 150 330 178 Z" fill="#3a2030" stroke="#55303f"/>
+      <path d="M560 196 L790 196 L812 176 L538 176 Z" fill="#2a1a2e"/>
+      <path d="M528 176 Q675 144 822 176 Z" fill="#3a2030" stroke="#55303f"/>
+      <rect x="330" y="186" width="210" height="50" fill="#241a2c"/>
+      <path d="M318 186 Q435 152 552 186 Z" fill="#43243a" stroke="#64384c"/>
+    </g>
+    <!-- 홍등 -->
+    ${[180,230,280,600,650,700,750].map((x,i)=>`
+      <g opacity=".95"><line x1="${x}" y1="178" x2="${x}" y2="190" stroke="#4a3550"/>
+      <ellipse cx="${x}" cy="196" rx="7" ry="9" fill="#d2563f" opacity=".92"/>
+      <ellipse cx="${x}" cy="196" rx="16" ry="18" fill="#d2563f" opacity=".12"/></g>`).join("")}
+    <!-- 기둥/창문 네온 -->
+    ${Array.from({length:30},(_,i)=>{const x=20+i*30,y=205+((i*13)%22);
+      const col=["#4fb3a3","#caa548","#9d7fd0","#d2563f"][i%4];
+      return `<rect x="${x}" y="${y}" width="3" height="3" fill="${col}" opacity=".8"/>`}).join("")}
+    <rect y="214" width="900" height="22" fill="#120b1a"/>
+    ${rain?Array.from({length:70},(_,i)=>{const x=(i*53)%900,y=(i*37)%200;
+      return `<line x1="${x}" y1="${y}" x2="${x-5}" y2="${y+16}" stroke="#8e86a6" stroke-width="1" opacity=".22"/>`}).join(""):""}
+    ${w.n==="짙은 안개"?`<rect width="900" height="236" fill="#9b93ac" opacity=".10"/>`:""}
+  </svg>`;
+}
+
+/* ───────────── 강의실 ───────────── */
+let CLASSFILTER="전체", CLASSSORT="즐겨찾기";
+VIEWS.class=()=>{
+  const eff=(2.16+S.course*0.18)*(1+mod("study"));
+  const cur=S.lesson?SUBJECTS.find(s=>s.id===S.lesson.plan[S.lesson.idx]):null;
+
+  const planCards=S.plans.map((p,i)=>{
+    if(!p) return `<div class="sub" style="display:grid;place-items:center;min-height:92px;border-style:dashed">
+      <button class="btn sm ghost" onclick="editPlan(${i})">+ 시간표 ${i+1} 만들기</button></div>`;
+    const running=S.lesson && S.lesson.planIdx===i;
+    return `<div class="sub ${running?"active":""}">
+      <div class="spread"><b>${esc(p.n)}</b><span class="tiny muted">총 ${p.list.length}시간</span></div>
+      <div class="tiny muted" style="margin:4px 0 8px">${p.list.map((id,k)=>`${k+1}교시 ${SUBJECTS.find(s=>s.id===id).n}`).join(" · ")}</div>
+      <div class="row">
+        <button class="btn pri sm" ${running?"disabled":""} onclick="startLesson(${i})">${running?"듣는 중":"시간표 듣기"}</button>
+        <button class="btn sm" onclick="editPlan(${i})">수정</button>
+      </div></div>`;
+  }).join("");
+
+  let list=SUBJECTS.filter(s=>CLASSFILTER==="전체"||STATS.find(x=>x.k===s.st).n===CLASSFILTER);
+  if(CLASSSORT==="즐겨찾기") list=[...list].sort((a,b)=>(S.sub[b.id].fav?1:0)-(S.sub[a.id].fav?1:0)||b.id.localeCompare(a.id));
+  if(CLASSSORT==="레벨") list=[...list].sort((a,b)=>S.sub[b.id].lv-S.sub[a.id].lv);
+
+  const subCards=list.map(s=>{
+    const d=S.sub[s.id], st=STATS.find(x=>x.k===s.st);
+    const capped=stat(s.st)>=statCap(s.st);
+    const isExam=COURSES[S.course-1].subs.includes(s.id);
+    return `<div class="sub ${cur&&cur.id===s.id?"active":""}">
+      <button class="starbtn ${d.fav?"on":""}" onclick="favSub('${s.id}')">★</button>
+      <h4>${s.n} <span class="lv">${d.lv}</span> ${isExam?'<span class="tag g">시험</span>':""}</h4>
+      <div class="tiny muted">${NPC[s.pf].n} 교사 · ${st.n} 계열</div>
+      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${d.p}% ${capped?`<span style="color:#d8a44a">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
+      <div class="bar"><i style="width:${d.p}%"></i></div>
+      <div class="tiny muted" style="margin:7px 0 4px">${s.d}</div>
+      <div class="quote">${s.q}</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="quickLesson('${s.id}')">1교시 듣기</button>
+        <span class="tiny muted" style="margin-left:auto">지식 +${Math.round((20+d.lv*5)*(1+mod("know")))}</span>
+      </div></div>`;
+  }).join("");
+
+  const curBox=S.lesson?`
+    <div class="card pad" style="margin-bottom:12px">
+      <div class="spread"><div class="sect-t" style="margin:0">수업 슬롯 1</div>
+        <button class="btn sm" onclick="stopLesson()">취소</button></div>
+      <div class="spread" style="margin:4px 0 6px">
+        <h3 style="margin:0;font-size:17px">${cur.n} <span class="lv" style="color:var(--gold)">Lv ${S.sub[cur.id].lv}</span></h3>
+        <span class="tiny muted">${NPC[cur.pf].n} 교사</span></div>
+      <div class="bar"><i style="width:${(100-S.lesson.left/S.lesson.total*100).toFixed(1)}%"></i></div>
+      <div class="tiny muted" style="margin-top:6px">
+        시간표 「${esc(S.plans[S.lesson.planIdx]?S.plans[S.lesson.planIdx].n:"즉석")}」 ${S.lesson.idx+1}/${S.lesson.plan.length}교시 ·
+        다음: ${S.lesson.idx+1<S.lesson.plan.length?SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx+1]).n:"없음"}</div>
+      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 진행도 +25%, 지식 +${Math.round((20+S.sub[cur.id].lv*5)*(1+mod("know")))}</div>
+      <div class="tiny" style="color:var(--jade);margin-top:4px">지금 이 강의실 ${rnd(40,90)}명 · 함께 시작한 학생 ${rnd(40,90)}명, 경험치 +5%</div>
+    </div>`:"";
+
+  return head("일곱 과목, 일곱 해","📖 강의실", `전공 수업 효율 <b style="color:var(--gold)">×${eff.toFixed(2)}</b><br><span class="tiny">경험치 · 지식 획득량</span>`)+`
+  ${buffStrip()}
+  <div class="card pad" style="margin-bottom:12px">
+    <div class="spread"><div class="sect-t" style="margin:0">시간표</div>
+      <button class="btn sm pri" onclick="examPlan()">${S.course}과정 시험 과목으로 짜기</button></div>
+    <div class="tiny muted" style="margin:6px 0 10px">교시를 최대 4시간까지 짜 두고 「시간표 듣기」로 차례로 이어 듣습니다.
+    <b style="color:var(--gold)">승급 시험은 지정 과목 세 개의 레벨로 채점</b>하므로, 과정이 바뀌면 시간표도 바꾸는 편이 좋습니다.</div>
+    <div class="grid g3">${planCards}</div>
+  </div>
+  ${curBox}
+  <div class="row" style="margin-bottom:10px">
+    <span class="tiny muted">과목 정렬</span>
+    <span class="seg">${["즐겨찾기","레벨","기본"].map(x=>`<button class="${CLASSSORT===x?"on":""}" onclick="setCS('${x}')">${x}</button>`).join("")}</span>
+    <span class="tiny muted" style="margin-left:12px">필터</span>
+    <span class="seg">${["전체",...STATS.map(s=>s.n)].map(x=>`<button class="${CLASSFILTER===x?"on":""}" onclick="setCF('${x}')">${x}</button>`).join("")}</span>
+  </div>
+  <div class="grid g4">${subCards}</div>`;
+};
+function examPlan(){
+  const c=COURSES[S.course-1];
+  const short=c.subs.filter(id=>S.sub[id].lv<c.need).sort((a,b)=>S.sub[a].lv-S.sub[b].lv);
+  const list=short.length?[...short,...c.subs].slice(0,4):[...c.subs,c.subs[0]];
+  S.plans[0]={n:`${S.course}과정 시험 준비`, list};
+  toast(`시간표 1을 ${S.course}과정 시험 과목으로 바꿨습니다.`,"good");
+  renderMain(); save();
+}
+function setCS(v){CLASSSORT=v;renderMain()} function setCF(v){CLASSFILTER=v;renderMain()}
+function favSub(id){ S.sub[id].fav=!S.sub[id].fav; renderMain(); save(); }
+function startLesson(i){
+  const p=S.plans[i]; if(!p) return;
+  S.lesson={plan:[...p.list], idx:0, left:60, total:60, planIdx:i};
+  toast(`「${p.n}」 수업을 시작합니다.`); renderMain(); renderTop();
+}
+function quickLesson(id){
+  S.lesson={plan:[id], idx:0, left:60, total:60, planIdx:-1};
+  toast(`${SUBJECTS.find(s=>s.id===id).n} 1교시를 시작합니다.`); renderMain();
+}
+function stopLesson(){ S.lesson=null; renderMain(); renderTop(); }
+function finishPeriod(){
+  const L=S.lesson; const id=L.plan[L.idx]; const s=SUBJECTS.find(x=>x.id===id); const d=S.sub[id];
+  d.p+=25;
+  gainKnow(20+d.lv*5);
+  gainExp(28+d.lv*6+S.course*10);
+  addMark(5);
+  if(d.p>=100){
+    d.p=0; d.lv++;
+    if(stat(s.st)<statCap(s.st)){ S.bonus[s.st]++; toast(`「${s.n}」 수료 · <b>${STATS.find(x=>x.k===s.st).n} +1</b>`,"good"); }
+    else toast(`「${s.n}」 Lv ${d.lv} · ${STATS.find(x=>x.k===s.st).n}은(는) 이미 한계입니다.`);
+  }
+  const extra=L.left; // 음수 캐리
+  if(L.idx+1<L.plan.length){ L.idx++; L.left=60+extra; L.total=60; }
+  else { S.lesson=null; toast("시간표를 모두 마쳤습니다."); }
+}
+function editPlan(i){
+  const p=S.plans[i]||{n:`시간표 ${i+1}`, list:["s17"]};
+  let list=[...p.list];
+  const draw=()=>{
+    const opts=SUBJECTS.map(s=>`<option value="${s.id}">${s.n} (Lv ${S.sub[s.id].lv})</option>`).join("");
+    return `
+    <label class="f">시간표 이름</label>
+    <input class="inp" id="pn" value="${esc(p.n)}" maxlength="12">
+    <label class="f">교시 (최대 4시간)</label>
+    <div id="rows">${list.map((id,k)=>`
+      <div class="row" style="margin-bottom:6px">
+        <span class="tiny muted" style="width:46px">${k+1}교시</span>
+        <select class="inp" style="flex:1" onchange="PLANTMP[${k}]=this.value">${opts.replace(`value="${id}"`,`value="${id}" selected`)}</select>
+        <button class="btn sm red" onclick="planDel(${k})">삭제</button>
+      </div>`).join("")}</div>
+    ${list.length<4?`<button class="btn sm" onclick="planAdd()">+ 교시 추가</button>`:""}
+    <div class="row" style="margin-top:14px">
+      <button class="btn pri" onclick="planSave(${i})">저장</button>
+      ${S.plans[i]?`<button class="btn red" onclick="planClear(${i})">시간표 비우기</button>`:""}
+      <button class="btn" onclick="closeModal()">닫기</button></div>`;
+  };
+  window.PLANTMP=list;
+  window.planAdd=()=>{ PLANTMP.push("s17"); list=PLANTMP; modal(`시간표 ${i+1} 수정`,draw()); };
+  window.planDel=k=>{ PLANTMP.splice(k,1); if(!PLANTMP.length)PLANTMP.push("s17"); list=PLANTMP; modal(`시간표 ${i+1} 수정`,draw()); };
+  window.planSave=idx=>{ const n=$("#pn").value.trim()||`시간표 ${idx+1}`;
+    S.plans[idx]={n, list:[...PLANTMP]}; closeModal(); renderMain(); save(); toast("시간표를 저장했습니다."); };
+  window.planClear=idx=>{ S.plans[idx]=null; closeModal(); renderMain(); save(); };
+  modal(`시간표 ${i+1} 수정`, draw());
+}
+function buffStrip(){
+  const items=[];
+  S.buffs.filter(b=>!b.hide).forEach(b=>items.push(`<span class="buffchip">${b.e||"◉"} ${esc(b.n)} <span class="muted">${hhmm(b.left)}</span></span>`));
+  if(S.book) items.push(`<span class="buffchip">📜 ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${hhmm(S.book.left)}</span></span>`);
+  if(!items.length) return "";
+  return `<div class="card pad" style="margin-bottom:12px;padding:9px 14px"><div class="row">${items.join("")}</div></div>`;
+}
+
+/* ───────────── 수행(연구) ───────────── */
+VIEWS.research=()=>{
+  const cur=S.study?RESEARCH.find(r=>r.id===S.study.id):null;
+  const curBox=cur?`
+    <div class="card pad" style="margin-bottom:14px">
+      <div class="spread"><div><span class="tag j">수행</span> <b>${cur.n} ${S.res[cur.id]+1}단계</b></div>
+        <div class="tiny muted">${hhmm(S.study.left)} 남음</div></div>
+      <div class="bar" style="margin:8px 0 6px"><i style="width:${(100-S.study.left/S.study.total*100).toFixed(1)}%"></i></div>
+      <div class="row">
+        <button class="btn sm" onclick="cutStudy('mana')">파장으로 1시간 단축 · ${nf(cutCost("mana"))}</button>
+        <button class="btn sm" onclick="cutStudy('know')">지식으로 1시간 단축 · ${nf(cutCost("know"))}</button>
+        <button class="btn sm red" style="margin-left:auto" onclick="cancelStudy()">취소</button>
+      </div></div>`:"";
+
+  const bookBox=`
+   <div class="card pad" style="margin-bottom:14px">
+    <div class="spread"><div class="sect-t" style="margin:0">죄업 기록 서고</div>
+      <span class="tiny muted">열람 비용 지식 <b style="color:var(--jade)">${nf(bookCost())}</b> · 보유 ${nf(S.know)}</span></div>
+    <div class="tiny muted" style="margin:4px 0 10px">지식을 들여 고서를 펼치면 3시간 동안 효과가 적용됩니다. 같은 책을 다시 펼치면 시간이 이어집니다(최대 9시간).</div>
+    ${S.book?`<div class="row" style="margin-bottom:10px"><span class="tag g">열람 중</span>
+      <b>${BOOKS.find(b=>b.id===S.book.id).n}</b> · ${BOOKS.find(b=>b.id===S.book.id).e}
+      <span class="tiny muted" style="margin-left:auto">${hhmm(S.book.left)}</span></div>`:""}
+    <div class="grid g2">
+      ${BOOKS.map(b=>{const on=S.book&&S.book.id===b.id;
+        return `<div class="spread" style="background:#15122a;border:1px solid ${on?"var(--gold2)":"var(--line)"};border-radius:7px;padding:7px 11px">
+        <div><b style="font-size:13px">${b.n}</b> <span class="tiny muted">${b.e}</span></div>
+        <button class="btn sm ${on?"pri":""}" onclick="readBook('${b.id}')">${on?"이어 읽기":"바꿔 펼치기"}</button></div>`}).join("")}
+    </div></div>`;
+
+  const cards=RESEARCH.map(r=>{
+    const lv=S.res[r.id], done=lv>=r.max, locked=r.req&&S.course<r.req;
+    const cm=Math.round(1800*Math.pow(1.115,lv)*r.mana), ck=Math.round(70*Math.pow(1.115,lv)*r.know);
+    const tm=Math.round(r.t*Math.pow(1.11,lv));
+    const busy=!!S.study;
+    return `<div class="sub ${locked?"":""}" style="${locked?"opacity:.45":""}">
+      <div class="spread"><h4 style="margin:0">${r.n}</h4><span class="tiny muted">${lv} / ${r.max===999?"∞":r.max}</span></div>
+      <div class="tiny muted" style="margin:5px 0 2px">${r.e}</div>
+      <div class="tiny" style="color:var(--jade)">지금 받는 효과 · ${effText(r,lv)}</div>
+      ${locked?`<div class="tag" style="margin-top:8px">${r.req}과정부터</div>`
+        :done?`<div class="tag g" style="margin-top:8px">연구 완료</div>`
+        :`<div style="margin-top:8px">
+          <button class="btn sm ${busy?"":"pri"}" ${busy?"disabled":""} onclick="startStudy('${r.id}')">${lv+1}단계 수행 · ${hhmm(tm)}</button>
+          <div class="tiny muted" style="margin-top:5px">비용 · 파장 ${nf(cm)} · 지식 ${nf(ck)} <span style="color:#6f6885">(시작할 때 냄)</span></div></div>`}
+    </div>`;
+  }).join("");
+
+  return head("이름 없는 사서의 서가","🕯 수행", `수행 자리 <b>${S.study?1:0} / 1</b>`)+`
+  ${curBox}${bookBox}
+  <div class="grid g4">${cards}</div>`;
+};
+function effText(r,lv){
+  if(lv===0) return "없음";
+  const m={r1:["파장 재생",6],r2:["파장 한도","+"+lv*3+"시간분"],r3:["수업 효율",2],r4:["공격력",4],r5:["생명력",4],
+    r6:["륜 획득",4],r7:["지식 획득",4],r8:["경험치",4],r9:["전리품 확률",2.5],r10:["공명 배율","+"+(lv*.1).toFixed(1)],
+    r11:["가방 칸","+"+lv*5],r12:["강화 성공률",3],r13:["공격·생명력",2]}[r.id];
+  if(typeof m[1]==="string") return `${m[0]} ${m[1]}`;
+  return `${m[0]} +${(m[1]*lv).toFixed(m[1]%1?1:0)}%`;
+}
+function cutCost(k){ return k==="mana"?Math.round(manaRate()*72):Math.round(960+S.course*120); }
+function startStudy(id){
+  if(S.study){ toast("이미 수행 중입니다.","bad"); return; }
+  const r=RESEARCH.find(x=>x.id===id), lv=S.res[id];
+  if(r.req&&S.course<r.req){ toast(`${r.req}과정부터 가능합니다.`,"bad"); return; }
+  if(lv>=r.max){ toast("이미 완료했습니다.","bad"); return; }
+  const cm=Math.round(1800*Math.pow(1.115,lv)*r.mana), ck=Math.round(70*Math.pow(1.115,lv)*r.know);
+  if(S.mana<cm){ toast("파장이 부족합니다.","bad"); return; }
+  if(S.know<ck){ toast("지식이 부족합니다.","bad"); return; }
+  S.mana-=cm; S.know-=ck;
+  const tm=Math.round(r.t*Math.pow(1.11,lv));
+  S.study={id, left:tm, total:tm};
+  toast(`${r.n} ${lv+1}단계 수행을 시작했습니다.`); renderMain(); renderTop(); save();
+}
+function cutStudy(k){
+  if(!S.study) return; const c=cutCost(k);
+  if(k==="mana"&&S.mana<c){ toast("파장이 부족합니다.","bad"); return; }
+  if(k==="know"&&S.know<c){ toast("지식이 부족합니다.","bad"); return; }
+  if(k==="mana") S.mana-=c; else S.know-=c;
+  S.study.left=Math.max(0,S.study.left-60);
+  if(S.study.left<=0) finishResearch();
+  renderMain(); renderTop();
+}
+function cancelStudy(){ S.study=null; toast("수행을 중단했습니다."); renderMain(); }
+function finishResearch(){
+  const r=RESEARCH.find(x=>x.id===S.study.id);
+  S.res[r.id]++; S.study=null;
+  addMark(12); gainExp(120+S.course*40);
+  toast(`<b>${r.n} ${S.res[r.id]}단계</b> 수행을 마쳤습니다.`,"good");
+  pushNews(`[서가] ${S.name} 학생이 ${r.n} ${S.res[r.id]}단계를 마쳤습니다.`);
+  save();
+}
+function bookCost(){ return Math.round(1200+S.lvl*140+S.course*600); }
+function readBook(id){
+  const c=bookCost();
+  if(S.book&&S.book.id===id){
+    if(S.know<c){ toast("지식이 부족합니다.","bad"); return; }
+    S.know-=c; S.book.left=Math.min(540,S.book.left+180); toast("열람 시간을 이었습니다.");
+  }else{
+    if(S.know<c){ toast("지식이 부족합니다.","bad"); return; }
+    S.know-=c; S.book={id,left:180};
+    toast(`「${BOOKS.find(b=>b.id===id).n}」를 펼쳤습니다.`);
+  }
+  renderMain(); renderTop(); save();
+}
+function addMark(n){
+  if(S.fest.todayMarks>=100) return;
+  const add=Math.min(n, 100-S.fest.todayMarks);
+  S.fest.todayMarks+=add; S.fest.marks+=add; S.fest.total+=add;
+}
+
+/* ═══════════════════════════════════════════════════
+   전투 판정 — 세계관 규칙 (D5)
+   공격 판정: 공격 스탯 D5 + 5  /  방어 판정: 방어 스탯 D5 + 5
+   회피: 양측 민첩 D5 비교 (대련은 공격자 민첩+1)
+   ═══════════════════════════════════════════════════ */
+function mkFighter(n,st,hp,c){ return {n, atk:st.atk, def:st.def, agi:st.agi, men:st.men, res:st.res, hp, max:hp, c:c||"#b9b1c6"}; }
+function meFighter(tempHP){
+  return mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},
+    tempHP||Math.round(S.hp*(1+mod("hpP"))*1.6+60), S.color);
+}
+function enemyFor(stage,boss){
+  const k=stage;
+  const st={atk:Math.max(1,Math.round(1.6+k*.32)), def:Math.max(1,Math.round(1.2+k*.28)),
+            agi:Math.max(1,Math.round(1.4+k*.26)), men:3, res:2};
+  const names=["업귀 잔해","폭주한 마무기","영혼 밀매상","개조 의체 괴한","죄업에 잠식된 악인","마녀의 사역물","업귀"];
+  const hp=Math.round(70+k*26)*(boss?2.4:1);
+  const f=mkFighter(boss?`【${pick(["무명","잿빛","검은 손","홍월"])}】 ${pick(names)}`:pick(names), st, Math.round(hp), "#d2563f");
+  f.boss=!!boss; return f;
+}
+function resolveAttack(A,D,log,opts={}){
+  const bonusEvade=opts.duel?1:0;
+  const av=d5(A.atk)+5;
+  // 민첩이 방어보다 뚜렷하게 높으면 회피를, 아니면 방어를 고른다 (비슷하면 섞는다)
+  const gap=D.agi-D.def;
+  const wantEvade = gap>1 ? Math.random()<.8 : gap<-1 ? Math.random()<.2 : Math.random()<.5;
+  let line=`<span class="d">${esc(A.n)}</span> 공격 판정 <b>${av}</b>`;
+  if(wantEvade){
+    let ar,dr,guard=0;
+    do{ ar=d5(A.agi+bonusEvade); dr=d5(D.agi); guard++; }while(ar===dr && guard<8); // 동점은 재판정
+    if(dr>ar){ log.push(line+` → ${esc(D.n)} 회피 판정 ${dr} vs ${ar} · <span class="s">완전 회피</span>`); return 0; }
+    D.hp=Math.max(0,D.hp-av);
+    log.push(line+` → 회피 실패 (${dr} vs ${ar}) · <span class="h">체력 −${av}</span>`);
+    return av;
+  }else{
+    const dv=d5(D.def)+5;
+    const dmg=Math.max(0,av-dv);
+    D.hp=Math.max(0,D.hp-dmg);
+    log.push(line+` → ${esc(D.n)} 방어 판정 <b>${dv}</b> · ${dmg>0?`<span class="h">체력 −${dmg}</span>`:`<span class="s">완전 방어</span>`}`);
+    return dmg;
+  }
+}
+function simBattle(me,allies,foes,maxTurn,opts={}){
+  const log=[]; let turn=0;
+  const order=[me,...allies,...foes].sort((a,b)=>d5(b.agi)-d5(a.agi));
+  log.push(`<span class="turn">전투 개시 · 선공 ${esc(order[0].n)}</span>`);
+  while(turn<maxTurn){
+    turn++;
+    log.push(`<span class="turn">${turn}턴</span>`);
+    for(const u of order){
+      if(u.hp<=0) continue;
+      const foe = foes.includes(u);
+      const targets = foe ? [me,...allies].filter(x=>x.hp>0) : foes.filter(x=>x.hp>0);
+      if(!targets.length) break;
+      resolveAttack(u, pick(targets), log, opts);
+    }
+    if(foes.every(f=>f.hp<=0)){ log.push(`<span class="s">■ 적을 모두 제압했습니다.</span>`); return {win:true,turn,log}; }
+    if(me.hp<=0){ log.push(`<span class="h">■ 전투 불능. 현장에서 퇴장합니다.</span>`); return {win:false,turn,log}; }
+  }
+  log.push(`<span class="turn">제한 턴 종료 · 철수</span>`);
+  return {win:false,turn,log,timeout:true};
+}
+
+/* ═══════════════ 의뢰 ═══════════════ */
+function questAt(stage){
+  const seed=stage*7919;
+  const r=(n)=>Math.floor((Math.sin(seed*n)*10000)%1000+1000)%1000;
+  const rank=RANKS[clamp(Math.floor((stage-1)/30),0,4)];
+  const ward=WARDS[r(3)%7];
+  const t=`${QT_A[r(1)%QT_A.length]} ${QT_B[r(2)%QT_B.length]}`;
+  const dur=30+((r(4)%7)*10);
+  const foes=1+Math.floor(stage/8)+ (rank.r==="Ⅴ"?1:0);
+  return {stage, rank, ward, t, dur, foes, no:`${1024}-${String(stage).padStart(3,"0")}`};
+}
+let QFILTER=0;
+VIEWS.quest=()=>{
+  const open=Math.min(200, S.quests.cleared+1);
+  const start=Math.max(1, open-7+QFILTER*8);
+  const list=[]; for(let i=start;i<Math.min(201,start+8);i++) list.push(questAt(i));
+  const room=S.quests.room;
+
+  const roomBox=room?(()=>{
+    const q=questAt(room.stage);
+    return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
+      <div class="spread"><div class="sect-t" style="margin:0">함께 의뢰 <span class="tag">최대 4명</span></div>
+        <span class="tiny muted">인원이 다 모이지 않아도 출동할 수 있습니다</span></div>
+      <div class="spread" style="margin:6px 0">
+        <div><b>${q.stage}단계 · ${q.t}</b>
+          <div class="tiny muted">사건번호 ${q.no} · ${q.ward.n} · <span style="color:${q.rank.c}">${q.rank.r}등급 ${q.rank.n}</span> · 예상 ${q.dur}분</div></div>
+        <div class="tiny muted">방장 ${esc(S.name)}</div></div>
+      <div class="row" style="margin:8px 0">
+        ${[0,1,2,3].map(i=>{
+          const m=i===0?{n:S.name,pos:room.pos,me:true}:room.party[i-1];
+          return m?`<span class="buffchip" style="border-color:${m.me?"var(--gold2)":"#2b2545"}">
+            <span class="tag ${m.me?"g":""}">${m.pos||"후열"}</span> ${esc(m.n)}</span>`
+          :`<span class="buffchip" style="color:#5a5370">빈자리</span>`}).join("")}
+      </div>
+      <div class="row">
+        <span class="tiny muted">내 포지션</span>
+        <span class="seg">${["선봉","후열","지원"].map(p=>`<button class="${room.pos===p?"on":""}" onclick="setPos('${p}')">${p}</button>`).join("")}</span>
+        <span class="tiny muted" style="margin-left:8px">선봉 공격 +10%, 받는 피해 +10% · 지원 회복 +</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sm" onclick="inviteParty()">동행 부르기</button>
+        <button class="btn sm" onclick="inviteTeacher()">교사 동행 요청 · 륜 600</button>
+        <div style="margin-left:auto"></div>
+        <button class="btn sm" onclick="leaveRoom()">나가기</button>
+        <button class="btn pri" onclick="runQuest(${room.stage},true)">지금 출동</button>
+      </div></div>`;
+  })():"";
+
+  return head("명계 각 구역","⚔ 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">완료 ${S.quests.cleared}건</span>`)+`
+  ${buffStrip()}
+  ${roomBox}
+  <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
+    <div class="row"><span class="tiny muted">사무전에 접수된 의뢰</span>
+      <div style="margin-left:auto" class="row">
+        <button class="btn sm" onclick="QFILTER=Math.max(QFILTER-1,-24);renderMain()">◀ 이전</button>
+        <button class="btn sm" onclick="QFILTER=Math.min(QFILTER+1,24);renderMain()">다음 ▶</button>
+        <button class="btn sm ghost" onclick="QFILTER=0;renderMain()">현재</button>
+      </div></div>
+  </div>
+  <div class="grid g2">
+    ${list.map(q=>{
+      const locked=q.stage>open;
+      const rew=questReward(q);
+      return `<div class="sub" style="${locked?"opacity:.4":""}">
+        <div class="spread"><h4 style="margin:0">${q.stage}단계 · ${q.t}</h4>
+          <span class="tag" style="border-color:${q.rank.c};color:${q.rank.c}">${q.rank.r} ${q.rank.n}</span></div>
+        <div class="tiny muted" style="margin:4px 0 6px">사건번호 ${q.no} · ${q.ward.n} ${q.ward.t} · 예상 ${q.dur}분 · 적 ${q.foes}체</div>
+        <div class="tiny" style="color:var(--jade)">보상 · 륜 ${nf(rew.rin)} · 경험치 ${nf(rew.exp)} · 지식 ${nf(rew.know)}${rew.sari?` · 사리 ${rew.sari}`:""}</div>
+        <div class="tiny muted" style="margin-top:4px">예상 소모 · 체력 ${q.rank.hp[0]}~${q.rank.hp[1]} · 이성 ${q.rank.sn[0]}~${q.rank.sn[1]}</div>
+        <div class="row" style="margin-top:9px">
+          <button class="btn pri sm" ${locked?"disabled":""} onclick="runQuest(${q.stage},false)">혼자 출동</button>
+          <button class="btn sm" ${locked?"disabled":""} onclick="makeRoom(${q.stage})">함께 의뢰 방 열기</button>
+        </div></div>`;
+    }).join("")}
+  </div>`;
+};
+function questReward(q){
+  const m=q.rank.mul, k=q.stage;
+  return {rin:Math.round((120+k*48)*m), exp:Math.round((90+k*34)*m), know:Math.round((18+k*7)*m),
+          sari:(q.rank.r==="Ⅳ"&&Math.random()<.3)||q.rank.r==="Ⅴ"?1:0};
+}
+function makeRoom(st){ S.quests.room={stage:st,pos:"후열",party:[]}; renderMain(); toast("함께 의뢰 방을 열었습니다. 다른 학생이 들어오기를 기다립니다."); }
+function leaveRoom(){ S.quests.room=null; renderMain(); }
+function setPos(p){ S.quests.room.pos=p; renderMain(); }
+function inviteParty(){
+  const r=S.quests.room; if(r.party.length>=3){ toast("자리가 다 찼습니다.","bad"); return; }
+  const pool=[...S.friends.map(f=>f.n), ...FAKENAMES];
+  r.party.push({n:pick(pool), pos:pick(["선봉","후열","지원"]), lv:rnd(1,7)});
+  renderMain(); toast("동행 요청을 수락했습니다.");
+}
+function inviteTeacher(){
+  const r=S.quests.room; if(r.party.length>=3){ toast("자리가 다 찼습니다.","bad"); return; }
+  if(S.rin<600){ toast("륜이 부족합니다.","bad"); return; }
+  S.rin-=600;
+  const t=pick(["항아","삼장","강시","양귀비"]);
+  r.party.push({n:NPC[t].n, pos:"선봉", teacher:true, lv:9});
+  renderMain(); renderTop(); toast(`${NPC[t].n} 교사가 동행합니다.`,"good");
+}
+function runQuest(stage,party){
+  const q=questAt(stage);
+  if(S.hp<=10){ toast("체력이 너무 낮습니다. 보건실에서 회복하세요.","bad"); return; }
+  const room=party?S.quests.room:null;
+  const pos=room?room.pos:"후열";
+  const me=meFighter();
+  if(pos==="선봉") me.atk=Math.round(me.atk*1.1);
+  const allies=(room?room.party:[]).map(p=>mkFighter(p.n,
+    {atk:Math.max(1,Math.round((p.teacher?7:2)+p.lv*.6)), def:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)),
+     agi:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)), men:3,res:3},
+    Math.round(120+p.lv*40), p.teacher?"#caa548":"#9db8c9"));
+  const foes=Array.from({length:q.foes},(_,i)=>enemyFor(stage, i===0&&q.rank.r==="Ⅴ"));
+  const res=simBattle(me,allies,foes,10);
+
+  S.t+=q.dur;
+  let hpL=rnd(q.rank.hp[0],q.rank.hp[1]), snL=rnd(q.rank.sn[0],q.rank.sn[1]);
+  if(pos==="선봉") hpL=Math.round(hpL*1.1);
+  if(pos==="지원"){ hpL=Math.round(hpL*.8); snL=Math.round(snL*.8); }
+  if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
+  if(!res.win){ hpL=Math.round(hpL*1.8); snL=Math.round(snL*1.6); }
+  damageHP(hpL); damageSN(snL);
+
+  let reward=null;
+  if(res.win){
+    const rw=questReward(q);
+    const rin=gainRin(rw.rin), ex=gainExp(rw.exp), kn=gainKnow(rw.know);
+    if(rw.sari) S.sari+=rw.sari;
+    const loot=Math.random()<(0.22+mod("loot"));
+    if(loot) S.lotus+=1;
+    if(stage>S.quests.cleared) S.quests.cleared=stage;
+    addMark(Math.round(6*q.rank.mul));
+    reward={rin,ex,kn,sari:rw.sari,loot};
+    pushNews(`[의뢰] ${S.name} 학생이 사건 ${q.no}(${q.rank.r}등급)을 해결했습니다.`);
+  }
+  S.quests.log.unshift({no:q.no,t:q.t,win:res.win,time:cal().str}); if(S.quests.log.length>30)S.quests.log.pop();
+  if(party) S.quests.room=null;
+
+  modal(`의뢰 일지 · ${q.no}`,`
+    <div class="spread" style="margin-bottom:8px">
+      <div><b>${q.t}</b><div class="tiny muted">${q.ward.n} · <span style="color:${q.rank.c}">${q.rank.r}등급 ${q.rank.n}</span> · ${q.dur}분 소요</div></div>
+      <span class="tag ${res.win?"g":"r"}">${res.win?"해결":"철수"}</span></div>
+    <div class="log">${res.log.join("<br>")}</div>
+    <div class="card pad" style="margin-top:12px">
+      ${res.win?`<div class="tiny" style="color:var(--jade)">보상 · 륜 +${nf(reward.rin)} · 경험치 +${nf(reward.ex)} · 지식 +${nf(reward.kn)}${reward.sari?` · 사리 +${reward.sari}`:""}${reward.loot?` · <b style="color:var(--gold)">연등 +1</b>`:""}</div>`
+      :`<div class="tiny" style="color:var(--red)">해결하지 못하고 철수했습니다. 보상은 없습니다.</div>`}
+      <div class="tiny muted" style="margin-top:4px">체력 −${hpL} · 이성 −${snL}</div>
+      <div class="tiny muted" style="margin-top:6px">보고서 · 무엇을 보았고, 무엇을 선택했으며, 다른 방법이 있었는지 적어 제출할 것.</div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal()">확인</button>
+      ${res.win&&stage===S.quests.cleared?`<button class="btn" onclick="closeModal();runQuest(${stage+1},false)">다음 단계 바로 출동</button>`:""}</div>`,"wide");
+  renderTop(); renderNav(); renderMain(); save();
+}
+
+/* ═══════════════ 대련 ═══════════════ */
+let DUEL=null;
+VIEWS.duel=()=>{
+  const opp=duelOpponents();
+  return head("연무장","🗡 대련", `임시 체력 100 · 실제 체력에 반영되지 않습니다`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="sect-t">판정 규칙</div>
+    <div class="tiny muted">선공·후공은 민첩 판정(민첩 D5)으로 정합니다. 공격 판정은 <b>공격 D5 + 5</b>,
+    방어 판정은 <b>방어 D5 + 5</b>이며 차이만큼 임시 체력이 깎입니다.
+    회피는 대항 판정으로, 공격자는 <b>(민첩+1) D5</b>, 방어자는 <b>민첩 D5</b>를 굴려 방어자 쪽이 같거나 높으면 완전히 피합니다.</div>
+  </div>
+  <div class="grid g3">
+    ${opp.map((o,i)=>`<div class="sub">
+      <div class="spread"><h4 style="margin:0">${o.n}</h4><span class="tag ${o.npc?"g":""}">${o.tag}</span></div>
+      <div class="tiny muted" style="margin:5px 0 6px">${o.d}</div>
+      <div class="tiny">공 ${o.st.atk} · 방 ${o.st.def} · 민 ${o.st.agi} · 정 ${o.st.men} · 공명 ${o.st.res}</div>
+      <button class="btn pri sm" style="margin-top:9px" onclick="startDuel(${i})">대련 신청</button>
+    </div>`).join("")}
+  </div>`;
+};
+function duelOpponents(){
+  const c=S.course, b=v=>Math.max(1,Math.round(v));
+  return [
+    {n:"동급생 "+FAKENAMES[(cal().day)%FAKENAMES.length], tag:`${c}과정`, d:"비슷한 시기에 입학한 학생. 서로의 버릇을 대강 안다.",
+     st:{atk:b(2+c*.9),def:b(2+c*.8),agi:b(2+c*.8),men:3,res:3}},
+    {n:"상급생 "+FAKENAMES[(cal().day+5)%FAKENAMES.length], tag:`${Math.min(7,c+2)}과정`, d:"의뢰 경험이 많다. 들어오는 틈을 기다릴 줄 안다.",
+     st:{atk:b(3+c*1.25),def:b(3+c*1.1),agi:b(3+c*1.1),men:4,res:4}},
+    {n:"항아 교관", tag:"전투 교관", npc:true, d:"\"허접~♡ 한 바퀴 더 돌까?\" 가속과 급정지를 섞는 고속 근접전.",
+     st:{atk:b(6+c*1.6),def:b(4+c*1.2),agi:b(7+c*1.5),men:6,res:6}},
+  ];
+}
+function startDuel(i){
+  const o=duelOpponents()[i];
+  DUEL={me:mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},100,S.color),
+        foe:mkFighter(o.n,o.st,100,"#d2563f"), log:[], turn:0, first:null, phase:"start", npcName:o.n};
+  const a=d5(DUEL.me.agi), b=d5(DUEL.foe.agi);
+  DUEL.first = a>=b ? "me":"foe";
+  DUEL.log.push(`<span class="turn">민첩 판정 · ${esc(S.name)} ${a} vs ${esc(o.n)} ${b} → 선공 ${DUEL.first==="me"?esc(S.name):esc(o.n)}</span>`);
+  drawDuel();
+}
+function drawDuel(){
+  const D=DUEL;
+  const bar=(f)=>`<div class="spread"><b style="color:${f.c}">${esc(f.n)}</b><span class="tiny muted">${f.hp} / 100</span></div>
+    <div class="bar hp" style="margin:4px 0 10px"><i style="width:${f.hp}%"></i></div>`;
+  let action="";
+  if(D.phase==="done"){
+    action=`<div class="row"><button class="btn pri" onclick="closeModal();renderMain()">끝내기</button></div>`;
+  }else if(D.phase==="choose"){
+    action=`<div class="tiny muted" style="margin-bottom:6px">${esc(D.foe.n)}의 공격입니다. 어떻게 대응하시겠습니까?</div>
+      <div class="row"><button class="btn pri" onclick="duelDefend('def')">방어 (방어 D5 + 5)</button>
+      <button class="btn" onclick="duelDefend('eva')">회피 (민첩 D5 대항)</button></div>`;
+  }else{
+    action=`<div class="row"><button class="btn pri" onclick="duelAttack()">공격한다</button>
+      <button class="btn" onclick="closeModal()">기권</button></div>`;
+  }
+  modal(`대련 · ${esc(D.foe.n)}`,`
+    ${bar(D.me)}${bar(D.foe)}
+    <div class="log" id="dlog">${D.log.join("<br>")}</div>
+    <div style="margin-top:12px">${action}</div>`,"");
+  const l=$("#dlog"); if(l) l.scrollTop=l.scrollHeight;
+}
+function duelAttack(){
+  const D=DUEL; D.turn++;
+  D.log.push(`<span class="turn">${D.turn}턴</span>`);
+  D.queue = D.first==="me" ? ["me","foe"] : ["foe","me"];
+  duelNext();
+}
+function duelNext(){
+  const D=DUEL; if(!D) return;
+  if(!D.queue||!D.queue.length){ D.phase="act"; drawDuel(); return; }
+  const who=D.queue.shift();
+  if(who==="me"){
+    const av=d5(D.me.atk)+5;
+    const gp=D.foe.agi-D.foe.def;
+    const useEva= gp>1 ? Math.random()<.8 : gp<-1 ? Math.random()<.2 : Math.random()<.5;
+    if(useEva){
+      const ar=d5(D.me.agi+1), dr=d5(D.foe.agi);
+      if(dr>=ar) D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → ${esc(D.foe.n)} 회피 ${dr} vs ${ar} · <span class="s">완전 회피</span>`);
+      else { D.foe.hp=Math.max(0,D.foe.hp-av); D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → 회피 실패 (${dr} vs ${ar}) · <span class="h">−${av}</span>`); }
+    }else{
+      const dv=d5(D.foe.def)+5, dmg=Math.max(0,av-dv);
+      D.foe.hp=Math.max(0,D.foe.hp-dmg);
+      D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → 방어 <b>${dv}</b> · ${dmg?`<span class="h">−${dmg}</span>`:`<span class="s">완전 방어</span>`}`);
+    }
+    if(D.foe.hp<=0){ endDuel(true); return; }
+    duelNext();
+  }else{
+    D.pendingAtk=d5(D.foe.atk)+5;
+    D.phase="choose"; drawDuel();
+  }
+}
+function duelDefend(mode){
+  const D=DUEL; const av=D.pendingAtk;
+  if(mode==="def"){
+    const dv=d5(D.me.def)+5, dmg=Math.max(0,av-dv);
+    D.me.hp=Math.max(0,D.me.hp-dmg);
+    D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 내 방어 <b>${dv}</b> · ${dmg?`<span class="h">−${dmg}</span>`:`<span class="s">완전 방어</span>`}`);
+  }else{
+    const ar=d5(D.foe.agi+1), dr=d5(D.me.agi);
+    if(dr>=ar) D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 내 회피 ${dr} vs ${ar} · <span class="s">완전 회피</span>`);
+    else { D.me.hp=Math.max(0,D.me.hp-av); D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 회피 실패 (${dr} vs ${ar}) · <span class="h">−${av}</span>`); }
+  }
+  D.phase="act";
+  if(D.me.hp<=0){ endDuel(false); return; }
+  duelNext();
+}
+function endDuel(win){
+  const D=DUEL; D.phase="done";
+  D.log.push(win?`<span class="s">■ 승리. ${esc(D.foe.n)}이(가) 손을 들었습니다.</span>`
+                :`<span class="h">■ 패배. 임시 체력이 바닥났습니다.</span>`);
+  const rin=win?gainRin(180+S.course*90):gainRin(60);
+  const ex=gainExp(win?160+S.course*70:60);
+  addMark(win?10:4);
+  D.log.push(`<span class="turn">정산 · 륜 +${nf(rin)} · 경험치 +${nf(ex)}</span>`);
+  S.t+=20; drawDuel(); renderTop(); renderNav(); save();
+}
+
+/* ═══════════════ 석탑 ═══════════════ */
+VIEWS.tower=()=>{
+  const fl=(S.tower||0)+1;
+  return head("명계 전역을 굽어보는","🗼 석탑", `도달 층 <b>${S.tower||0}층</b>`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="tiny muted">석탑 내부에는 명계 전역의 파장을 모으는 감응 장치와 결계의 핵이 있다.
+    층마다 봉인된 것이 하나씩 깨어나며, 올라갈수록 종소리가 가까워진다.</div>
+  </div>
+  <div class="card pad">
+    <div class="spread"><h3 style="margin:0;font-size:18px">${fl}층 · ${pick(["봉인된 마녀의 도구","압수된 개조 무기","회수된 악인의 영혼","잔류 파장 덩어리"])}</h3>
+      <span class="tag r">보스급</span></div>
+    <div class="tiny muted" style="margin:6px 0 10px">권장 전투력 ${nf(Math.round(2600*Math.pow(1.17,fl)))} · 내 전투력 ${nf(power())}</div>
+    <div class="tiny" style="color:var(--jade)">보상 · 사리 1 · 지식 ${nf(120+fl*40)} · 경험치 ${nf(300+fl*120)}</div>
+    <button class="btn pri" style="margin-top:12px" onclick="climbTower()">오른다</button>
+  </div>`;
+};
+function climbTower(){
+  const fl=(S.tower||0)+1;
+  const me=meFighter();
+  const foe=enemyFor(Math.round(fl*2.4+4), true);
+  foe.n=`${fl}층 봉인체`;
+  const res=simBattle(me,[],[foe],12);
+  S.t+=45;
+  if(res.win){ S.tower=fl; S.sari+=1; gainKnow(120+fl*40); gainExp(300+fl*120); addMark(14);
+    damageHP(rnd(8,22)); damageSN(rnd(6,16)); }
+  else { damageHP(rnd(18,34)); damageSN(rnd(12,26)); }
+  modal(`석탑 ${fl}층`,`<div class="log">${res.log.join("<br>")}</div>
+    <div class="tiny" style="margin-top:10px;color:${res.win?"var(--jade)":"var(--red)"}">
+      ${res.win?`${fl}층 돌파 · 사리 +1 · 지식 +${nf(120+fl*40)} · 경험치 +${nf(300+fl*120)}`:"돌파 실패. 종소리가 멀어집니다."}</div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain()">확인</button></div>`,"wide");
+  renderTop(); renderNav(); save();
+}
+
+/* ═══════════════ 승급 시험 ═══════════════ */
+function examReady(){
+  const c=COURSES[S.course-1];
+  return c.subs.every(id=>S.sub[id].lv>=c.need);
+}
+function examScore(){
+  const c=COURSES[S.course-1];
+  const avg=c.subs.reduce((a,id)=>a+S.sub[id].lv,0)/3;
+  const theory=clamp((avg-(c.need-2))/4,0,1)*74.5;
+  return {avg, theory};
+}
+VIEWS.exam=()=>{
+  const c=COURSES[S.course-1], sc=examScore();
+  const ready=examReady();
+  const est=sc.theory+ (ready?31.9:0);
+  const grade=est>=100?"S":est>=90?"A":est>=80?"B":est>=64?"C":"-";
+  return head("과정 평가","📝 시험장", `합격선 <b>${c.line}점</b>`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="sect-t">대련 준비</div>
+    <div class="row" style="margin-bottom:8px">
+      ${S.buffs.length?S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip">${esc(b.n)} ${hhmm(b.left)}</span>`).join(""):'<span class="tiny muted">적용 중인 물약·식사가 없습니다. 매점에서 준비할 수 있습니다.</span>'}
+    </div>
+    <div class="row"><span class="tiny muted">체력 ${Math.floor(S.hp)} · 이성 ${Math.floor(S.sn)}</span>
+      <button class="btn sm" onclick="go('shop')">매점으로</button>
+      <button class="btn sm" onclick="rest()">보건실에서 쉬기 (3시간)</button></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card pad">
+      <div class="page-kicker">${S.course}과정</div>
+      <h3 style="margin:2px 0 8px;font-size:19px">${S.course}과정 승급 · ${c.n}</h3>
+      <div class="tiny muted">대련 상대: ${["잔류 파장체","폭주한 마무기","영혼 밀매 조직원","개조 의체 괴한","업귀","마녀의 사역물","무명의 업귀"][S.course-1]} (의뢰 ${S.course*8}단계 보스급) · 과제: 10턴 안에 쓰러뜨리기</div>
+      <hr class="hr">
+      <div class="sect-t">시험 과목</div>
+      ${c.subs.map(id=>{const s=SUBJECTS.find(x=>x.id===id), d=S.sub[id];
+        return `<div class="spread tiny" style="padding:3px 0">
+          <span>${s.n}</span>
+          <b style="color:${d.lv>=c.need?"var(--jade)":"var(--red)"}">Lv ${d.lv} / 기준 ${c.need}</b></div>`}).join("")}
+      <div class="tiny muted" style="margin-top:6px">이론은 이 과목들의 평균 레벨로 채점합니다. 평균이 기준 +2이면 이론 만점(74.5점)입니다.</div>
+      <hr class="hr">
+      <div class="sect-t">응시 자격</div>
+      <div class="tiny" style="color:${ready?"var(--jade)":"var(--red)"}">${ready?"충족 (모든 시험 과목 기준 이상)":"미충족 — 시험 과목 레벨을 더 올려야 합니다"}</div>
+    </div>
+
+    <div class="card pad">
+      <div class="sect-t">예상 성적 <span class="muted">지금 응시하면</span></div>
+      <div style="font-size:40px;font-weight:600;color:var(--gold);line-height:1.1">${grade}</div>
+      <div class="tiny muted">총점 약 ${est.toFixed(1)}점 · 이론 ${sc.theory.toFixed(1)} + 대련 최대 31.9</div>
+      <hr class="hr">
+      <table class="t">
+        <tr><td><b>S</b></td><td>100+</td><td class="tiny muted">연등·사리 2배 · 전설 장비 · 사역귀 알</td></tr>
+        <tr><td><b>A</b></td><td>90~100</td><td class="tiny muted">연등·사리 1.5배</td></tr>
+        <tr><td><b>B</b></td><td>80~89</td><td class="tiny muted">연등·사리 1.2배</td></tr>
+        <tr><td><b>C</b></td><td>64~79</td><td class="tiny muted">기본 보상</td></tr>
+      </table>
+      <div class="tiny muted" style="margin-top:8px">합격하면 바로 다음 과정이 되어 이 시험은 다시 볼 수 없습니다. 지금 보지 않고 레벨을 더 올려 S를 노릴 수도 있습니다.</div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" onclick="examPractice()">대련 연습</button>
+        <button class="btn pri" ${ready?"":"disabled"} onclick="takeExam()">시험 응시하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card pad" style="margin-top:14px">
+    <div class="sect-t">성적표</div>
+    <table class="t">
+      ${COURSES.map((x,i)=>{const r=S.examHist[i+1];
+        return `<tr><td style="width:90px">${i+1}과정</td><td>${x.n}</td>
+          <td style="text-align:right">${r?`<b style="color:var(--gold)">${r.g}</b> <span class="tiny muted">${r.score}점</span>`:
+            (i+1===S.course?'<span class="tag g">진행 중</span>':'<span class="muted">—</span>')}</td></tr>`}).join("")}
+    </table>
+  </div>`;
+};
+function rest(){
+  S.t+=180; S.hp=Math.min(100,S.hp+45); S.sn=Math.min(100,S.sn+45);
+  toast("삼장 선생이 상처를 보고 차를 내어 주었습니다. 체력·이성이 회복됩니다.","good");
+  renderTop(); renderNav(); renderMain();
+}
+function examPractice(){
+  const me=meFighter(); const foe=enemyFor(S.course*8,true);
+  const res=simBattle(me,[],[foe],10);
+  modal("대련 연습",`<div class="tiny muted" style="margin-bottom:8px">연습 결과는 기록되지 않으며 체력·이성에도 반영되지 않습니다.</div>
+    <div class="log">${res.log.join("<br>")}</div>
+    <div class="tiny" style="margin-top:8px;color:${res.win?"var(--jade)":"var(--red)"}">${res.win?`${res.turn}턴에 제압 · 본 시험이라면 대련 만점입니다.`:"제한 턴 안에 쓰러뜨리지 못했습니다."}</div>
+    <div class="row" style="margin-top:12px"><button class="btn" onclick="examPractice()">다시 연습</button>
+      <button class="btn pri" onclick="closeModal()">닫기</button></div>`,"wide");
+}
+function takeExam(){
+  if(!examReady()){ toast("응시 자격이 충족되지 않았습니다.","bad"); return; }
+  const sc=examScore();
+  const me=meFighter(); const foe=enemyFor(S.course*8,true);
+  const res=simBattle(me,[],[foe],10);
+  const duel = res.win ? 31.9 : 31.9*clamp(1-foe.hp/foe.max,0,1)*0.7;
+  const total=sc.theory+duel;
+  const g=total>=100?"S":total>=90?"A":total>=80?"B":total>=COURSES[S.course-1].line?"C":"F";
+  const pass=g!=="F";
+  S.t+=120; damageHP(rnd(10,26)); damageSN(rnd(8,20));
+  let rewardTxt="";
+  if(pass){
+    const m={S:2,A:1.5,B:1.2,C:1}[g];
+    const lo=Math.round(20*m), sa=Math.round(2*m), rin=gainRin(Math.round(1500*m*S.course));
+    S.lotus+=lo; S.sari+=sa;
+    S.examHist[S.course]={g,score:total.toFixed(1)};
+    if(g==="S"&&!S.titleUnlock) { S.titleUnlock=true; }
+    S.course=Math.min(7,S.course+1);
+    gainExp(1200*S.course);
+    rewardTxt=`연등 +${lo} · 사리 +${sa} · 륜 +${nf(rin)} · <b>${S.course}과정으로 승급</b>`;
+    pushNews(`[수석 진급] ${S.name} 학생이 ${S.course-1}과정 시험을 ${g}등급(${total.toFixed(0)}점)으로 통과하고 ${S.course}과정으로 진급했습니다.`);
+  }
+  modal("승급 시험 결과",`
+    <div style="text-align:center;padding:6px 0 10px">
+      <div style="font-size:52px;font-weight:600;color:${pass?"var(--gold)":"var(--red)"};line-height:1">${g}</div>
+      <div class="tiny muted">총점 ${total.toFixed(1)} · 이론 ${sc.theory.toFixed(1)} + 대련 ${duel.toFixed(1)}</div>
+    </div>
+    <div class="log">${res.log.join("<br>")}</div>
+    ${pass?`<div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">${rewardTxt}</div></div>`
+          :`<div class="tiny" style="margin-top:10px;color:var(--red)">합격선 ${COURSES[S.course-1].line}점에 미치지 못했습니다. 과목 레벨을 더 올린 뒤 다시 응시할 수 있습니다.</div>`}
+    <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain()">확인</button></div>`,"wide");
+  renderTop(); renderNav(); save();
+}
+
+/* ═══════════════ 구역 나들이 ═══════════════ */
+VIEWS.outing=()=>{
+  return head("사무전 정문 · 통행 관리","🚇 구역 나들이", `통행패 <b>${S.pass} / 3</b>`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="tiny muted">통행패는 12시간마다 한 장씩 발급되며 최대 3장까지 모입니다(넘는 발급분은 사라집니다).
+    나들이를 나가면 구역 지도가 열리고, 한 번에 이야기를 3개까지 겪을 수 있습니다. 선택에 따라 결과가 달라집니다.</div>
+    ${S.pass===0?`<div class="tiny" style="color:var(--red);margin-top:8px">가진 통행패가 없습니다. 다음 발급까지 ${hhmm(S.passNext)} 남았습니다.</div>`:""}
+  </div>
+  <div class="grid g3">
+    ${WARDS.map(w=>{
+      const lock=S.course<w.req, done=S.outing.done[w.id]||0;
+      return `<div class="sub" style="${lock?"opacity:.45":""}">
+        <div class="spread"><h4 style="margin:0;color:${w.c}">${w.n}</h4><span class="tag">${w.t}</span></div>
+        <div class="tiny muted" style="margin:6px 0 8px;min-height:52px">${w.d}</div>
+        <div class="tiny muted">오늘 이야기 ${done} / 3 · 기념품 ${S.outing.souv.filter(s=>s.w===w.id).length}종</div>
+        ${lock?`<div class="tag" style="margin-top:8px">${w.req}과정부터 방문할 수 있습니다</div>`
+          :`<button class="btn pri sm" style="margin-top:8px" ${S.pass<1||done>=3?"disabled":""} onclick="startOuting(${w.id})">
+             나들이 가기 · 통행패 1장</button>`}
+      </div>`;
+    }).join("")}
+  </div>
+  ${S.outing.souv.length?`<div class="card pad" style="margin-top:14px">
+    <div class="sect-t">모은 기념품</div>
+    <div class="row">${S.outing.souv.map(s=>`<span class="buffchip">${s.e} ${esc(s.n)}</span>`).join("")}</div></div>`:""}`;
+};
+const OCHOICE=[
+ {t:"눈에 띄지 않게 뒤를 밟는다", st:"agi", dc:11, g:"발소리를 죽이고 따라붙는다. 상대는 끝내 눈치채지 못했다.", b:"반 박자 늦게 그림자가 멈춘다. 들켰다."},
+ {t:"파장을 읽어 본다",         st:"res", dc:11, g:"잔향이 또렷하게 잡힌다. 누가 지나갔는지 알 것 같다.", b:"읽으려는 순간 파장이 흐트러져 머리가 울린다."},
+ {t:"정면으로 말을 건다",       st:"men", dc:8,  g:"상대가 경계를 풀고 제법 길게 이야기해 준다.", b:"잘못 건드렸다. 분위기가 험해진다."},
+ {t:"힘으로 밀어붙인다",         st:"atk", dc:12, g:"한 번에 제압했다. 구경꾼들이 흩어진다.", b:"생각보다 단단하다. 어깨를 부딪히고 물러선다."},
+ {t:"앞을 막아선다",            st:"def", dc:11, g:"버텨 섰다. 뒤에 있던 사람이 무사히 빠져나간다.", b:"충격이 그대로 들어온다. 숨이 막힌다."},
+ {t:"그냥 지나간다",            st:null, g:"못 본 척 지나쳤다. 등 뒤가 조금 서늘하다."},
+];
+let OUTING=null;
+function startOuting(wid){
+  if(S.pass<1) return;
+  S.pass--; S.t+=90;
+  const w=WARDS.find(x=>x.id===wid);
+  OUTING={w, step:0, got:{rin:0,know:0,exp:0,lotus:0}, souv:null};
+  S.outing.done[wid]=(S.outing.done[wid]||0)+1;
+  drawOuting();
+}
+function drawOuting(){
+  const O=OUTING, w=O.w;
+  if(O.step>=3){
+    const got=O.got;
+    const canSouv = !S.outing.souv.find(s=>s.w===w.id);
+    modal(`${w.n} 나들이 · 돌아가는 길`,`
+      <div class="tiny muted" style="margin-bottom:10px">여섯 걸음을 걸었고 세 가지 이야기를 겪었습니다. 통행패를 반납하고 사무전으로 돌아갑니다.</div>
+      <div class="card pad">
+        <div class="tiny" style="color:var(--jade)">륜 +${nf(got.rin)} · 지식 +${nf(got.know)} · 경험치 +${nf(got.exp)}${got.lotus?` · 연등 +${got.lotus}`:""}</div>
+      </div>
+      ${canSouv?`<div style="margin-top:12px"><div class="sect-t">작은 기념품을 하나 고르세요</div>
+        <div class="row">${souvenirsFor(w).map((s,i)=>`<button class="btn" onclick="takeSouv(${w.id},${i})">${s.e} ${s.n}</button>`).join("")}</div></div>`:""}
+      <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain();renderTop()">돌아간다</button></div>`);
+    renderTop(); renderNav(); save(); return;
+  }
+  const scene=pick(w.ev);
+  const cs=[...OCHOICE].sort(()=>Math.random()-.5).slice(0,2).concat(OCHOICE[5]);
+  OUTING.cs=cs;
+  modal(`${w.n} · ${O.step+1}번째 이야기`,`
+    <div class="tiny" style="color:${w.c};letter-spacing:.1em">${w.t}</div>
+    <div style="margin:8px 0 14px;font-size:15px;line-height:1.8">${scene}. ${pick(["어둠 속에서 네온 하나가 깜빡인다.","멀리서 독경 소리가 흘러나온다.","발밑에 전선이 얽혀 있다.","향 냄새와 납땜 연기가 섞인다.","지도 애플리케이션은 계속 직진하라고 안내한다."])}</div>
+    <div class="grid" style="gap:8px">
+      ${cs.map((c,i)=>`<button class="btn" style="text-align:left" onclick="outChoose(${i})">
+        ${c.t}${c.st?` <span class="tiny muted">· ${STATS.find(s=>s.k===c.st).n} 판정 (목표 ${c.dc})</span>`:` <span class="tiny muted">· 판정 없음</span>`}</button>`).join("")}
+    </div>
+    <div class="tiny muted" style="margin-top:10px">걸음 ${O.step*2+1}–${O.step*2+2} / 6</div>`);
+}
+function outChoose(i){
+  const O=OUTING, c=O.cs[i];
+  let txt, ok=true;
+  if(c.st){ const roll=d5(effStat(c.st)); ok=roll>=c.dc;
+    txt=`<div class="tiny muted">${STATS.find(s=>s.k===c.st).n} 판정 · ${effStat(c.st)}D5 = <b>${roll}</b> / 목표 ${c.dc}</div>
+         <div style="margin-top:8px;font-size:15px">${ok?c.g:c.b}</div>`;
+    if(ok){ O.got.rin+=rnd(60,180); O.got.know+=rnd(10,40); O.got.exp+=rnd(40,110); if(Math.random()<.3)O.got.lotus++; }
+    else { damageHP(rnd(2,9)); damageSN(rnd(1,7)); O.got.exp+=rnd(10,30); }
+  }else{ txt=`<div style="font-size:15px">${c.g}</div>`; O.got.exp+=rnd(15,35); }
+  addMark(4);
+  O.step++;
+  modal("결과", txt+`<div class="row" style="margin-top:14px"><button class="btn pri" onclick="drawOuting()">계속 걷는다</button></div>`);
+}
+function souvenirsFor(w){
+  const base=[{e:"🏮",n:`${w.n} 연등`},{e:"🪙",n:"닳은 륜 한 닢"},{e:"🎐",n:"작은 유리 풍경"},{e:"📿",n:"구역 표식 염주"}];
+  return base.slice(0,3);
+}
+function takeSouv(wid,i){
+  const w=WARDS.find(x=>x.id===wid), s=souvenirsFor(w)[i];
+  S.outing.souv.push({w:wid,...s}); closeModal(); renderMain(); toast(`${s.n}을(를) 챙겼습니다.`,"good"); save();
+}
+
+/* ═══════════════ 염라제 ═══════════════ */
+VIEWS.fest=()=>{
+  const c=cal(), goals=[{n:"1단계",v:26600,r:"연등 10"},{n:"2단계",v:80000,r:"연등 15 · 사리 30"},{n:"3단계",v:160000,r:"연등 20 · 사역귀의 알 1"},{n:"4단계",v:400000,r:"연등 40 · 전설 부적"}];
+  return head(`축제 · ${c.m} 1일 ~ 10일`,"🏮 염라제", `끝나기까지 ${Math.max(0,10-(c.day%10))}일`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="tiny muted" style="line-height:1.85">
+    한 해 가운데 사무전이 가장 느슨해지는 때. 심연에 내려가 돌아오지 못한 졸업생들의 그림자가 잊어버린 종소리를 찾아
+    하룻밤씩 사무전으로 올라온다. 학생들은 창가에 잿불을 담은 「등롱」을 두어 그림자에게 길을 밝힌다.
+    그림자는 자기 이름을 불러 준 사람을 따라간다고 전해지므로, 이 주에는 서로 진짜 이름 대신 가장 좋은 모습으로 부르는 것이 오랜 관례다.</div>
+    <div class="quote" style="margin-top:10px">이름 없는 사서 — "새벽이 되자 그림자들이 모두 내려갔습니다. 서고 가장 안쪽 책장에 배지가 하나 늘었군요. 올해도 누군가가 집에 돌아왔습니다."</div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card pad">
+      <div class="spread"><b>문 앞 공양 바구니</b><span class="tag ${S.fest.basket?"":"g"}">${S.fest.basket?"오늘 열었습니다":"열 수 있습니다"}</span></div>
+      <div class="tiny muted" style="margin:6px 0 10px">축제 동안 하루 한 번, 숙사 방문 앞에 놓인 바구니를 열 수 있습니다. 대개 사역귀 간식·연등·부적가루·축제 표식이 들어 있으나, 가끔 장난이 들어 있기도 합니다.</div>
+      <button class="btn pri sm" ${S.fest.basket?"disabled":""} onclick="openBasket()">바구니 열기</button>
+    </div>
+    <div class="card pad">
+      <div class="spread"><b>이웃 방에서 과자 받기</b><span class="tag">오늘 ${S.fest.visits} / 5</span></div>
+      <div class="tiny muted" style="margin:6px 0 10px">관계를 맺은 학생의 방을 구경하면 「과자 받기」를 누를 수 있습니다. 한 방에서 하루 한 번, 하루 5곳까지 표식 4개를 받습니다. 그 방에 등롱이 놓여 있으면 4개를 더 받습니다.</div>
+      <button class="btn pri sm" ${S.fest.visits>=5?"disabled":""} onclick="visitRoom()">이웃 방 구경하기</button>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card pad">
+      <div class="sect-t">내 축제 표식</div>
+      <div style="font-size:30px;font-weight:600;color:var(--gold)">${S.fest.marks}<span style="font-size:14px;color:var(--dim)"> 개 보유</span></div>
+      <div class="tiny muted">수업·의뢰·수행·나들이 등 평소 활동으로 모입니다(활동 점수 20점마다 1개). 하루에 100개까지 모을 수 있으며, 오늘 ${S.fest.todayMarks}개를 모았습니다.</div>
+      <div class="bar jd" style="margin:8px 0"><i style="width:${S.fest.todayMarks}%"></i></div>
+      <div class="row">
+        <button class="btn sm" onclick="exchangeMark(10)">표식 10 → 륜 4,740</button>
+        <button class="btn sm" onclick="exchangeMark(50)">표식 50 → 연등 3</button>
+      </div>
+    </div>
+    <div class="card pad">
+      <div class="sect-t">공동 목표</div>
+      <div class="tiny muted">모든 학생이 모은 표식 <b style="color:var(--gold)">${nf(S.fest.total)}</b>개 · 참여 1,237명</div>
+      ${goals.map(g=>{const p=clamp(S.fest.total/g.v*100,0,100);
+        return `<div style="margin-top:8px"><div class="spread tiny"><span>${g.n} · ${nf(g.v)}개</span>
+          <span class="${p>=100?"":"muted"}" style="${p>=100?"color:var(--jade)":""}">${p>=100?"달성":p.toFixed(0)+"%"}</span></div>
+          <div class="bar" style="margin:3px 0"><i style="width:${p}%"></i></div>
+          <div class="tiny muted">보상 ${g.r}</div></div>`}).join("")}
+    </div>
+  </div>
+
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="spread"><div class="sect-t" style="margin:0">도장과 기념품</div>
+      <span class="tiny muted">도장 ${S.fest.stamps.length} / 5</span></div>
+    <div class="tiny muted" style="margin:5px 0 8px">부스를 처음 체험할 때 승패와 무관하게 도장 한 개를 받습니다. 서로 다른 세 곳을 체험하면 기념품 한 종을 고를 수 있습니다.</div>
+    <div class="row">${BOOTHS.map(b=>`<span class="buffchip" style="${S.fest.stamps.includes(b.id)?"border-color:var(--gold2);color:var(--gold)":"opacity:.5"}">${b.e} ${b.kw}</span>`).join("")}</div>
+    ${S.fest.stamps.length>=3&&!S.fest.souv?`<div class="row" style="margin-top:10px">
+      ${SOUVENIRS.map(s=>`<button class="btn" onclick="takeFestSouv('${s.id}')">${s.e} ${s.n}</button>`).join("")}</div>`:""}
+    ${S.fest.souv?`<div class="row" style="margin-top:10px"><span class="tag g">기념품</span>
+      ${SOUVENIRS.find(s=>s.id===S.fest.souv).e} ${SOUVENIRS.find(s=>s.id===S.fest.souv).n}
+      <span class="tiny muted">능력치 변화 없이 추억으로 남는 물건입니다.</span></div>`:""}
+  </div>
+
+  <div class="grid g3">
+    ${BOOTHS.map(b=>`<div class="booth">
+      <h4>${b.e} ${b.n} <span class="tag">${b.kw}</span></h4>
+      <div class="tiny muted" style="margin:5px 0 9px;min-height:40px">${b.d}</div>
+      <button class="btn pri sm" onclick="booth('${b.id}')">체험하기</button>
+      ${S.fest.stamps.includes(b.id)?'<span class="tag g" style="margin-left:6px">도장 ✓</span>':""}
+    </div>`).join("")}
+  </div>`;
+};
+function stamp(id){ if(!S.fest.stamps.includes(id)){ S.fest.stamps.push(id); toast("도장 한 개를 받았습니다.","good"); } }
+function takeFestSouv(id){ S.fest.souv=id; renderMain(); toast("기념품을 받았습니다.","good"); save(); }
+function openBasket(){
+  S.fest.basket=1;
+  const r=Math.random();
+  let txt,gain;
+  if(r<.08){ txt="바구니 안에 작은 쪽지가 있다. 「올해도 걸렸네.」 — 아무래도 누가 먼저 다녀간 모양이다."; gain="장난 · 표식 2"; addMark(2); }
+  else if(r<.4){ S.lotus+=3; txt="잿불을 담은 작은 연등 세 개가 가지런히 놓여 있다."; gain="연등 +3"; }
+  else if(r<.7){ const k=gainKnow(240); txt="부적가루 한 줌과 손때 묻은 경문 사본이 들어 있다."; gain=`지식 +${nf(k)}`; }
+  else { const n=rnd(30,60); S.fest.marks+=n; S.fest.total+=n; txt="축제 표식이 한 움큼 들어 있다. 누가 이렇게 많이 넣어 둔 걸까."; gain=`축제 표식 +${n}`; }
+  modal("문 앞 공양 바구니",`<div style="font-size:15px;line-height:1.9">${txt}</div>
+    <div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">${gain}</div></div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain();renderTop()">닫기</button></div>`);
+  save();
+}
+function visitRoom(){
+  S.fest.visits++;
+  const who=S.rel.length?pick(S.rel).n:pick(FAKENAMES);
+  const lamp=Math.random()<.5;
+  const got=4+(lamp?4:0);
+  S.fest.marks+=got; S.fest.total+=got;
+  modal("이웃 방 구경",`
+    <div style="font-size:15px;line-height:1.9">${esc(who)}의 방. ${pick(["창가에 말린 꽃이 줄지어 걸려 있다.","책상 위에 다 쓴 부적이 쌓여 있다.","벽 한 면이 전부 지도다. 구역마다 핀이 꽂혀 있다.","이불이 개어져 있지 않다. 급히 나간 모양이다.","작은 불단에 향이 한 대 꽂혀 있다."])}
+    ${lamp?"창가에 <b>등롱</b>이 놓여 있다. 잿불이 아직 따뜻하다.":""}</div>
+    <div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">축제 표식 +${got}${lamp?" (등롱 +4 포함)":""}</div></div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain()">닫기</button></div>`);
+  save();
+}
+function exchangeMark(n){
+  if(S.fest.marks<n){ toast("표식이 부족합니다.","bad"); return; }
+  S.fest.marks-=n;
+  if(n===10){ const r=gainRin(4740); toast(`륜 +${nf(r)}`,"good"); } else { S.lotus+=3; toast("연등 +3","good"); }
+  renderMain(); renderTop(); save();
+}
+/* ── 부스 ── */
+let BG=null;
+function booth(id){
+  stamp(id);
+  if(id==="shoot"){ BG={turn:1,me:0,foe:0,shots:[],left:3}; drawShoot(); }
+  else if(id==="fish"){ BG={mine:0,tries:0,done:false,foe:fishAI()}; drawFish(); }
+  else drawCard(id);
+  save();
+}
+function drawCard(id){
+  let t,b;
+  if(id==="food"){ t="🏮 사무전 야시장"; const f=pick(FOODS); b=`<b>${f}</b>을(를) 샀다.<br>${pick(FOODSIT)}`; addMark(3); }
+  if(id==="photo"){ t="📷 오늘의 기념사진"; b=`소품은 <b>${pick(PHOTOPROP)}</b>.<br>${pick(PHOTOSIT)}`; addMark(3); }
+  if(id==="walk"){ t="🎊 축제 한 바퀴"; b=pick(WALKSIT); addMark(3); }
+  modal(t,`<div style="font-size:16px;line-height:2;padding:6px 0">${b}</div>
+    <div class="tiny muted">받은 상황을 바탕으로 자유롭게 놀아 주세요. 횟수 제한은 없습니다.</div>
+    <div class="row" style="margin-top:14px"><button class="btn" onclick="booth('${id}')">한 번 더</button>
+      <button class="btn pri" onclick="closeModal();renderMain()">닫기</button></div>`);
+}
+function drawShoot(){
+  const g=BG;
+  const rings=[72,56,40,18].map((r,i)=>`<div class="ring" style="width:${r*2}px;height:${r*2}px;border-color:${i===2?"#caa548":i===3?"#d2563f":"#4a3f6e"};${i===2?"background:rgba(202,165,72,.06)":""}"></div>`).join("");
+  const shots=g.shots.map(s=>`<div class="shot" style="left:${s.x}%;top:${s.y}%"></div>`).join("");
+  modal("🎯 염라 님을 맞혀라",`
+    <div class="spread" style="margin-bottom:8px">
+      <span class="tiny muted">${g.turn} / 3턴 · 이번 턴 남은 탄 ${g.left}발</span>
+      <span class="tiny">나 <b style="color:var(--gold)">${g.me}</b> · 과녁지기 <b style="color:var(--red)">${g.foe}</b></span></div>
+    <div class="target" id="tgt" onclick="shootAt(event)">
+      ${rings}
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.5">😄</div>
+      ${shots}
+    </div>
+    <div class="tiny muted" style="margin-top:8px">과녁을 눌러 쏩니다. 금빛 원 안에 맞으면 1점. 한 턴에 0~3점, 세 턴 누적이 높은 쪽이 승리합니다. 최고 9점이며 동점은 공동 승리입니다.</div>
+    ${g.over?`<div class="card pad" style="margin-top:10px"><b>${g.me>g.foe?"승리":g.me<g.foe?"패배":"공동 승리"}</b>
+      <div class="tiny muted">${g.me} : ${g.foe} · 승패는 기록되지 않습니다. 편하게 즐겨 주세요.</div></div>
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="booth('shoot')">한 판 더</button>
+      <button class="btn pri" onclick="closeModal();renderMain()">닫기</button></div>`:""}`);
+}
+function shootAt(e){
+  const g=BG; if(g.over||g.left<=0) return;
+  const r=$("#tgt").getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*100, y=(e.clientY-r.top)/r.height*100;
+  const dx=(x-50)/100*r.width, dy=(y-50)/100*r.height;
+  const d=Math.hypot(dx,dy);
+  g.shots.push({x,y});
+  if(d<40){ g.me+=1; toast(d<18?"정중앙에 맞혔습니다.":"명중."); }
+  g.left--;
+  if(g.left<=0){
+    const f=rnd(0,3); g.foe+=f;
+    toast(`${g.turn}턴 · 과녁지기 ${f}점`);
+    if(g.turn>=3){ g.over=true; addMark(8); }
+    else { g.turn++; g.left=3; g.shots=[]; }
+  }
+  drawShoot();
+}
+function fishAI(){ let s=0; for(let i=0;i<3;i++){ if(i>0&&Math.random()<.45) break;
+  if(Math.random()<[0.17,0.33,0.5][i]) return 0; s+=rnd(1,3);} return s; }
+function drawFish(){
+  const g=BG, next=[17,33,50][g.tries]||50;
+  modal("🐠 달빛 금붕어 건지기",`
+    <div class="spread" style="margin-bottom:8px">
+      <span class="tiny muted">선공(과녁지기)의 확정 점수 <b style="color:var(--red)">${g.foe}점</b></span>
+      <span class="tiny">내 누적 <b style="color:var(--gold)">${g.mine}점</b> · ${g.tries}/3회</span></div>
+    <div style="position:relative;height:120px;background:radial-gradient(circle,#1b2a3a,#101723);border:1px solid var(--line);border-radius:9px;overflow:hidden">
+      ${[0,1,2,3,4].map(i=>`<span class="fish" style="left:${8+i*18}%;top:${18+((i*27)%60)}%;animation-delay:${i*.6}s">🐠</span>`).join("")}
+    </div>
+    ${g.done?`<div class="card pad" style="margin-top:10px">
+        <b>${g.mine>g.foe?"승리":g.mine<g.foe?"패배":"공동 승리"}</b>
+        <div class="tiny muted">${g.mine} : ${g.foe} · ${g.broke?"뜰채가 찢어져 그 판의 점수가 0이 되었습니다.":"무사히 확정했습니다."}</div></div>
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="booth('fish')">한 판 더</button>
+        <button class="btn pri" onclick="closeModal();renderMain()">닫기</button></div>`
+    :`<div class="tiny muted" style="margin:10px 0">다음 건지기의 뜰채 파손 확률은 <b style="color:var(--red)">${next}%</b>입니다. 파손되면 누적 점수가 0이 되고 즉시 종료됩니다.</div>
+      <div class="row"><button class="btn pri" onclick="fishScoop()">한 번 건진다</button>
+        <button class="btn" onclick="fishStop()">지금 점수로 확정</button></div>`}`);
+}
+function fishScoop(){
+  const g=BG, p=[17,33,50][g.tries]||50;
+  g.tries++;
+  if(Math.random()*100<p){ g.mine=0; g.broke=true; g.done=true; addMark(8); }
+  else { g.mine+=rnd(1,3); if(g.tries>=3){ g.done=true; addMark(8); } }
+  drawFish();
+}
+function fishStop(){ BG.done=true; addMark(8); drawFish(); }
+
+/* ═══════════════ 지도 ═══════════════ */
+const PLACES=[
+ {id:"plaza",  n:"사무전 광장", e:"⛩", x:50, y:48, view:"plaza"},
+ {id:"class",  n:"강의동",     e:"📖", x:22, y:30, view:"class"},
+ {id:"seogo",  n:"기록 서고",   e:"🕯", x:12, y:52, view:"research"},
+ {id:"tower",  n:"석탑",       e:"🗼", x:50, y:16, view:"tower"},
+ {id:"train",  n:"연무장",     e:"🗡", x:78, y:30, view:"duel"},
+ {id:"desk",   n:"의뢰 접수대", e:"⚔", x:74, y:56, view:"quest"},
+ {id:"shop",   n:"여와의 매점", e:"🏪", x:30, y:68, view:"shop"},
+ {id:"heal",   n:"보건실",     e:"🩹", x:52, y:78, view:null, act:"rest"},
+ {id:"dorm",   n:"기숙사",     e:"🛏", x:86, y:76, view:"rel"},
+ {id:"gate",   n:"정문 · 통행소",e:"🚇", x:16, y:86, view:"outing"},
+ {id:"exam",   n:"시험장",     e:"📝", x:70, y:88, view:"exam"},
+ {id:"fest",   n:"축제 거리",   e:"🏮", x:44, y:62, view:"fest"},
+ {id:"yama",   n:"이사장실",   e:"🍵", x:88, y:14, view:null, act:"yama", req:3},
+];
+VIEWS.map=()=>{
+  return head("지금 있는 곳","🗺 사무전", `${PLACES.find(p=>p.id===S.place).n}`)+`
+  <div class="card pad" style="margin-bottom:14px;padding:10px 14px">
+    <div class="tiny muted">밝게 표시된 장소를 눌러 이동합니다. 이동에는 명계 시간이 조금 걸립니다. 회색 장소는 과정 제한 구역입니다.</div>
+  </div>
+  <div class="mapwrap">
+    <svg style="position:absolute;inset:0;width:100%;height:100%">
+      ${[["plaza","class"],["plaza","tower"],["plaza","train"],["plaza","desk"],["plaza","fest"],
+         ["class","seogo"],["fest","shop"],["fest","heal"],["desk","dorm"],["shop","gate"],
+         ["heal","exam"],["train","yama"],["dorm","exam"]].map(([a,b])=>{
+        const A=PLACES.find(p=>p.id===a),B=PLACES.find(p=>p.id===b);
+        return `<line x1="${A.x}%" y1="${A.y}%" x2="${B.x}%" y2="${B.y}%" stroke="#2a2444" stroke-width="2" stroke-dasharray="3 4"/>`}).join("")}
+    </svg>
+    ${PLACES.map(p=>{
+      const lock=p.req&&S.course<p.req;
+      return `<div class="node ${S.place===p.id?"here":""} ${lock?"lock":""}" style="left:${p.x}%;top:${p.y}%"
+        onclick="${lock?"":`moveTo('${p.id}')`}"><div class="nd">${p.e}</div><span>${p.n}</span></div>`}).join("")}
+  </div>
+  <div class="card pad" style="margin-top:14px">
+    <div class="sect-t">사무전에 함께 있는 학생 ${rnd(26,38)}명</div>
+    <div class="grid g4">
+      ${FAKENAMES.slice(0,8).map(n=>`<div class="spread" style="background:#15122a;border:1px solid var(--line);border-radius:7px;padding:6px 10px">
+        <div><b style="font-size:12.5px">${n}</b><div class="tiny muted">${pick(PLACES).n}</div></div>
+        <button class="btn sm ghost" onclick="addFriend('${n}')">동행 신청</button></div>`).join("")}
+    </div>
+  </div>`;
+};
+function moveTo(id){
+  const p=PLACES.find(x=>x.id===id);
+  if(S.place!==id){ S.t+=rnd(8,22); S.place=id; }
+  if(p.act==="rest"){ rest(); return; }
+  if(p.act==="yama"){ yamaTea(); return; }
+  if(p.view) go(p.view); else { renderMain(); renderTop(); }
+}
+function yamaTea(){
+  modal("이사장실",`
+    <div style="font-size:15px;line-height:2">
+    넓은 방 안이 전부 분화다. 염라가 찻주전자를 든 채 고개를 든다.<br><br>
+    "고개를 들어 나를 보아라. 그래, 겁먹을 필요는 없다. 앞에 놓인 과자도 먹어도 된다. 네 것이니 누구의 허락을 기다릴 필요는 없어."<br><br>
+    <span class="muted">${pick(["\"그 아이가 미워지는 날보다, 소중해지는 날을 더욱 경계해라.\"","\"남이 건네준 깨달음은 온전히 네 것이 될 수 없다.\"","\"죄를 인정하는 것과 스스로를 미워하는 것은 다른 일이다.\"","\"같은 인연이 다시 네 앞에 놓였을 때, 지난 생과 다른 선택을 내려라.\""])}</span></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn pri" onclick="takeTea()">차를 마신다</button>
+      <button class="btn" onclick="closeModal()">물러난다</button></div>`);
+}
+function takeTea(){
+  S.t+=60; S.sn=Math.min(100,S.sn+25); gainExp(400); addMark(6);
+  closeModal(); renderMain(); renderTop(); renderNav();
+  toast("보이차를 한 잔 얻어 마셨습니다. 이성이 회복됩니다.","good");
+}
+
+/* ═══════════════ 매점 ═══════════════ */
+VIEWS.shop=()=>{
+  return head("사무전 1층","🏪 여와의 매점", `보유 륜 <b style="color:var(--gold)">${nf(S.rin)}</b>`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="quote">"앗, 죄송해요! 방금 건 못 본 걸로… 아, 치료용품은 삼장 선생님이 직접 만드신 거예요. 그건 확실해요."</div>
+  </div>
+  <div class="grid g3">
+    ${SHOP.map(p=>`<div class="sub">
+      <div class="spread"><h4 style="margin:0">${p.n}</h4>${p.tag?`<span class="tag">${p.tag}</span>`:""}</div>
+      <div class="tiny muted" style="margin:5px 0 8px">${p.d}</div>
+      <div class="spread">
+        <span class="tiny" style="color:var(--gold)">륜 ${nf(p.c)}</span>
+        <span class="tiny muted">보유 ${S.inv[p.id]||0}</span></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="buy('${p.id}')">구매</button>
+        <button class="btn pri sm" ${(S.inv[p.id]||0)<1?"disabled":""} onclick="useItem('${p.id}')">사용</button>
+      </div></div>`).join("")}
+  </div>`;
+};
+function buy(id){
+  const p=SHOP.find(x=>x.id===id);
+  if(S.rin<p.c){ toast("륜이 부족합니다.","bad"); return; }
+  S.rin-=p.c; S.inv[id]=(S.inv[id]||0)+1;
+  renderTop(); renderMain(); save();
+}
+function useItem(id){
+  const p=SHOP.find(x=>x.id===id);
+  if(!(S.inv[id]>0)) return;
+  S.inv[id]--;
+  if(p.type==="heal"){ S.hp=Math.min(100,S.hp+p.v); toast(`체력 +${p.v}`,"good"); }
+  if(p.type==="san"){ S.sn=Math.min(100,S.sn+p.v); toast(`이성 +${p.v}`,"good"); }
+  if(p.type==="ward"){ S.ward=true; toast("호신 부적을 붙였습니다. 다음 의뢰의 피해가 절반이 됩니다.","good"); }
+  if(p.type==="buff"){
+    const ex=S.buffs.find(b=>b.n===p.n);
+    if(ex) ex.left=Math.min(p.dur*3, ex.left+p.dur);
+    else S.buffs.push({n:p.n,key:p.key,v:p.v,left:p.dur,e:p.tag==="식사"?"🍱":"🧪",c:p.tag==="식사"?"#d8a44a":"#4fb3a3"});
+    toast(`${p.n} · ${p.d}`,"good");
+  }
+  renderTop(); renderNav(); renderMain(); save();
+}
+
+/* ═══════════════ 인연 · 관계 ═══════════════ */
+VIEWS.rel=()=>{
+  return head("사무전 교류","🕯 인연 · 관계", `맺은 관계 ${S.rel.length} / 50`)+`
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="tiny muted">학생 정보창의 「관계 신청」으로 신청하고, 상대가 수락하면 두 학생의 정보창 「관계」 탭에 표시됩니다.
+    페어는 전생의 하나의 죄업으로 묶인 상대이므로, 한 사람에게 하나만 맺을 수 있습니다.</div>
+  </div>
+  <div class="grid g2">
+    <div class="card pad">
+      <div class="spread"><div class="sect-t" style="margin:0">인연 (친구)</div>
+        <button class="btn sm" onclick="addFriend()">학생 찾기</button></div>
+      ${S.friends.length?S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+        <div><b>${esc(f.n)}</b> <span class="tiny muted">· ${f.c}과정 · Lv ${f.lv} · ${f.line}</span>
+          <div class="tiny muted">${esc(f.memo||"마지막 접속 "+f.last)}</div></div>
+        <div class="row">
+          <button class="btn sm ghost" onclick="relPropose('${esc(f.n)}')">관계</button>
+          <button class="btn sm ghost" onclick="dmTo('${esc(f.n)}')">1:1</button>
+        </div></div>`).join(""):`<div class="tiny muted" style="padding:10px 0">아직 맺은 인연이 없습니다. 지도에서 함께 있는 학생에게 동행을 신청해 보세요.</div>`}
+    </div>
+    <div class="card pad">
+      <div class="sect-t">맺은 관계</div>
+      ${S.rel.length?S.rel.map((r,i)=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+        <div><b>${esc(r.n)}</b>
+          <div class="tiny muted">나는 ${esc(r.nick||r.n)}의 <b style="color:var(--gold)">${r.a}</b> · ${esc(r.n)} 님은 나의 <b style="color:var(--gold)">${r.b}</b></div></div>
+        <div class="row">
+          <button class="btn sm ghost" onclick="relPropose('${esc(r.n)}',${i})">수정 제안</button>
+          <button class="btn sm red" onclick="relCut(${i})">끊기</button></div></div>`).join("")
+        :`<div class="tiny muted" style="padding:10px 0">맺은 관계가 없습니다.</div>`}
+    </div>
+  </div>`;
+};
+function addFriend(n){
+  n=n||pick(FAKENAMES.filter(x=>!S.friends.find(f=>f.n===x)))||("학생"+rnd(10,99));
+  if(S.friends.find(f=>f.n===n)){ toast("이미 인연을 맺은 학생입니다."); return; }
+  S.friends.push({n, c:rnd(1,7), lv:rnd(20,90), line:pick(["장인","마무기"]), last:cal().str});
+  toast(`${n} 학생과 인연을 맺었습니다.`,"good"); renderMain(); save();
+}
+function relPropose(name, idx){
+  const cur=idx!=null?S.rel[idx]:null;
+  modal("관계 "+(cur?"수정 제안":"신청"),`
+    <div class="tiny muted" style="margin-bottom:10px">${esc(name)}</div>
+    <div class="row" style="margin-bottom:10px">
+      ${RELKIND.map(k=>`<button class="btn sm" onclick="relSet('${k}')">${k}</button>`).join("")}</div>
+    <label class="f">나는 ${esc(name)} 님의</label><input class="inp" id="ra" maxlength="8" value="${cur?esc(cur.a):"친구"}">
+    <label class="f">${esc(name)} 님의 애칭 (선택)</label><input class="inp" id="rn" maxlength="8" value="${cur?esc(cur.nick||""):""}">
+    <label class="f">${esc(name)} 님은 나의</label><input class="inp" id="rb" maxlength="8" value="${cur?esc(cur.b):"친구"}">
+    <div class="tiny muted" style="margin-top:8px">관계 이름·애칭은 8자까지 가능합니다. 한 학생과는 하나의 관계만 맺을 수 있습니다.</div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn pri" onclick="relSave('${esc(name)}',${idx==null?"null":idx})">${cur?"수정 제안 보내기":"관계 신청"}</button>
+      <button class="btn" onclick="closeModal()">취소</button></div>`);
+}
+function relSet(k){ const m={"선배·후배":["선배","후배"],"후배·선배":["후배","선배"],"스승·제자":["스승","제자"],"제자·스승":["제자","스승"]};
+  const p=m[k]||[k,k]; $("#ra").value=p[0]; $("#rb").value=p[1]; }
+function relSave(n, idx){
+  const a=$("#ra").value.trim()||"친구", b=$("#rb").value.trim()||"친구", nick=$("#rn").value.trim();
+  if(idx!=null&&idx>=0) S.rel[idx]={n,a,b,nick};
+  else { if(S.rel.find(r=>r.n===n)){ toast("이미 맺은 관계가 있습니다.","bad"); return; } S.rel.push({n,a,b,nick}); }
+  if(!S.friends.find(f=>f.n===n)) addFriend(n);
+  closeModal(); renderMain(); toast(`${n} 님이 관계를 수락했습니다.`,"good"); save();
+}
+function relCut(i){ if(confirm("관계를 끊을까요?")){ S.rel.splice(i,1); renderMain(); save(); } }
+function dmTo(n){ S.chatTab="1:1"; addMsg("1:1",n,fmtChat(pick(CHATPOOL.RP)),"#b9b1c6"); renderChat(); toast(`${n}과(와)의 1:1 창을 열었습니다.`); }
+
+/* ═══════════════ 기록 ═══════════════ */
+VIEWS.record=()=>{
+  const subLv=SUBJECTS.reduce((a,s)=>a+S.sub[s.id].lv,0);
+  const resLv=RESEARCH.reduce((a,r)=>a+S.res[r.id],0);
+  return head("저승차사 기록부","📜 기록", `입학 ${new Date(S.playFrom).toLocaleDateString("ko-KR")}`)+`
+  <div class="grid g4" style="margin-bottom:14px">
+    ${[["전투력",nf(power())],["완료한 의뢰",S.quests.cleared+"단계"],["석탑",(S.tower||0)+"층"],["과목 레벨 합",subLv],
+       ["수행 단계 합",resLv],["모은 축제 표식",S.fest.marks],["맺은 관계",S.rel.length],["기념품",S.outing.souv.length+(S.fest.souv?1:0)]]
+      .map(([k,v])=>`<div class="card pad" style="padding:11px 13px"><div class="tiny muted">${k}</div>
+        <div style="font-size:19px;font-weight:600;color:var(--gold)">${v}</div></div>`).join("")}
+  </div>
+  <div class="grid g2">
+    <div class="card pad">
+      <div class="sect-t">성적표</div>
+      <table class="t">${COURSES.map((x,i)=>{const r=S.examHist[i+1];
+        return `<tr><td style="width:76px">${i+1}과정</td><td>${x.n}</td>
+        <td style="text-align:right">${r?`<b style="color:var(--gold)">${r.g}</b> <span class="tiny muted">${r.score}</span>`:
+          (i+1===S.course?'<span class="tag g">진행 중</span>':'<span class="muted">—</span>')}</td></tr>`}).join("")}</table>
+    </div>
+    <div class="card pad">
+      <div class="sect-t">의뢰 일지</div>
+      ${S.quests.log.length?`<table class="t">${S.quests.log.slice(0,12).map(l=>`<tr>
+        <td class="tiny muted" style="width:86px">${l.no}</td><td>${esc(l.t)}</td>
+        <td style="text-align:right"><span class="tag ${l.win?"j":"r"}">${l.win?"해결":"철수"}</span></td></tr>`).join("")}</table>`
+        :`<div class="tiny muted">아직 수행한 의뢰가 없습니다.</div>`}
+    </div>
+  </div>
+  <div class="card pad" style="margin-top:14px">
+    <div class="sect-t">사무전 소식</div>
+    ${S.news.length?S.news.slice(0,14).map(n=>`<div class="ticker-row"><span class="tag">소식</span>
+      <span style="flex:1">${esc(n.t)}</span><span class="tiny muted">${n.time}</span></div>`).join(""):'<div class="tiny muted">소식이 없습니다.</div>'}
+  </div>`;
+};
+
+/* ═══════════════ 모달 ═══════════════ */
+function modal(title, body, cls){
+  $("#modalroot").innerHTML=`<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal ${cls||""}">
+      <div class="mhead"><h3>${title}</h3>
+        <button class="btn sm ghost" style="margin-left:auto" onclick="closeModal()">닫기</button></div>
+      <div class="mbody">${body}</div>
+    </div></div>`;
+}
+function closeModal(){ $("#modalroot").innerHTML=""; }
+
+/* ═══════════════ 내 정보 ═══════════════ */
+let METAB="학생증";
+function openMe(tab){ if(tab) METAB=tab; drawMe(); }
+function drawMe(){
+  const tabs=["학생증","프리셋","편집","꾸미기","인연","관계"];
+  let b="";
+  const hall=HALLS.find(h=>h.id===S.hall);
+
+  if(METAB==="학생증"){
+    b=`<div class="tiny muted" style="margin-bottom:10px">다른 학생이 채팅이나 친구 목록에서 내 이름을 누르면 이렇게 보입니다.</div>
+    <div class="idcard">
+      <div class="row" style="align-items:flex-start">
+        ${avatarHTML(70)}
+        <div style="flex:1">
+          <div class="tiny" style="color:var(--gold)">${esc(S.title)}</div>
+          <div style="font-size:21px;font-weight:600;color:${S.color}">${esc(S.name)}</div>
+          <div class="tiny muted">🏮 ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div>
+          <div class="tiny muted">📿 ${S.rel.find(r=>r.a==="페어")?`페어 ${esc(S.rel.find(r=>r.a==="페어").n)}`:"페어 미정"}</div>
+          <div class="tiny muted">${esc(S.intro||"한 줄 소개가 없습니다")}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="tiny muted">전투력</div>
+          <div style="font-size:17px;font-weight:600;color:var(--gold)">${nf(power())}</div>
+          <div class="tiny muted">${S.quests.cleared}단계</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:12px">
+      <div><div class="sect-t">능력치</div>
+        ${STATS.map(s=>`<div class="mini-stat"><span>${s.n}</span><b>${stat(s.k)}${hallBonus(s.k)?` <span style="color:var(--jade)">+${hallBonus(s.k)}</span>`:""} <span class="muted tiny">/${statCap(s.k)}</span></b></div>`).join("")}
+      </div>
+      <div><div class="sect-t">소개</div>
+        <div class="tiny" style="white-space:pre-wrap">${esc(S.bio||"자기소개가 비어 있습니다.")}</div></div>
+    </div>`;
+  }
+
+  if(METAB==="프리셋"){
+    b=`<div class="tiny muted" style="margin-bottom:10px">의뢰·대련·시험 전에 쓰는 준비 꾸러미입니다. 지금은 물약과 식사가 그대로 적용됩니다.</div>
+      <div class="grid g2">
+        <div class="card pad"><div class="sect-t">적용 중</div>
+          ${S.buffs.length?S.buffs.filter(x=>!x.hide).map(x=>`<div class="spread tiny" style="padding:3px 0"><span>${x.e} ${esc(x.n)}</span><span class="muted">${hhmm(x.left)}</span></div>`).join(""):'<div class="tiny muted">없음</div>'}
+          ${S.book?`<div class="spread tiny" style="padding:3px 0"><span>📜 ${BOOKS.find(x=>x.id===S.book.id).n}</span><span class="muted">${hhmm(S.book.left)}</span></div>`:""}
+        </div>
+        <div class="card pad"><div class="sect-t">소지품</div>
+          ${Object.keys(S.inv).filter(k=>S.inv[k]>0).length?Object.keys(S.inv).filter(k=>S.inv[k]>0).map(k=>{
+            const p=SHOP.find(x=>x.id===k);
+            return `<div class="spread tiny" style="padding:3px 0"><span>${p.n} ×${S.inv[k]}</span>
+              <button class="btn sm ghost" onclick="useItem('${k}');drawMe()">사용</button></div>`}).join(""):'<div class="tiny muted">비어 있습니다</div>'}
+        </div></div>`;
+  }
+
+  if(METAB==="편집"){
+    b=`<div class="row" style="align-items:flex-start">
+      <div style="flex:none;text-align:center">
+        ${avatarHTML(88)}
+        <div class="tiny muted" style="margin-top:6px">두상</div>
+      </div>
+      <div style="flex:1">
+        <label class="f">두상 이미지</label>
+        <div class="row">
+          <button class="btn sm pri" onclick="openAvatar(false)">이미지 선택</button>
+          <button class="btn sm" ${S.avImg?"":"disabled"} onclick="clearAvatar()">이미지 제거</button>
+        </div>
+        <div class="tiny muted" style="margin-top:6px;line-height:1.8">
+          그림을 선택하면 확대·이동해 두상으로 사용할 영역을 정할 수 있습니다. 배경이 투명한 PNG는 투명한 상태로 사용됩니다.
+          100×100으로 줄여 「적용」을 누를 때 저장됩니다.<br>
+          <b style="color:var(--red)">생성형 AI로 만든 그림, 허락받지 않은 다른 사람의 그림은 사용할 수 없습니다.</b>
+          직접 그린 그림이 없다면 캐릭터 메이커 사용을 권장합니다.
+        </div>
+        <label class="f">두상 출처 (선택 · 60자)</label>
+        <input class="inp" id="e_avsrc" maxlength="60" value="${esc(S.avSrc||"")}" placeholder="지원·커미션 결과물이면 반드시 적어 주세요">
+        <label class="f">두상 기호 <span class="muted">— 이미지를 쓰지 않을 때 보입니다</span></label>
+        <div class="row">${["🏮","🕯","🗡","📿","🌑","🐉","🦊","🪷","⚔","🜂"].map(e=>`<button class="btn sm ${S.av===e&&!S.avImg?"pri":""}" onclick="setAv('${e}')">${e}</button>`).join("")}</div>
+        <label class="f">학생 이름</label>
+        <input class="inp" id="e_name" maxlength="10" value="${esc(S.name)}">
+        <label class="f">테마 컬러 — 영혼과 파장을 대표하는 색</label>
+        <div class="row">${["#caa548","#d2563f","#4fb3a3","#9d7fd0","#6f8fd0","#5fae7a","#c98fb0","#e8e3d6"].map(c=>
+          `<button class="btn sm" style="background:${c};border-color:${c};width:30px;height:26px;padding:0" onclick="setColor('${c}')"></button>`).join("")}</div>
+      </div></div>
+      <label class="f">계통</label>
+      <div class="row"><span class="seg">
+        <button class="${S.line==="장인"?"on":""}" onclick="setLine('장인')">장인</button>
+        <button class="${S.line==="마무기"?"on":""}" onclick="setLine('마무기')">마무기</button></span>
+        <input class="inp" id="e_wep" style="flex:1" maxlength="14" placeholder="무기 종류 (예: 장검 / 권총 / 거울)" value="${esc(S.weapon)}">
+      </div>
+      <label class="f">숙사</label>
+      <div class="row">${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="setHall('${h.id}')">${h.n} <span class="tiny">· ${h.b}</span></button>`).join("")}</div>
+      <label class="f">한 줄 소개 (40자)</label>
+      <input class="inp" id="e_intro" maxlength="40" value="${esc(S.intro)}" placeholder="예: 3구역 출신, 야간 순찰 자원병">
+      <label class="f">자기소개 (300자) — *별표 사이*의 글자는 기울임으로 표시됩니다</label>
+      <textarea class="inp" id="e_bio" maxlength="300" placeholder="캐릭터 설정, 좋아하는 것, RP 가능한 시간 등">${esc(S.bio)}</textarea>
+      <div class="row" style="margin-top:14px"><button class="btn pri" onclick="saveMe()">저장</button>
+        <button class="btn" onclick="closeModal()">취소</button></div>`;
+  }
+
+  if(METAB==="꾸미기"){
+    b=`<div class="sect-t">칭호 도감 (${TITLES.filter((t,i)=>i<=S.course+1).length} / ${TITLES.length})</div>
+      <div class="row">${TITLES.map((t,i)=>{const open=i<=S.course+1;
+        return `<button class="btn sm ${S.title===t?"pri":""}" ${open?"":"disabled"} onclick="setTitle('${t}')">${open?t:"???"}</button>`}).join("")}</div>
+      <hr class="hr">
+      <div class="sect-t">방 꾸미기</div>
+      <div class="tiny muted">염라제 기간에는 창가에 등롱을 두면 찾아오는 학생이 과자를 4개 더 받습니다.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm ${S.lamp?"pri":""}" onclick="S.lamp=!S.lamp;drawMe();save()">${S.lamp?"등롱 놓음 ✓":"창가에 등롱 두기"}</button>
+        <span class="tiny muted">${S.lamp?"잿불이 조용히 타고 있습니다.":"창가가 비어 있습니다."}</span>
+      </div>`;
+  }
+
+  if(METAB==="인연"){
+    b=`<div class="row" style="margin-bottom:10px"><input class="inp" id="fsearch" placeholder="학생 이름 검색" style="flex:1">
+      <button class="btn" onclick="addFriend(($('#fsearch').value||'').trim()||undefined);drawMe()">검색·신청</button></div>
+      <div class="tiny muted" style="margin-bottom:8px">인연 ${S.friends.length}명</div>
+      ${S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+        <div><b>${esc(f.n)}</b> <span class="tiny muted">${f.c}과정 · Lv ${f.lv} · 전투력 ${nf(f.lv*430)} · ${f.line}</span></div>
+        <div class="row"><button class="btn sm ghost" onclick="dmTo('${esc(f.n)}')">1:1</button>
+          <button class="btn sm ghost" onclick="relPropose('${esc(f.n)}')">관계</button></div></div>`).join("")
+        ||'<div class="tiny muted">아직 인연이 없습니다.</div>'}`;
+  }
+
+  if(METAB==="관계"){
+    b=`<div class="tiny muted" style="margin-bottom:10px">맺은 관계 ${S.rel.length} / 50</div>
+      ${S.rel.map((r,i)=>`<div class="spread" style="padding:8px 0;border-bottom:1px solid #221d38">
+        <div><b>${esc(r.n)}</b><div class="tiny muted">나는 ${esc(r.nick||r.n)}의 ${r.a} · ${esc(r.n)} 님은 ${esc(S.name)}의 ${r.b}</div></div>
+        <div class="row"><button class="btn sm" onclick="relPropose('${esc(r.n)}',${i})">수정 제안</button>
+          <button class="btn sm red" onclick="relCut(${i});drawMe()">끊기</button></div></div>`).join("")
+        ||'<div class="tiny muted">맺은 관계가 없습니다.</div>'}`;
+  }
+
+  $("#modalroot").innerHTML=`<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal wide">
+      <div class="mhead"><div><h3>내 정보</h3>
+        <div class="tiny muted">${esc(S.name)} · ${hall.n}</div></div>
+        <button class="btn sm ghost" style="margin-left:auto" onclick="closeModal()">닫기</button></div>
+      <div class="tabs">${tabs.map(t=>`<div class="tab ${METAB===t?"on":""}" onclick="openMe('${t}')">${t}</div>`).join("")}</div>
+      <div class="mbody">${b}</div>
+    </div></div>`;
+}
+function setAv(e){ S.av=e; drawMe(); }
+function setColor(c){ S.color=c; drawMe(); }
+function setLine(l){ S.line=l; drawMe(); }
+function setHall(h){ S.hall=h; drawMe(); renderTop(); renderNav(); save(); }
+function setTitle(t){ S.title=t; drawMe(); save(); }
+function saveMe(){
+  const n=$("#e_name").value.trim(); if(n) S.name=n;
+  const src=$("#e_avsrc"); if(src) S.avSrc=src.value.trim();
+  S.weapon=$("#e_wep").value.trim();
+  S.intro=$("#e_intro").value.trim();
+  S.bio=$("#e_bio").value;
+  closeModal(); renderTop(); renderNav(); renderMain(); save(); toast("저장했습니다.","good");
+}
+function openSettings(){
+  modal("설정",`
+    <div class="sect-t">시간 흐름</div>
+    <div class="tiny muted">현실 1초 = 명계 ${3*S.speed}분. 배속을 올리면 수업·수행이 빨리 끝납니다.</div>
+    <div class="row" style="margin-top:8px"><span class="seg">${[1,4,16].map(v=>`<button class="${S.speed===v?"on":""}" onclick="setSpeed(${v});openSettings()">×${v}</button>`).join("")}</span></div>
+    <hr class="hr">
+    <div class="sect-t">기록</div>
+    <div class="tiny muted">진행 상황은 이 브라우저에 자동 저장됩니다. 자리를 비운 동안에도 최대 8시간까지 시간이 흐릅니다.</div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="save();toast('저장했습니다.','good')">지금 저장</button>
+      <button class="btn" onclick="exportSave()">기록 복사</button>
+      <button class="btn red" onclick="resetAll()">처음부터 다시</button></div>
+    <hr class="hr">
+    <div class="tiny muted">無明長夜 · 사신무기전문학교 명계지부<br>
+    육신은 멸하여도 업은 멸하지 않는다. 남은 업은 인연을 따라 다시 무명의 장야에 이른다.</div>`);
+}
+function exportSave(){
+  const txt=JSON.stringify(S);
+  try{
+    navigator.clipboard.writeText(txt).then(
+      ()=>toast("기록을 클립보드에 복사했습니다. 메모장에 붙여 두면 보관할 수 있습니다.","good"),
+      ()=>showSaveText(txt));
+  }catch(e){ showSaveText(txt); }
+}
+function showSaveText(txt){
+  modal("기록 내보내기",`<div class="tiny muted" style="margin-bottom:8px">아래 글자를 모두 선택해 복사해 두세요.</div>
+    <textarea class="inp" style="min-height:160px;font-size:11px" readonly onclick="this.select()">${esc(txt)}</textarea>`);
+}
+
+/* ═══════════════ 입학 (캐릭터 생성) ═══════════════ */
+let MK=null;
+function openCreate(){
+  MK={name:"", line:"장인", weapon:"장검", hall:"h1", color:"#caa548", av:"🏮", avImg:null, intro:"",
+      st:{atk:3,def:3,agi:3,men:2,res:2}};
+  drawCreate();
+}
+function drawCreate(){
+  const total=Object.values(MK.st).reduce((a,b)=>a+b,0);
+  const ok=total===13 && MK.name.trim().length>0;
+  $("#modalroot").innerHTML=`<div class="mask">
+   <div class="modal wide">
+    <div class="mhead"><div>
+      <div class="page-kicker">사신무기전문학교 명계지부</div>
+      <h3>사무전 입학 신청서</h3></div></div>
+    <div class="mbody">
+      <div class="quote" style="margin-bottom:14px">
+        "고개를 들어 나를 보아라. 그래, 겁먹을 필요는 없다. 너는 아주 오래전에 한 번 죽었다.
+        지금의 네가 태어나기 전, 다른 몸과 이름으로 살아가던 때의 이야기다." — 염라</div>
+
+      <div class="grid g2">
+        <div>
+          <label class="f">이름 (한글)</label>
+          <input class="inp" id="c_name" value="${esc(MK.name)}" maxlength="10" placeholder="예: 무영"
+            oninput="MK.name=this.value;mkCheck()">
+          <label class="f">계통</label>
+          <div class="row"><span class="seg">
+            <button class="${MK.line==="장인"?"on":""}" onclick="MK.line='장인';drawCreate()">장인</button>
+            <button class="${MK.line==="마무기"?"on":""}" onclick="MK.line='마무기';drawCreate()">마무기</button></span></div>
+          <label class="f">무기 종류 ${MK.line==="장인"?"(다루는 무기)":"(변형하는 형태)"}</label>
+          <input class="inp" id="c_wep" value="${esc(MK.weapon)}" maxlength="14" oninput="MK.weapon=this.value"
+            placeholder="장검 / 권총 / 거울 / 석장 …">
+          <label class="f">두상</label>
+          <div class="row" style="margin-bottom:6px;align-items:center">
+            ${MK.avImg?`<div style="width:46px;height:46px;border-radius:50%;overflow:hidden;border:2px solid ${MK.color};flex:none"><img src="${MK.avImg}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`:""}
+            <button class="btn sm" onclick="openAvatar(true)">이미지 선택</button>
+            ${MK.avImg?`<button class="btn sm" onclick="MK.avImg=null;drawCreate()">제거</button>`:""}
+          </div>
+          <div class="row" style="margin-bottom:6px">${["🏮","🕯","🗡","📿","🌑","🐉","🦊","🪷"].map(e=>
+            `<button class="btn sm ${MK.av===e&&!MK.avImg?"pri":""}" onclick="MK.av='${e}';drawCreate()">${e}</button>`).join("")}</div>
+          <label class="f">테마 컬러</label>
+          <div class="row">${["#caa548","#d2563f","#4fb3a3","#9d7fd0","#6f8fd0","#5fae7a","#c98fb0"].map(c=>
+            `<button class="btn sm" style="background:${c};border-color:${MK.color===c?"#fff":c};width:30px;height:26px;padding:0" onclick="MK.color='${c}';drawCreate()"></button>`).join("")}</div>
+          <label class="f">한 줄 소개 (40자)</label>
+          <input class="inp" id="c_intro" value="${esc(MK.intro)}" maxlength="40" oninput="MK.intro=this.value"
+            placeholder="예: 6구역 출신, 야간 순찰 자원병">
+        </div>
+        <div>
+          <label class="f">스탯 분배 — 각 1~5, 총합 <b id="c_total" style="color:${total===13?"var(--jade)":"var(--red)"}">${total}</b> / 13</label>
+          ${STATS.map(s=>`<div class="spread" style="padding:5px 0">
+            <div><b>${s.n}</b><div class="tiny muted">${s.d}</div></div>
+            <div class="row">
+              <button class="btn sm" onclick="mkSt('${s.k}',-1)">−</button>
+              <b style="width:22px;text-align:center;color:var(--gold)">${MK.st[s.k]}</b>
+              <button class="btn sm" onclick="mkSt('${s.k}',1)">+</button></div></div>`).join("")}
+          <label class="f">숙사</label>
+          ${HALLS.map(h=>`<div class="spread" style="padding:4px 0">
+            <div><b>${h.n}</b> <span class="tiny muted">${h.h}</span><div class="tiny muted">${h.d}</div></div>
+            <button class="btn sm ${MK.hall===h.id?"pri":""}" onclick="MK.hall='${h.id}';drawCreate()">${h.b}</button></div>`).join("")}
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn pri" id="c_go" ${ok?"":"disabled"} onclick="finishCreate()">입학한다</button>
+        <span class="tiny muted" id="c_hint">${ok?"문밖에 그 아이가 기다리고 있을 것이다.":"이름을 적고 스탯 총합을 13으로 맞춰 주세요."}</span>
+      </div>
+    </div></div></div>`;
+  const el=$("#c_name"); if(el && document.activeElement!==el && !MK.name) el.focus();
+}
+function mkCheck(){
+  const total=Object.values(MK.st).reduce((a,b)=>a+b,0);
+  const ok=total===13 && MK.name.trim().length>0;
+  const btn=$("#c_go"); if(btn) btn.disabled=!ok;
+  const t=$("#c_total"); if(t){ t.textContent=total; t.style.color=total===13?"var(--jade)":"var(--red)"; }
+  const h=$("#c_hint"); if(h) h.textContent=ok?"문밖에 그 아이가 기다리고 있을 것이다.":"이름을 적고 스탯 총합을 13으로 맞춰 주세요.";
+}
+function mkSt(k,d){
+  const v=MK.st[k]+d; if(v<1||v>5) return;
+  MK.st[k]=v; drawCreate();
+}
+function finishCreate(){
+  S=newState();
+  S.made=true; S.name=MK.name.trim(); S.line=MK.line; S.weapon=MK.weapon.trim();
+  S.hall=MK.hall; S.color=MK.color; S.av=MK.av; S.avImg=MK.avImg||null; S.intro=MK.intro.trim();
+  S.base={...MK.st};
+  S.plans[0]={n:"1과정 시험 준비", list:[...COURSES[0].subs, COURSES[0].subs[0]]};
+  S.t=rnd(0,1)*0+ (20*60);  // 오후 8시 입학
+  S.dayStamp=cal().day;
+  closeModal();
+  pushNews(`[입학] ${S.name} 학생이 사무전에 입학했습니다. 염라의 호출로 명계에 도착했습니다.`);
+  addMsg("전체","염라",fmtChat("새로 온 아이가 있구나. *찻잔을 내려놓는다.* 잘 먹고, 잘 자고, 친구를 사귀고, 배워라. 그것 역시 네게 주어진 수행이다."),NPC.염라.c,"이사장");
+  addMsg("전체","강시",fmtChat("통금은 오전 2시다. 늦으면 정말로 문을 잠근다."),NPC.강시.c,"경비");
+  boot();
+  toast("사무전에 입학했습니다. 먼저 강의실에서 수업을 들어 보세요.","good");
+}
+
+/* ═══════════════ 초기화 ═══════════════ */
+function boot(){
+  renderTop(); renderNav(); renderMain(); renderChat(); startTick(); save();
+}
+function init(){
+  const l=load();
+  if(l && l.made){
+    S=l; offline(); boot();
+  }else{
+    S=newState();
+    $("#topbar").innerHTML=`<div class="tb1"><div class="seal">輪</div>
+      <div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
+    $("#main").innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px">
+      <div class="page-kicker">無明長夜</div>
+      <h1 class="page" style="font-size:30px">육신은 멸하여도 업은 멸하지 않는다</h1>
+      <div class="muted" style="max-width:520px;margin:6px auto 18px">
+        남은 업은 인연을 따라 다시 무명의 장야에 이른다.<br>
+        명계의 중심, 사신무기전문학교 명계지부에 입학합니다.</div>
+      <button class="btn pri" onclick="openCreate()">입학 신청서 작성</button></div>`;
+    $("#navcol").innerHTML=""; $("#chatcol").innerHTML="";
+  }
+  window.addEventListener("beforeunload",save);
+  setInterval(()=>{ if(S&&S.made) renderChat(); }, 15000);
+}
+
+/* ═══════════════════════════════════════════════════
+   두상 — 이미지 선택 · 확대/이동 · 100×100 저장
+   ═══════════════════════════════════════════════════ */
+function avatarHTML(size, borderCol){
+  const b=borderCol||S.color, img=S.avImg;
+  if(img) return `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;
+    border:2px solid ${b};flex:none;background:#0f0c1c" title="${esc(S.avSrc||"")}">
+    <img src="${img}" alt="두상" style="width:100%;height:100%;object-fit:cover;display:block"></div>`;
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${b};
+    display:grid;place-items:center;font-size:${Math.round(size*0.42)}px;background:#0f0c1c;flex:none">${S.av}</div>`;
+}
+function clearAvatar(){
+  if(!confirm("두상 이미지를 지울까요? 기호 두상으로 돌아갑니다.")) return;
+  S.avImg=null; S.avSrc="";
+  renderTop(); renderNav(); drawMe(); save();
+}
+
+let AV=null;
+function openAvatar(forCreate){
+  AV={img:null, zoom:1, ox:0, oy:0, F:230, forCreate:!!forCreate, x:0, y:0, w:0, h:0};
+  drawAvatarUI();
+}
+function drawAvatarUI(){
+  const a=AV, col=a.forCreate?(window.MK?MK.color:"#caa548"):S.color;
+  modal("두상 설정", `
+    <div class="tiny muted" style="line-height:1.85;margin-bottom:12px">
+      그림을 선택하면 확대·이동해 두상으로 사용할 영역을 정할 수 있습니다. 배경이 투명한 PNG는 투명한 상태로 사용됩니다.
+      「적용」을 누르면 100×100으로 줄여 저장합니다.<br>
+      <b style="color:var(--red)">생성형 AI로 만든 그림, 허락받지 않은 다른 사람의 그림은 사용할 수 없습니다.</b>
+      지원·커미션 결과물이라면 「두상 출처」에 반드시 적어 주세요.
+    </div>
+    <input type="file" id="avfile" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
+    <div class="row" style="align-items:flex-start;gap:18px">
+      <div style="flex:none">
+        <div id="avbox" style="width:${a.F}px;height:${a.F}px;border-radius:50%;overflow:hidden;
+          border:2px solid ${col};background:#0f0c1c;position:relative;touch-action:none;
+          cursor:${a.img?"grab":"default"}">
+          ${a.img?`<img id="avimg" src="${a.img.src}" draggable="false"
+             style="position:absolute;user-select:none;pointer-events:none">`
+            :`<div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--dim2);font-size:12px;text-align:center;padding:20px">
+               그림을 선택해 주세요<br><span style="font-size:11px">선택한 뒤 끌어서 위치를, 아래 막대로 크기를 맞춥니다</span></div>`}
+        </div>
+        <div class="tiny muted" style="text-align:center;margin-top:6px">원 안이 저장되는 영역입니다</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <button class="btn pri" onclick="document.getElementById('avfile').click()">그림 고르기</button>
+        <label class="f">크기</label>
+        <input type="range" id="avzoom" min="100" max="400" value="${Math.round(a.zoom*100)}"
+          style="width:100%" ${a.img?"":"disabled"}>
+        <div class="tiny muted">확대 ${Math.round(a.zoom*100)}% · 그림 위를 끌어 옮길 수 있습니다</div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn sm" ${a.img?"":"disabled"} onclick="avReset()">가운데로</button>
+        </div>
+        <hr class="hr">
+        <div class="tiny muted">${a.img?`원본 ${a.img.naturalWidth}×${a.img.naturalHeight}px → 저장 100×100px`:"아직 그림이 없습니다"}</div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn pri" ${a.img?"":"disabled"} onclick="avApplySave()">적용</button>
+          <button class="btn" onclick="closeModal()">취소</button>
+        </div>
+      </div>
+    </div>`, "wide");
+  avBind();
+}
+function avBind(){
+  const a=AV;
+  const f=document.getElementById("avfile");
+  if(f) f.onchange=e=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    if(file.size>12*1024*1024){ toast("그림이 너무 큽니다. 12MB 이하로 올려 주세요.","bad"); return; }
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{ a.img=im; a.zoom=1; a.ox=0; a.oy=0; drawAvatarUI(); };
+      im.onerror=()=>toast("그림을 읽지 못했습니다.","bad");
+      im.src=rd.result;
+    };
+    rd.onerror=()=>toast("파일을 읽지 못했습니다.","bad");
+    rd.readAsDataURL(file);
+  };
+  const z=document.getElementById("avzoom");
+  if(z) z.oninput=e=>{ a.zoom=(+e.target.value)/100; avLayout();
+    const t=z.parentElement.querySelector(".tiny.muted");
+    if(t) t.textContent=`확대 ${Math.round(a.zoom*100)}% · 그림 위를 끌어 옮길 수 있습니다`; };
+  const box=document.getElementById("avbox");
+  if(box&&a.img){
+    let sx=0, sy=0, bx=0, by=0, on=false;
+    box.onpointerdown=e=>{ on=true; sx=e.clientX; sy=e.clientY; bx=a.ox; by=a.oy;
+      box.setPointerCapture(e.pointerId); box.style.cursor="grabbing"; };
+    box.onpointermove=e=>{ if(!on) return; a.ox=bx+(e.clientX-sx); a.oy=by+(e.clientY-sy); avLayout(); };
+    box.onpointerup=box.onpointercancel=e=>{ on=false; box.style.cursor="grab"; };
+    box.onwheel=e=>{ e.preventDefault();
+      a.zoom=clamp(a.zoom*(e.deltaY<0?1.08:1/1.08),1,4); avLayout();
+      const zz=document.getElementById("avzoom"); if(zz) zz.value=Math.round(a.zoom*100); };
+    avLayout();
+  }
+}
+function avLayout(){
+  const a=AV, el=document.getElementById("avimg"); if(!el||!a.img) return;
+  const nw=a.img.naturalWidth, nh=a.img.naturalHeight;
+  const base=Math.max(a.F/nw, a.F/nh), sc=base*a.zoom;
+  const w=nw*sc, h=nh*sc;
+  let x=(a.F-w)/2+a.ox, y=(a.F-h)/2+a.oy;
+  x=clamp(x, a.F-w, 0); y=clamp(y, a.F-h, 0);
+  a.ox=x-(a.F-w)/2; a.oy=y-(a.F-h)/2;
+  a.x=x; a.y=y; a.w=w; a.h=h;
+  el.style.width=w+"px"; el.style.height=h+"px"; el.style.left=x+"px"; el.style.top=y+"px";
+}
+function avReset(){ AV.ox=0; AV.oy=0; AV.zoom=1; avLayout();
+  const z=document.getElementById("avzoom"); if(z) z.value=100; }
+function avApplySave(){
+  const a=AV; if(!a.img) return;
+  avLayout();
+  const R=100/a.F;
+  const c=document.createElement("canvas"); c.width=100; c.height=100;
+  const g=c.getContext("2d");
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality="high";
+  g.drawImage(a.img, a.x*R, a.y*R, a.w*R, a.h*R);   // 배경은 칠하지 않아 투명 PNG가 유지됩니다
+  let url;
+  try{ url=c.toDataURL("image/png"); }
+  catch(e){ toast("그림을 저장하지 못했습니다.","bad"); return; }
+  if(a.forCreate){ MK.avImg=url; closeModal(); drawCreate(); toast("두상을 설정했습니다."); return; }
+  S.avImg=url;
+  closeModal(); renderTop(); renderNav(); renderMain(); drawMe(); save();
+  toast("두상을 저장했습니다. 100×100으로 줄여 보관합니다.","good");
+}
+
+setTimeout(init,0);
+</script>
+<script src="config.js"></script>
+<script src="part2.js"></script>
+<script src="part3.js"></script>
+<script src="part4.js"></script>
+<script src="part5.js"></script>
+<script src="part6.js"></script>
+</body>
+</html>
