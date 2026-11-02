@@ -605,16 +605,12 @@ chatVisible = function(m){
 const CHATMS_ON=3000, CHATMS_OFF=15000;
 let CHATTICK=null, CHATBUSY=false;
 function chatRows(rows){
-  if(!rows||!rows.length){ if(S.chatSkip) S.chatSkip=0; return 0; }
-  /* 기록을 비운 직후에는 서버에 남아 있던 예전 글을 가져오지 않고
-     "여기서부터" 표식만 찍습니다. 채팅은 비운 시점부터 다시 시작합니다. */
-  if(S.chatSkip){
-    rows.forEach(r=>{ if(r.id>(S.sb.chatId||0)) S.sb.chatId=r.id; });
-    S.chatSkip=0; save(); return 0;
-  }
+  if(!rows||!rows.length) return 0;
   let added=0;
   rows.forEach(r=>{
     if(r.id>(S.sb.chatId||0)) S.sb.chatId=r.id;
+    /* 기록을 비운 시점보다 먼저 올라온 글은 서버에 남아 있어도 가져오지 않습니다 */
+    if(S.chatFrom && new Date(r.created_at||0).getTime() < S.chatFrom) return;
     if(String(r.from_id)===String(S.sb.id)) return;          // 내가 보낸 건 이미 화면에 있습니다
     if(S.msgs.some(m=>m.sid===r.id)) return;
     const d=new Date(r.created_at||Date.now());

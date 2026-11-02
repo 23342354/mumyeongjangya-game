@@ -43,6 +43,7 @@
   --scrim1:rgba(10,6,22,.40); --scrim2:rgba(10,6,22,.68); --scrim3:rgba(8,4,18,.86);
   --wash1:rgba(176,124,255,.16); --wash2:rgba(255,77,158,.12);
   --bgSat:1.05;
+  color-scheme:dark;
 }
 :root[data-theme="light"]{
   /* ── 밝은 테마 ── 색조는 그대로, 명도 사다리만 뒤집었습니다 */
@@ -65,6 +66,7 @@
   --scrim1:rgba(250,246,255,.76); --scrim2:rgba(248,243,255,.88); --scrim3:rgba(252,249,255,.95);
   --wash1:rgba(142,70,230,.14); --wash2:rgba(230,50,130,.09);
   --bgSat:.5;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -111,7 +113,13 @@ body::after{
   filter:drop-shadow(0 0 22px rgba(var(--glowRGB),.40))}
 button .ic, .res .ic, .buffchip .ic{vertical-align:-.2em}
 button{font-family:inherit; cursor:pointer}
-input,select,textarea{font-family:inherit}
+input,select,textarea{font-family:inherit;background:var(--s1);border:1px solid var(--line);
+  border-radius:7px;color:var(--tx);padding:8px 10px;font-size:13.5px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(var(--glowRGB),.18)}
+input::placeholder,textarea::placeholder{color:var(--dim2)}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--s4);border-radius:9px}
@@ -723,7 +731,7 @@ function newState(){
     pass:3, passNext:720, outing:{done:{}, souv:[]},
     fest:{marks:0, todayMarks:0, basket:0, visits:0, stamps:[], souv:null, total:265000},
     rel:[], friends:[],
-    msgs:[], chatReset:2, chatSkip:0, chatTab:"전체", chatMode:"RP",
+    msgs:[], chatReset:2, chatFrom:0, chatTab:"전체", chatMode:"RP",
     news:[], notes:[],
     place:"plaza", examHist:{},
     dayStamp:0, playFrom:Date.now(),
@@ -734,8 +742,8 @@ function load(){
   try{ const r=localStorage.getItem(SAVEKEY); if(!r) return null;
        const o=JSON.parse(r); const base=newState();
        /* 채팅 기록 비우기 — 표식을 올리면 그 다음 접속 때 한 번 더 비웁니다.
-          chatSkip 은 서버에 남아 있는 예전 글까지 건너뛰게 합니다. */
-       if((o.chatReset||0) < 2){ o.msgs=[]; o.chatReset=2; o.chatSkip=1; }
+          chatFrom 보다 먼저 올라온 글은 서버에 남아 있어도 가져오지 않습니다. */
+       if((o.chatReset||0) < 2){ o.msgs=[]; o.chatReset=2; o.chatFrom=Date.now(); }
        if(o.av && ICLEGACY[o.av]) o.av=ICLEGACY[o.av];
        if(o.av && !ICONS[o.av]) o.av="lantern";
        return Object.assign(base,o, {sub:Object.assign(base.sub,o.sub||{}), res:Object.assign(base.res,o.res||{})});
@@ -2840,6 +2848,11 @@ function boot(){
   renderTop(); renderNav(); renderMain(); renderChat(); startTick(); save();
 }
 function init(){
+  /* 로그인(part7)이 끼어들 자리 — 호출 시점에 찾으므로 로딩 순서에 영향받지 않습니다 */
+  if(typeof gateIntercept==="function" && gateIntercept()) return;
+  initGame();
+}
+function initGame(){
   updStart();
   const l=load();
   if(l && l.made){
@@ -2988,7 +3001,10 @@ function avApplySave(){
   toast("두상을 저장했습니다. 100×100으로 줄여 보관합니다.","good");
 }
 
-setTimeout(init,0);
+/* 확장(part2~7)이 모두 올라온 뒤에 시작합니다.
+   타이머로 시작하면 확장보다 먼저 돌아 버릴 수 있습니다. */
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", ()=>init());
+else setTimeout(()=>init(),0);
 </script>
 <script src="config.js"></script>
 <script src="part2.js"></script>
@@ -2996,5 +3012,6 @@ setTimeout(init,0);
 <script src="part4.js"></script>
 <script src="part5.js"></script>
 <script src="part6.js"></script>
+<script src="part7.js"></script>
 </body>
 </html>

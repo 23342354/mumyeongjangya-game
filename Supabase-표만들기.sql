@@ -6,6 +6,17 @@
 --  고칠 곳은 없습니다. 두 번 실행해도 문제 없습니다.
 -- ════════════════════════════════════════════════════════════
 
+-- ── 0. 계정 (로그인) ────────────────────────────────────────
+--  비밀번호는 그대로 담지 않고 섞은 값(해시)만 담습니다.
+create table if not exists accounts (
+  id         text primary key,          -- 아이디 (영문 소문자·숫자·밑줄)
+  pw         text not null,             -- 비밀번호를 섞은 값
+  name       text default '',           -- 학생 이름 (표시용)
+  save       jsonb,                     -- 캐릭터 저장본
+  created_at timestamptz default now(),
+  seen_at    timestamptz default now()
+);
+
 -- ── 1. 학생 명부 ────────────────────────────────────────────
 create table if not exists students (
   id          text primary key,
@@ -101,12 +112,14 @@ create or replace view suggestions_public as
   from suggestions;
 
 -- ── 4. 접근 권한 ────────────────────────────────────────────
+alter table accounts     enable row level security;
 alter table students     enable row level security;
 alter table rooms        enable row level security;
 alter table room_members enable row level security;
 alter table suggestions  enable row level security;
 alter table messages     enable row level security;
 
+drop policy if exists p_accounts_all     on accounts;
 drop policy if exists p_students_all     on students;
 drop policy if exists p_rooms_all        on rooms;
 drop policy if exists p_room_members_all on room_members;
@@ -114,6 +127,7 @@ drop policy if exists p_messages_all     on messages;
 drop policy if exists p_sugg_insert      on suggestions;
 drop policy if exists p_sugg_update      on suggestions;
 
+create policy p_accounts_all     on accounts     for all using (true) with check (true);
 create policy p_students_all     on students     for all using (true) with check (true);
 create policy p_rooms_all        on rooms        for all using (true) with check (true);
 create policy p_room_members_all on room_members for all using (true) with check (true);
