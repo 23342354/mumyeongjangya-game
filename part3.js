@@ -314,7 +314,7 @@ function startRun(stage,party){
   const allies=(room?room.party:[]).map(p=>mkFighter(p.n,
     {atk:Math.max(1,Math.round((p.teacher?7:2)+p.lv*.6)), def:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)),
      agi:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)), men:3,res:3},
-    Math.round(1200+p.lv*260), p.teacher?"#c92de5":"#7face7"));
+    Math.round(1200+p.lv*260), p.teacher?"var(--gold)":"var(--blue)"));
   allies.forEach((a,i)=>{ a.pos=(room.party[i].pos)||"후열"; a.teacher=room.party[i].teacher; a.lv=room.party[i].lv; });
   S.run={stage, q, pos, me, allies, foes:[enemyFor(stage,q.rank.r==="Ⅴ")],
          logs:[], left:q.dur, total:q.dur, kills:0, rin:0, acc:0, done:false, party:!!party};
@@ -437,7 +437,7 @@ VIEWS.record=()=>{
     <div class="grid g4">
       ${list.map(({a,v,done})=>`<div class="sub" style="${done?"border-color:var(--gold2)":""}">
         <div class="spread"><div class="row" style="gap:6px">
-          <span style="width:16px;height:16px;border-radius:50%;border:1px solid ${done?"var(--gold)":"#541f82"};display:grid;place-items:center;font-size:10px;color:var(--gold)">${done?ic("check",11):""}</span>
+          <span style="width:16px;height:16px;border-radius:50%;border:1px solid ${done?"var(--gold)":"var(--s5)"};display:grid;place-items:center;font-size:10px;color:var(--gold)">${done?ic("check",11):""}</span>
           <b style="font-size:13px">${a.n}</b></div>
           <span class="tag ${done?"g":""}">+${a.p}</span></div>
         <div class="tiny muted" style="margin:5px 0 4px">${a.d}</div>
@@ -515,7 +515,7 @@ VIEWS.rank=()=>{
         <span class="tiny muted">내 순위 ${myRank}위</span></div>
       <div class="tiny muted" style="margin-bottom:8px">법구·능력치를 반영한 전투력입니다. 물약·요리 같은 시간제 효과는 순위에서 제외합니다.</div>
       <table class="t">
-        <tr style="background:#270e3c"><td style="width:26px">—</td>
+        <tr style="background:var(--s2)"><td style="width:26px">—</td>
           <td><b style="color:var(--gold)">${esc(S.name)}</b> <span class="tiny muted">${S.course}과정 · Lv ${S.lvl}</span></td>
           <td style="text-align:right"><b>${nf(my)}</b></td></tr>
       </table>
@@ -526,7 +526,7 @@ VIEWS.rank=()=>{
         <span class="tiny muted">내 기록 ${S.tower||0}층</span></div>
       <div class="tiny muted" style="margin-bottom:8px">이번 주(월요일 KST 0시~) 등록된 팀이 오른 가장 높은 층입니다.</div>
       <table class="t">
-        <tr style="background:#270e3c"><td style="width:26px">—</td>
+        <tr style="background:var(--s2)"><td style="width:26px">—</td>
           <td><b style="color:var(--gold)">${esc(S.name)}</b></td>
           <td style="text-align:right"><b>${S.tower||0}층</b></td></tr>
       </table>
@@ -561,7 +561,7 @@ VIEWS.hallv=()=>{
         <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">내 숙사</span>':""}</span>
           <span class="muted">활동 ${180+(h.sc%95)}명 · <b>${nf(h.sc)}</b></span></div>
         <div class="bar" style="margin-top:3px"><i style="width:${h.sc/top*100}%;background:linear-gradient(90deg,${h.c}66,${h.c})"></i></div></div>`).join("")}
-      <div class="card pad" style="background:#200c31;margin-top:10px">
+      <div class="card pad" style="background:var(--s1);margin-top:10px">
         <div class="tiny muted" style="line-height:1.85">
         <b>대항전 규칙</b><br>
         · 숙사 점수는 이번 주 100점 이상 활동한 학생의 평균입니다. 인원이 많은 숙사가 유리하지 않습니다.<br>
@@ -590,7 +590,7 @@ VIEWS.hallv=()=>{
     <table class="t">
       ${[["유스탄",4004],["로베르 테넌",3609],["하얀",3477],["위사 누",3120],["코멧",2884]]
         .map((r,i)=>`<tr><td style="width:26px">${i+1}</td><td>${r[0]}</td><td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      <tr style="background:#270e3c"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
+      <tr style="background:var(--s2)"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
         <td style="text-align:right"><b>${nf(S.war.mine||0)}</b></td></tr>
     </table>
   </div>`;
@@ -619,7 +619,7 @@ VIEWS.lounge=()=>{
       <div class="spread" style="margin:10px 0 4px"><b>복원 점수 ${nf(L.pts)} / ${nf(cur.p)}</b>
         <span class="tiny muted">기준 인원 290명 · 이번 달 참여 ${70+(cal().day*7)%40}명</span></div>
       <div class="bar" style="margin-bottom:10px"><i style="width:${clamp(L.pts/cur.p*100,0,100)}%"></i></div>
-      ${stages.map((s,i)=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid #2c1045">
+      ${stages.map((s,i)=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid var(--s3)">
         <span class="${L.stage>i?"":"muted"}">${L.stage>i?ic("check")+" ":""}${s.n}</span>
         <span class="tiny muted">${nf(s.p)}점</span></div>`).join("")}
       <div class="tiny" style="color:var(--jade);margin-top:8px">단계마다 체력·이성 회복 +5%, 지식 획득 +2% — 현재 적용 ${L.stage>0?`회복 +${L.stage*5}% · 지식 +${L.stage*2}%`:"없음"}</div>
@@ -628,7 +628,7 @@ VIEWS.lounge=()=>{
       <div class="card pad" style="margin-bottom:12px">
         <div class="sect-t">오늘의 납부 <span class="muted">종류마다 하루 한 번 · 한 번에 10점</span></div>
         ${[["rin","륜 납부","륜 4,740"],["mana","파장 납부","파장 1시간분"],["mat","재료 납부","재료 아무거나 4"]]
-          .map(([k,n,c])=>`<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
+          .map(([k,n,c])=>`<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
           <div><b>${n}</b><div class="tiny muted">${c}</div></div>
           <button class="btn sm ${L.today[k]?"":"pri"}" ${L.today[k]?"disabled":""} onclick="donateLounge('${k}')">${L.today[k]?"오늘 완료":"납부"}</button></div>`).join("")}
         <div class="tiny muted" style="margin-top:8px">달이 바뀌면 30점 이상 납부한 학생에게 완료한 단계마다 연등 5개가 우편으로 전달됩니다. 휴게실 복원은 숙사 대항전 점수와 별개입니다.</div>
@@ -637,7 +637,7 @@ VIEWS.lounge=()=>{
         <div class="sect-t">이번 달 복원에 힘을 보탠 학생</div>
         ${["이브","코멧","위사 누","포토스","머그 포르투넬","로베르 테넌"].map((n,i)=>
           `<div class="spread tiny" style="padding:3px 0"><span>${i+1} ${n}</span><span class="muted">30점</span></div>`).join("")}
-        <div class="spread tiny" style="padding:3px 0;background:#270e3c"><span><b style="color:var(--gold)">${esc(S.name)}</b></span>
+        <div class="spread tiny" style="padding:3px 0;background:var(--s2)"><span><b style="color:var(--gold)">${esc(S.name)}</b></span>
           <span class="muted">${L.month||0}점</span></div>
       </div>
     </div>
@@ -664,9 +664,9 @@ VIEWS.world=()=>{
   ${(S.wTab||"이야기")==="이야기"?STORY.map(s=>{
     const open=S.course>=s.need;
     return `<div class="card pad" style="margin-bottom:12px;position:relative;${open?"":"opacity:.5"}">
-      <div style="position:absolute;right:16px;top:8px;font-size:34px;color:#30114b;font-weight:600">${["Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ"][s.ch-1]}</div>
+      <div style="position:absolute;right:16px;top:8px;font-size:34px;color:var(--s3);font-weight:600">${["Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ"][s.ch-1]}</div>
       <h3 style="margin:0 0 8px;font-size:17px">${s.ch}장. ${s.t}</h3>
-      ${open?s.b.map(p=>`<p class="tiny" style="margin:0 0 8px;line-height:1.95;color:#d3b5ee;max-width:760px">${p}</p>`).join("")
+      ${open?s.b.map(p=>`<p class="tiny" style="margin:0 0 8px;line-height:1.95;color:var(--violetL);max-width:760px">${p}</p>`).join("")
         :`<div class="tiny muted">${s.need}과정이 되면 열립니다.</div>`}
       ${open?`<div class="spread" style="margin-top:8px"><span class="tiny muted">학기 이야기 · ${s.ch} / 7</span>
         <button class="btn sm" onclick="readStory(${s.ch})">${S.storyRead.includes(s.ch)?"다시 읽기":"읽음 표시"}</button></div>`:""}
@@ -972,8 +972,8 @@ renderChat=function(){
     const owner=(m.mode==="오너");
     return `<div class="cmsg" style="${owner?"justify-content:flex-end":""}">
       ${owner?"":`<span class="ctime">${m.time}</span>`}
-      <span class="cbody" style="${owner?"background:#3c165d;border-radius:12px;padding:5px 11px;max-width:80%":"flex:1"}">
-        ${owner?"":`<b style="color:${m.c||"#be92e5"}">${esc(m.who)}</b> `}${m.body}</span>
+      <span class="cbody" style="${owner?"background:var(--s4);border-radius:12px;padding:5px 11px;max-width:80%":"flex:1"}">
+        ${owner?"":`<b style="color:${m.c||"var(--violetL)"}">${esc(m.who)}</b> `}${m.body}</span>
       ${owner?`<span class="ctime" style="text-align:right">${m.time}</span>`:""}</div>`;
   }).join("")||`<div class="tiny muted" style="padding:14px 2px">주고받은 말이 없습니다.</div>`;
   log.scrollTop=log.scrollHeight;

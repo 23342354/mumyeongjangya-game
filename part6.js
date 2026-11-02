@@ -228,7 +228,7 @@ VIEWS.together=()=>{
         ${[0,1,2,3].map(i=>{ const m=ms[i];
           return m?`<span class="buffchip" style="${m.student_id===S.sb.id?"border-color:var(--gold2)":""}">
             ${esc(m.name)} <span class="muted">${m.course}과정</span></span>`
-          :`<span class="buffchip" style="color:#66259e">빈자리</span>`}).join("")}
+          :`<span class="buffchip" style="color:var(--s6)">빈자리</span>`}).join("")}
       </div>
       <div class="tiny" style="color:var(--jade)">합산 초당 피해 ${nf(dps)} · 합산 생명력 ${nf(hp)}</div>
       <div class="row" style="margin-top:8px">
@@ -255,7 +255,7 @@ VIEWS.together=()=>{
     </div>
   </div>
 
-  ${S.sb.state==="err"?`<div class="card pad" style="margin-bottom:12px;border-color:#a31256;padding:10px 14px">
+  ${S.sb.state==="err"?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD);padding:10px 14px">
     <span class="tag r">연결 실패</span> <span class="tiny">${esc(S.sb.err)}</span>
     <button class="btn sm" style="margin-left:8px" onclick="sbConnect()">연결 고치기</button></div>`:""}
 
@@ -313,9 +313,9 @@ VIEWS.roster=()=>{
       const me=r.id===S.sb.id;
       return `<div class="sub" style="${me?"border-color:var(--gold2)":""}">
         <div class="row" style="align-items:flex-start;gap:10px">
-          ${r.av_img?`<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid ${hall?hall.c:"#c92de5"};flex:none">
+          ${r.av_img?`<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid ${hall?hall.c:"var(--gold)"};flex:none">
             <img src="${r.av_img}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
-            :`<div style="width:44px;height:44px;border-radius:50%;border:2px solid ${hall?hall.c:"#c92de5"};display:grid;place-items:center;background:#150820;flex:none">${ic(r.av||"lantern",22)}</div>`}
+            :`<div style="width:44px;height:44px;border-radius:50%;border:2px solid ${hall?hall.c:"var(--gold)"};display:grid;place-items:center;background:var(--s0);flex:none">${ic(r.av||"lantern",22)}</div>`}
           <div style="flex:1;min-width:0">
             <div class="tiny" style="color:var(--gold)">${esc(r.title||"")}</div>
             <b>${esc(r.name)}</b> ${me?'<span class="tag g">나</span>':""}
@@ -326,7 +326,7 @@ VIEWS.roster=()=>{
         </div>
         ${r.intro?`<div class="tiny muted" style="margin-top:6px">${esc(r.intro)}</div>`:""}
         <div class="tiny muted" style="margin-top:6px">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
-        <div class="tiny muted" style="margin-top:3px;color:#5a4285">${ago(r.updated_at)}</div>
+        <div class="tiny muted" style="margin-top:3px;color:var(--s6)">${ago(r.updated_at)}</div>
       </div>`}).join("")}
   </div>`:`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
     아직 올라온 학생이 없습니다. 「지금 올리고 새로 고침」을 눌러 보세요.</div></div>`}`;
@@ -343,7 +343,7 @@ VIEWS.rank=()=>{
     return `<div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">${title}</div>
         <span class="tiny muted">내 순위 ${myIdx>=0?myIdx+1:"—"}위 / ${R.length}명</span></div>
-      <table class="t">${rows.map((r,i)=>`<tr${r.id===S.sb.id?' style="background:#270e3c"':""}>
+      <table class="t">${rows.map((r,i)=>`<tr${r.id===S.sb.id?' style="background:var(--s2)"':""}>
         <td style="width:26px">${i+1}</td>
         <td>${r.id===S.sb.id?`<b style="color:var(--gold)">${esc(r.name)}</b>`:esc(r.name)}
           <span class="tiny muted">${r.course}과정 · Lv ${r.lvl}</span></td>
@@ -547,7 +547,7 @@ hereHTML = function(){
     <div class="grid g4">
       ${list.slice(0,12).map(r=>{
         const h=HALLS.find(x=>x.id===r.hall);
-        return `<div class="spread" style="background:#1f0b31;border:1px solid var(--line);border-radius:7px;padding:6px 10px">
+        return `<div class="spread" style="background:var(--s1);border:1px solid var(--line);border-radius:7px;padding:6px 10px">
           <div><b style="font-size:12.5px">${esc(r.name||"이름 없음")}</b>
           <div class="tiny muted">${h?esc(h.n):"숙사 미정"} · ${r.course||1}과정</div></div>
           ${S.friends.find(f=>f.n===r.name)?'<span class="tag g">인연</span>'

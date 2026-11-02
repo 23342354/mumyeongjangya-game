@@ -26,23 +26,23 @@ DAREA.push("제3구역 폐공방","석탑 종루","심연");
 
 /* ─── 조제법 ─── */
 const POTIONS=[
- {id:"q1", n:"집중의 물약", c:"#5f97e0", dur:120, mana:1512,
+ {id:"q1", n:"집중의 물약", c:"var(--blue)", dur:120, mana:1512,
   mat:{먼지:18},               buf:[["study",.30]], d:"2시간 수업 효율 +30%"},
- {id:"q2", n:"투지의 물약", c:"#e72a82", dur:120, mana:4026,
+ {id:"q2", n:"투지의 물약", c:"var(--red)", dur:120, mana:4026,
   mat:{먼지:12,홍월초:6},       buf:[["atkP",.25]], d:"2시간 공격력 +25%"},
- {id:"q3", n:"수호의 물약", c:"#3ecf9a", dur:120, mana:4026,
+ {id:"q3", n:"수호의 물약", c:"var(--ok)", dur:120, mana:4026,
   mat:{먼지:18,홍월초:6},       buf:[["hpP",.25],["defP",.20]], d:"2시간 생명력 +25%, 방어력 +20%"},
- {id:"q4", n:"안신의 물약", c:"#ab71de", dur:120, mana:4026,
+ {id:"q4", n:"안신의 물약", c:"var(--violet)", dur:120, mana:4026,
   mat:{먼지:15,홍월초:9},       buf:[["rest",.25],["heal",.10]], d:"2시간 이성 회복 +25%, 치유·보호막 위력 +10%"},
- {id:"q5", n:"맨드레이크 각성제", c:"#c829e4", dur:120, mana:6039,
+ {id:"q5", n:"맨드레이크 각성제", c:"var(--gold)", dur:120, mana:6039,
   mat:{먼지:12,뿌리:3,약초:6},  buf:[["exp",.25],["study",.15]], d:"2시간 경험치 +25%, 수업 효율 +15%", farm:true},
- {id:"q6", n:"황금 물약", c:"#c92de5", dur:120, mana:12000,
+ {id:"q6", n:"황금 물약", c:"var(--gold)", dur:120, mana:12000,
   mat:{톱니:12,홍월초:6},       buf:[["gold",.40]], d:"2시간 륜 획득 +40%"},
- {id:"q7", n:"잿불 진정제", c:"#cd3be7", dur:120, mana:8052,
+ {id:"q7", n:"잿불 진정제", c:"var(--gold)", dur:120, mana:8052,
   mat:{집광편:3,잿불씨:6,홍월초:6}, buf:[["hpP",.15],["defP",.25]], d:"2시간 생명력 +15%, 방어력 +25%"},
- {id:"q8", n:"네잎 행운초", c:"#26d9dc", dur:120, mana:9400,
+ {id:"q8", n:"네잎 행운초", c:"var(--jadeD)", dur:120, mana:9400,
   mat:{인광:6,꽃:6},            buf:[["loot",.20],["crit",.03]], d:"2시간 전리품 확률 +20%, 치명타 확률 +3%", farm:true},
- {id:"q9", n:"행운의 물약", c:"#e870c4", dur:120, mana:16000,
+ {id:"q9", n:"행운의 물약", c:"var(--pink)", dur:120, mana:16000,
   mat:{종모래:3,심연정:1,인광:4}, buf:[["crit",.08],["critD",.20]], d:"2시간 치명타 확률 +8%, 치명타 피해 +20%", req:5},
 ];
 
@@ -152,7 +152,7 @@ VIEWS.alche=()=>{
       </div>
       ${POTIONS.map(p=>{
         const n=S.brewN, lock=p.req&&S.course<p.req, ok=canBrew(p,n);
-        return `<div style="padding:10px 0;border-bottom:1px solid #2c1045;${lock?"opacity:.45":""}">
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--s3);${lock?"opacity:.45":""}">
           <div class="spread">
             <div><span class="dot" style="background:${p.c};margin-right:6px"></span><b>${p.n}</b>
               <span class="tiny muted">효과 2시간 0분</span></div>
@@ -160,10 +160,10 @@ VIEWS.alche=()=>{
           </div>
           <div class="tiny muted" style="margin:3px 0 6px">${p.d}</div>
           <div class="row">
-            <span class="buffchip" style="${S.mana>=brewMana(p)*n?"":"color:var(--red);border-color:#740d3d"}">파장 ${nf(brewMana(p)*n)}</span>
+            <span class="buffchip" style="${S.mana>=brewMana(p)*n?"":"color:var(--red);border-color:var(--redD)"}">파장 ${nf(brewMana(p)*n)}</span>
             ${Object.keys(p.mat).map(k=>{
               const need=p.mat[k]*n, have=matHave(k);
-              return `<span class="buffchip" style="${have>=need?"":"color:var(--red);border-color:#740d3d"}">${matName(k)} ${nf(have)}/${need}</span>`}).join("")}
+              return `<span class="buffchip" style="${have>=need?"":"color:var(--red);border-color:var(--redD)"}">${matName(k)} ${nf(have)}/${need}</span>`}).join("")}
           </div>
           ${p.farm?`<div class="tiny muted" style="margin-top:4px">약초밭 수확물이 재료로 사용됩니다</div>`:""}
         </div>`}).join("")}
@@ -174,7 +174,7 @@ VIEWS.alche=()=>{
         <div class="sect-t">물약 선반</div>
         ${shelf.length?shelf.map(p=>{
           const act=S.buffs.find(b=>b.pid===p.id);
-          return `<div class="spread" style="padding:7px 0;border-bottom:1px solid #2c1045">
+          return `<div class="spread" style="padding:7px 0;border-bottom:1px solid var(--s3)">
             <div><span class="dot" style="background:${p.c};margin-right:6px"></span><b>${p.n}</b>
               <span class="tiny muted">×${S.potion[p.id]}</span>
               ${act?`<span class="tag g" style="margin-left:6px">${hhmm(act.left)}</span>`:""}
@@ -227,7 +227,7 @@ VIEWS.hallv=()=>{
         <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">내 숙사</span>':""}</span>
           <span class="muted">활동 ${180+(h.sc%95)}명 · <b>${nf(h.sc)}</b></span></div>
         <div class="bar" style="margin-top:3px"><i style="width:${h.sc/top*100}%;background:linear-gradient(90deg,${h.c}66,${h.c})"></i></div></div>`).join("")}
-      <div class="card pad" style="background:#200c31;margin-top:10px">
+      <div class="card pad" style="background:var(--s1);margin-top:10px">
         <div class="tiny muted" style="line-height:1.85">
         <b>대항전 규칙</b><br>
         · <b>인원 보정</b> — 숙사 점수는 이번 주 100점 이상 활동한 학생의 <b>평균</b>입니다. 인원이 많은 숙사가 유리하지 않습니다.<br>
@@ -260,7 +260,7 @@ VIEWS.hallv=()=>{
       ${[["유스탄",4614],["시엘 발루아",3846],["하얀",3477],["위사 누",3120],["코멧",2884]]
         .map((r,i)=>`<tr><td style="width:26px">${i+1}</td><td>${r[0]} ${i===0?'<span class="tag">거울 뒤편의 주인</span>':""}</td>
         <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      <tr style="background:#270e3c"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
+      <tr style="background:var(--s2)"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
         <td style="text-align:right"><b>${nf(S.war.mine||0)}</b></td></tr>
     </table>
   </div>`;

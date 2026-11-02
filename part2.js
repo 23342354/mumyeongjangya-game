@@ -7,11 +7,11 @@
 
 /* ─── 등급 · 부위 ─── */
 const GRADES=[
- {n:"일반", c:"#9a8ab5", m:1.00, opt:0},
- {n:"고급", c:"#3ecf9a", m:1.35, opt:1},
- {n:"희귀", c:"#5f97e0", m:1.85, opt:2},
- {n:"영웅", c:"#ab71de", m:2.50, opt:3},
- {n:"전설", c:"#c92de5", m:3.40, opt:4},
+ {n:"일반", c:"var(--dim)", m:1.00, opt:0},
+ {n:"고급", c:"var(--ok)", m:1.35, opt:1},
+ {n:"희귀", c:"var(--blue)", m:1.85, opt:2},
+ {n:"영웅", c:"var(--violet)", m:2.50, opt:3},
+ {n:"전설", c:"var(--gold)", m:3.40, opt:4},
 ];
 const SLOTS=[
  {k:"weapon", n:"무기",  st:"atk", e:ic("sword")},
@@ -427,7 +427,7 @@ function drawFish2(){
   const F=FISHGAME;
   modal(ic("fishing")+" 제7구역 검은 바다",`
     <div class="tiny muted" style="margin-bottom:10px">전자 범종이 울리는 부두. 찌가 흔들리는 순간 「챈다」를 누릅니다. 금빛 구간에 멈출수록 좋은 것이 올라옵니다.</div>
-    <div style="position:relative;height:28px;background:#08172b;border:1px solid var(--line);border-radius:7px;overflow:hidden">
+    <div style="position:relative;height:28px;background:var(--s1);border:1px solid var(--line);border-radius:7px;overflow:hidden">
       <div style="position:absolute;left:${F.target}%;width:16%;top:0;bottom:0;background:rgba(201,45,229,.28);border-left:1px solid var(--gold);border-right:1px solid var(--gold)"></div>
       <div id="fbar" style="position:absolute;left:${F.bar}%;top:0;bottom:0;width:3px;background:var(--red);box-shadow:0 0 8px var(--red)"></div>
     </div>
@@ -522,7 +522,7 @@ function clubExp(n){
 function clubBless(){
   if(S.club.blessed>0){ toast("이미 축복을 받았습니다."); return; }
   S.club.blessed=240;
-  S.buffs.push({n:"모임의 결속", key:"know", v:.05, left:240, e:ic("lantern"), c:"#c92de5"});
+  S.buffs.push({n:"모임의 결속", key:"know", v:.05, left:240, e:ic("lantern"), c:"var(--gold)"});
   toast("모임의 결속 · 지식·전리품 +5% (4시간)","good"); renderTop(); renderMain(); save();
 }
 
@@ -658,7 +658,7 @@ VIEWS.gear=()=>{
           <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
           ${up?`<button class="btn sm" style="margin-left:auto;color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
         </div>
-        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:#6c4e9f">· 보호는 사리 3 추가</span></div>
+        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
       </div>`;
     }).join("")}
   </div>
@@ -699,12 +699,12 @@ VIEWS.bag=()=>{
   const matRows=Object.keys(S.mat).map(k=>`<div class="spread tiny" style="padding:3px 0"><span>${k}</span><b>${nf(S.mat[k])}</b></div>`).join("");
   const dishRows=Object.keys(S.kit.have).filter(k=>S.kit.have[k]>0).map(k=>{
     const d=DISHES.find(x=>x.id===k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${d.e} ${d.n}</b> ×${S.kit.have[k]}<div class="tiny muted">${d.t} · ${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")} · ${hhmm(d.dur)}</div></div>
       <button class="btn sm pri" onclick="eat('${k}')">먹기</button></div>`}).join("");
   const itemRows=Object.keys(S.inv).filter(k=>S.inv[k]>0).map(k=>{
     const p=SHOP.find(x=>x.id===k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${p.n}</b> ×${S.inv[k]}<div class="tiny muted">${p.d}</div></div>
       <button class="btn sm pri" onclick="useItem('${k}');renderMain()">사용</button></div>`}).join("");
   return head("소지품 · 보관품",ic("bag")+" 바랑", `${S.bag.length} / ${40+S.res.r11*5}칸`)+`
@@ -734,7 +734,7 @@ VIEWS.stats=()=>{
   const c=C();
   const row=(s)=>{
     const base=stat(s.k), hall=hallBonus(s.k), al=S.alloc[s.k], ge=gearStat(s.k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${s.n}</b> <span class="tiny muted">${s.d}</span>
         <div class="tiny muted">기본 ${base} · 분배 <span style="color:var(--jade)">+${al}</span> · 숙사 +${hall} · 법구 <span style="color:var(--gold)">+${ge}</span></div></div>
       <div class="row">
@@ -914,7 +914,7 @@ VIEWS.guard=()=>{
       <span class="tiny muted">도전 횟수 제한 없음</span></div>
     <div class="tiny muted" style="margin:6px 0 10px">끝없이 몰려오는 업귀 떼에서 30초 동안 결계를 지키면 한 층을 오른다.
     적을 쓰러뜨릴 수 없으므로 화력보다 생명력·방어력·치유·보호막이 중요하다. 성향과 관계없이 기록은 하나이며, 오른 층은 줄어들지 않는다.</div>
-    <div class="card pad" style="background:#200c31;margin-bottom:10px">
+    <div class="card pad" style="background:var(--s1);margin-bottom:10px">
       <b>수호자의 가호 ${S.tendency==="수호"?'<span class="tag g">적용</span>':'<span class="tag">미적용</span>'}</b>
       <div class="tiny muted">수호 성향은 받는 공격 20% 감소 · 치유·보호막 위력 ×1.4. 법구와 주문을 바꾸지 않고 그대로 도전할 수 있습니다.</div>
     </div>
@@ -990,7 +990,7 @@ VIEWS.wboss=()=>{
       <span class="tiny muted">내 순위 ${wbMyRank()}</span></div>
     <div class="tiny muted" style="margin-bottom:6px">이번 주(월요일 KST 0시~) 업귀에 입힌 피해 합계입니다. 같은 기록이면 먼저 달성한 학생이 앞섭니다.</div>
     <table class="t">
-      ${board.map((r,i)=>`<tr${r[2]?' style="background:#270e3c"':""}><td style="width:30px">${i+1}</td>
+      ${board.map((r,i)=>`<tr${r[2]?' style="background:var(--s2)"':""}><td style="width:30px">${i+1}</td>
         <td>${r[2]?`<b style="color:var(--gold)">${esc(r[0])}</b>`:esc(r[0])}</td>
         <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
       ${board.length?"":`<tr><td colspan="3" class="tiny muted" style="text-align:center">아직 업귀에 입힌 피해가 없습니다</td></tr>`}
@@ -1152,7 +1152,7 @@ VIEWS.pets=()=>{
     ${S.pets.list.map((p,i)=>{
       const G=GRADES[p.g];
       const done=p.out&&S.t>=p.out.end;
-      return `<div class="sub" style="border-color:${p.out?"#3b165c":G.c}">
+      return `<div class="sub" style="border-color:${p.out?"var(--s4)":G.c}">
         <div class="spread"><div><b>${p.e} ${esc(p.nick||p.n)}</b> <span class="tiny" style="color:var(--gold)">Lv ${p.lv}</span></div>
           ${gradeTag(p.g)}</div>
         <div class="tiny muted">${p.d}</div>
@@ -1260,7 +1260,7 @@ VIEWS.farm=()=>{
       </div>
       <div class="card pad">
         <div class="sect-t">심을 수 있는 것</div>
-        ${CROPS.map(c=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid #2c1045">
+        ${CROPS.map(c=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid var(--s3)">
           <div><b>${c.e} ${c.n}</b> <span class="tiny muted">${hhmm(c.t)} · ${c.y} ${c.s}개</span>
             <div class="tiny muted">${c.d}</div></div></div>`).join("")}
       </div>
@@ -1338,7 +1338,7 @@ VIEWS.club=()=>{
         <div class="bar" style="margin:6px 0 4px"><i style="width:${clamp(K.exp/need*100,0,100)}%"></i></div>
         <div class="tiny muted">${nf(K.exp)} / ${nf(need)} → Lv ${K.lv+1} · 부원 모두 ${c.b}</div>
       </div></div>
-    <div class="card pad" style="background:#200c31;margin-top:10px">
+    <div class="card pad" style="background:var(--s1);margin-top:10px">
       <div class="tiny muted"><b>공지</b> · 부원 여러분의 모든 활동은 자유롭습니다. 부담 갖지 말고 하고 싶은 것만 하며, 자신의 속도로 나아가도록 합시다 :&gt;</div>
     </div>
   </div>
