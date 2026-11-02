@@ -55,6 +55,7 @@ function myRecord(){
     wb_dmg:(S.wb&&S.wb.dmg)||0,
     /* 페어에게 보여 줄 현황 */
     home_stage:(S.home&&S.home.stage)||0,
+    home_due:Number(S.home&&S.home.due)||0,
     home_late:(typeof rentLate==="function") ? !!rentLate() : false,
     run_ward:(S.run&&!S.run.done) ? (S.run.q.ward.n||"") : "",
     run_stage:(S.run&&!S.run.done) ? (S.run.q.stage||0) : 0,
@@ -472,6 +473,7 @@ go=function(v){
   _go6(v);
   if(!sbOn()) return;
   if(v==="roster"||v==="rank"||v==="hallv") { syncUp(false); syncRoster(false); }
+  if(v==="hallv") pairFetch(true);
   if(v==="together") syncRooms(true);
 };
 const _openSettings6=openSettings;
@@ -734,15 +736,20 @@ function pairOther(row){ return String(row.from_id)===String(S.sb.id)
 
 const PAIRMS=20000;
 let PAIRBUSY=false;
+let PAIRFETCHTASK=null;
 function pairFetch(force){
   const P=pairEnsure();
-  if(!sbOn() || PAIRBUSY) return Promise.resolve();
+  if(!sbOn()) return Promise.resolve(false);
+  if(PAIRBUSY) return PAIRFETCHTASK;
   const now=Date.now();
-  if(!force && P.at && now-P.at<PAIRMS) return Promise.resolve();
+  if(!force && P.at && now-P.at<PAIRMS) return Promise.resolve(false);
   P.at=now; PAIRBUSY=true;
+  const state=S;
   const id=encodeURIComponent(S.sb.id);
-  return sbGet(`pairs?select=*&or=(from_id.eq.${id},to_id.eq.${id})&order=id.desc&limit=60`)
-    .then(rows=>{
+  const fields="id,from_id,from_name,to_id,to_name,status,nick_from,nick_to,created_at,updated_at,rent_due";
+  PAIRFETCHTASK=sbGet(`pairs?select=${fields}&or=(from_id.eq.${id},to_id.eq.${id})&order=id.desc&limit=60`)
+    .then(async rows=>{
+      if(S!==state) return false;
       rows=rows||[];
       const before=(P.inbox||[]).length;
       P.mine  = rows.find(r=>r.status==="accepted") || null;
@@ -753,11 +760,97 @@ function pairFetch(force){
         toast(`${esc(n.from_name||"누군가")} 님이 페어를 신청했습니다.`,"good");
         pushNews(`[인연] ${n.from_name} 학생이 페어를 신청했습니다.`);
       }
-      if(VIEW==="rel") renderMain(true);
+      /* 업데이트 전에 개인이 낸 월세도 남은 기간을 페어에게 나눕니다. */
+      if(P.mine && Number(homeS().due)>Number(P.mine.rent_due||0)){
+        const r=await sbSend("POST","rpc/pair_rent",{
+          p_pair_id:P.mine.id, p_student_id:S.sb.id, p_action:"sync",
+          p_personal_due:Number(homeS().due)||0
+        });
+        if(S!==state) return false;
+        if(r && String(r.pair_id)===String(P.mine&&P.mine.id)) P.mine.rent_due=Number(r.due)||0;
+      }
+      syncHall(); renderTop();
+      if(VIEW==="rel" || VIEW==="hallv") renderMain(true);
+      save();
       renderChat();
+      return true;
     })
-    .catch(()=>{})
-    .then(()=>{ PAIRBUSY=false; });
+    .catch(()=>false)
+    .finally(()=>{ PAIRBUSY=false; PAIRFETCHTASK=null; });
+  return PAIRFETCHTASK;
+}
+
+/* ─── 페어 공동 월세 — 서버에서 한 번만 결제하고 두 사람이 기간을 공유 ─── */
+function pairRentActive(){
+  const p=S.pair&&S.pair.mine;
+  return !!(sbOn() && p && p.status==="accepted" &&
+    [p.from_id,p.to_id].some(id=>String(id)===String(S.sb.id)));
+}
+function pairRentDue(){ return pairRentActive() ? Number(S.pair.mine.rent_due)||0 : 0; }
+let PAIRRENTPROMISE=null, PAIRRENTAT=0;
+function pairRentTick(){
+  if(!sbOn()) return false;
+  const h=homeS(), due=rentPaidUntil();
+  if(h.rentPending || (!isDorm() && h.auto && due>0 && S.t>due)){
+    if(!PAIRRENTPROMISE && Date.now()-PAIRRENTAT>=30000) payPairRent(true);
+  }
+  return true; // 연결된 게임의 자동 납부는 반드시 최신 페어 상태부터 확인합니다.
+}
+function payPairRent(automatic){
+  if(PAIRRENTPROMISE) return PAIRRENTPROMISE;
+  PAIRRENTAT=Date.now();
+  const state=S, h=homeS();
+  PAIRRENTPROMISE=(async()=>{
+    let pending=h.rentPending;
+    if(!pending){
+      if(!await pairFetch(true)){
+        if(!automatic) toast("월세 정보를 불러오지 못했습니다. 연결을 확인한 뒤 다시 눌러 주세요.","bad");
+        return;
+      }
+      if(S!==state) return;
+      if(!pairRentActive()){ payLocalRent(automatic); return; }
+      if(isDorm()){ if(!automatic) toast("기숙사는 월세가 없습니다."); return; }
+      const due=rentPaidUntil();
+      if(automatic && (!h.auto || !due || S.t<=due)) return;
+      const cost=rentOf();
+      if(S.rin<cost){ if(!automatic) toast("륜이 부족합니다.","bad"); return; }
+      const p=S.pair.mine;
+      pending={id:S.sb.id+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2),
+        pairId:p.id, studentId:S.sb.id, cost, automatic:!!automatic,
+        expectedDue:Number(p.rent_due)||0, personalDue:Number(h.due)||0};
+      /* 처리 중에는 비용을 먼저 보관합니다. 같은 요청을 재전송해도 다시 차감하지 않습니다. */
+      S.rin-=cost; h.rentPending=pending;
+      save(); renderTop(); if(VIEW==="hallv") renderMain(true);
+    }
+    const result=await sbSend("POST","rpc/pair_rent",{
+      p_pair_id:pending.pairId, p_student_id:pending.studentId,
+      p_action:pending.automatic?"auto":"pay", p_request_id:pending.id,
+      p_expected_due:pending.expectedDue, p_personal_due:pending.personalDue
+    });
+    if(S!==state) return;
+    if(!result || String(result.request_id)!==pending.id || typeof result.charged!=="boolean")
+      throw new Error("월세 응답을 확인하지 못했습니다.");
+    if(!result.charged) S.rin+=pending.cost;
+    if(S.pair&&S.pair.mine&&String(S.pair.mine.id)===String(pending.pairId)){
+      S.pair.mine.rent_due=Number(result.due)||0;
+      if(result.reason==="inactive") S.pair.mine=null;
+    }
+    delete h.rentPending;
+    if(result.charged){
+      pushNews(`[거처] ${S.name} 학생이 페어 월세 ${nf(pending.cost)} 륜을 ${pending.automatic?"자동으로 ":""}냈습니다. 두 사람에게 함께 적용됩니다.`);
+      if(!automatic) toast(`월세 ${nf(pending.cost)} 륜을 냈습니다. 페어 두 사람 모두 이레 연장되었습니다.`,"good");
+    }else if(!automatic){
+      toast(result.reason==="inactive"?"페어가 변경되어 납부를 취소했습니다. 륜은 돌려드렸습니다.":"페어의 납부 내역을 적용했습니다. 추가로 차감하지 않았습니다.","good");
+    }
+    syncHall(); renderTop(); if(VIEW==="hallv") renderMain(true);
+    save(); syncUp(true);
+    if(typeof acctPush==="function") acctPush(true);
+  })().catch(()=>{
+    if(S===state && !automatic) toast(h.rentPending
+      ? "납부 결과를 확인 중입니다. 재시도해도 월세를 다시 차감하지 않습니다."
+      : "월세를 처리하지 못했습니다. 연결을 확인해 주세요.","bad");
+  }).finally(()=>{ PAIRRENTPROMISE=null; });
+  return PAIRRENTPROMISE;
 }
 function pairSend(toId){
   const P=pairEnsure();
@@ -839,7 +932,7 @@ chatScope=function(tab){
 
 /* 명부·채팅과 함께 주기적으로 받아 옵니다 */
 const _stepPair=step;
-step=function(m){ _stepPair(m); if(sbOn() && Math.random()<0.03) pairFetch(); };
+step=function(m){ _stepPair(m); if(sbOn()) pairFetch(); };
 const _bootPair=boot;
 boot=function(){ _bootPair(); pairEnsure(); if(sbOn()) pairFetch(true); };
 
@@ -916,25 +1009,26 @@ function pairHomeHTML(){
   const P=pairEnsure();
   if(!sbOn() || !P.mine) return "";
   const r=pairRow();
-  if(!r) return `<div class="card pad" style="margin-top:14px">
+  if(!r) return `<div class="card pad" style="margin-bottom:14px">
     <div class="sect-t">페어의 거처</div>
     <div class="tiny muted">아직 명부에 올라오지 않았습니다. 상대가 한 번 접속하면 보입니다.</div></div>`;
   const h=homeOf(r.hall), dorm=(r.hall==="dorm");
   const top=dorm?4:5, st=clamp(r.home_stage||0,0,top);
   const fac=HOMESTAGE[st]||0;
-  return `<div class="card pad" style="margin-top:14px;border-color:var(--gold2)">
+  const shared=pairRentDue(), due=Math.max(Number(r.home_due)||0,shared);
+  const late=!dorm && (due>0 ? nowMin()>due : !!r.home_late);
+  const sharedPaid=!dorm && shared>nowMin();
+  return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
     <div class="spread"><div class="sect-t" style="margin:0">페어의 거처</div>${pairSeen(r)}</div>
     <div class="spread" style="margin-top:4px">
       <div>${pairTitle(r)} <span class="tiny muted">· ${esc(h.n)} ${esc(h.h)}</span>
         <div class="tiny muted">${dorm?"방 꾸미기":"집 짓기"} ${st} / ${top} 단계
-          ${r.home_late?'· <span style="color:var(--red)">월세 미납</span>':dorm?"· 월세 없음":"· 월세 내는 중"}</div></div>
-      <span class="tag" style="border-color:${h.c};color:${h.c}">혜택 ${Math.round((r.home_late?0:fac)*100)}%</span></div>
+          ${dorm?"· 월세 없음":late?'· <span style="color:var(--red)">월세 미납</span>':sharedPaid?"· 페어 월세 적용 중":due?"· 월세 납부 완료":"· 아직 계약 전"}</div></div>
+      <span class="tag" style="border-color:${h.c};color:${h.c}">혜택 ${Math.round((late?0:fac)*100)}%</span></div>
     <div class="bar" style="margin-top:8px"><i style="width:${st/top*100}%"></i></div>
     <div class="tiny muted" style="margin-top:6px">${esc(h.b)}</div>
   </div>`;
 }
-const _hallvPair=VIEWS.hallv;
-VIEWS.hallv=()=>_hallvPair()+pairHomeHTML();
 
 /* ─── 의뢰 현황 ─── */
 function pairRunHTML(){

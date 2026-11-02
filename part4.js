@@ -95,8 +95,12 @@ function isDorm(id){ return (id||S.hall)==="dorm"; }
 function homePlan(id){ return isDorm(id) ? DORMCOST : HOMECOST; }
 function homeMax(id){ return homePlan(id).length; }      // 기숙사 4칸 · 구역 5칸
 function rentOf(id){ const h=homeS(); return Math.round((RENT[id||S.hall]||0)*(1+h.stage*0.35)); }
-function rentDue(){ return Math.max(0, homeS().due - S.t); }      // 남은 명계 분
-function rentLate(){ return !isDorm() && homeS().due>0 && S.t>homeS().due; }
+function rentPaidUntil(){
+  const shared=typeof pairRentDue==="function" ? pairRentDue() : 0;
+  return Math.max(Number(homeS().due)||0, shared);
+}
+function rentDue(){ return Math.max(0, rentPaidUntil() - S.t); }  // 개인·페어 중 더 긴 납부 기간
+function rentLate(){ const due=rentPaidUntil(); return !isDorm() && due>0 && S.t>due; }
 function hallGrowth(id){
   if(id!==S.hall) return 0;                      // 살지 않는 곳은 혜택이 없습니다
   if(rentLate()) return 0;                       // 월세가 밀리면 멈춤
@@ -251,7 +255,8 @@ function homeAct(){
   const h=homeS(), dorm=isDorm();
   const plan=homePlan(), top=homeMax();
   const next=plan[h.stage];
-  const rent=rentOf(), late=rentLate();
+  const rent=rentOf(), late=rentLate(), due=rentPaidUntil();
+  const paired=typeof pairRentActive==="function" && pairRentActive();
   const matRow=(m)=>Object.entries(m).map(([k,v])=>{
     const have=(S.mat&&S.mat[k])||0;
     return `<span class="tag ${have>=v?"g":""}">${k} ${nf(have)}/${nf(v)}</span>`;
@@ -265,17 +270,20 @@ function homeAct(){
     </div></div>` : `<div class="card pad">
     <div class="spread"><div class="sect-t" style="margin:0">월세</div>
       <span class="tiny ${late?"":"muted"}" style="${late?"color:var(--red)":""}">
-        ${late?"미납 — 혜택이 멈췄습니다":(h.due?`다음 납부까지 ${hhmm(rentDue())}`:"아직 계약 전")}</span></div>
+        ${late?"미납 — 혜택이 멈췄습니다":(due?`다음 납부까지 ${hhmm(rentDue())}`:"아직 계약 전")}</span></div>
     <div class="tiny muted" style="margin-bottom:8px">
       이레마다 <b style="color:var(--gold)">${nf(rent)} 륜</b>. 집이 넓어질수록 오릅니다.
       밀려도 쫓겨나지는 않지만, 낼 때까지 거주지 혜택이 붙지 않습니다.</div>
     <div class="row">
-      <button class="btn ${late?"pri":""}" onclick="payRent()">${h.due?"이레치 내기":"계약하고 첫 달 내기"}
+      <button class="btn ${late?"pri":""}" onclick="payRent()">${h.rentPending?"납부 결과 다시 확인":due?"이레치 내기":"계약하고 이레치 내기"}
         <span class="tiny muted">${nf(rent)}</span></button>
       <button class="btn sm ${h.auto?"pri":""}" onclick="toggleRentAuto()">
         자동 납부 ${h.auto?"켜짐":"꺼짐"}</button>
     </div>
-    <div class="tiny muted" style="margin-top:6px">자동 납부를 켜 두면 륜이 있을 때 알아서 빠집니다.</div>
+    <div class="tiny muted" style="margin-top:6px">${paired
+      ? "페어 중 한 명만 내면 두 사람 모두 같은 기간 적용됩니다. 자동 납부도 함께 적용됩니다."
+      : "자동 납부를 켜 두면 륜이 있을 때 알아서 빠집니다."}</div>
+    ${h.rentPending?'<div class="tiny muted" style="margin-top:6px">월세를 처리 중입니다. 연결이 돌아오면 같은 납부 건으로 다시 확인합니다.</div>':""}
   </div>`;
   return rentCard + `
   <div class="card pad" style="margin-top:14px">
@@ -315,6 +323,7 @@ VIEWS.hallv=()=>{
   };
   return head("지금 사는 곳",ic("castle")+" 거처",
     `${me.n} ${me.h} · ${h.stage} / ${homeMax()} 단계`)+`
+  ${typeof pairHomeHTML==="function" ? pairHomeHTML() : ""}
   <div class="grid g2" style="margin-bottom:14px">
     <div>
       <div class="card pad">
@@ -343,15 +352,23 @@ VIEWS.hallv=()=>{
   </div>`;
 };
 function payRent(){
+  if(typeof payPairRent==="function" && sbOn()) return payPairRent(false);
+  return payLocalRent(false);
+}
+function payLocalRent(automatic){
   const h=homeS();
+  if(h.rentPending){ if(!automatic) toast("먼저 연결을 복구해 진행 중인 월세 납부를 확인해 주세요.","bad"); return; }
   if(isDorm()){ toast("기숙사는 월세가 없습니다."); return; }
+  if(automatic && (!h.auto || !h.due || S.t<=h.due)) return;
   const r=rentOf();
-  if(S.rin<r){ toast("륜이 부족합니다.","bad"); return; }
+  if(S.rin<r){ if(!automatic) toast("륜이 부족합니다.","bad"); return; }
   S.rin-=r;
   const base = (h.due && S.t<h.due) ? h.due : S.t;      // 밀렸으면 지금부터, 아니면 이어서
   h.due = base + 7*1440;
-  toast(`월세 ${nf(r)} 륜을 냈습니다. 다음 납부까지 ${hhmm(h.due-S.t)}`,"good");
+  if(automatic) pushNews(`[거처] 월세 ${nf(r)} 륜이 자동으로 빠져나갔습니다.`);
+  else toast(`월세 ${nf(r)} 륜을 냈습니다. 다음 납부까지 ${hhmm(h.due-S.t)}`,"good");
   syncHall(); renderTop(); renderMain(); save();
+  if(typeof syncUp==="function") syncUp(true);
 }
 function toggleRentAuto(){ const h=homeS(); h.auto=!h.auto; renderMain(); save();
   toast(h.auto?"자동 납부를 켰습니다.":"자동 납부를 껐습니다."); }
@@ -374,14 +391,13 @@ function buildHome(){
 const _stepRent=step;
 step=function(m){
   _stepRent(m);
-  if(!S||!S.made||isDorm()) return;
+  if(!S||!S.made) return;
+  if(typeof pairRentTick==="function" && pairRentTick()) return;
+  if(isDorm()) return;
   const h=homeS();
   if(!h.due) return;
   if(S.t>h.due && h.auto){
-    const r=rentOf();
-    if(S.rin>=r){ S.rin-=r; h.due+=7*1440;
-      if(S.t>h.due) h.due=S.t+7*1440;
-      pushNews(`[거처] 월세 ${nf(r)} 륜이 자동으로 빠져나갔습니다.`); syncHall(); }
+    payLocalRent(true);
   }
 };
 
