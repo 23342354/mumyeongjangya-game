@@ -408,13 +408,6 @@ step=function(m){
   _step3(m);
   if(!S||!S.made||!S.auc) return;
   aucTick(m);
-  // 실시간 의뢰
-  if(S.run && !S.run.done){
-    S.run.left-=m;
-    S.run.acc+=m;
-    while(S.run.acc>=2 && S.run && !S.run.done){ S.run.acc-=2; runStep(); }
-    if(S.run && !S.run.done && S.run.left<=0) endRun(true);
-  }
   // 일수 집계
   ctMax("days", cal().day+1);
   if(Math.random()<0.02*m) achCheck();
@@ -1064,3 +1057,29 @@ PLACES.push({id:"loungep", n:"휴게실", e:ic("sofa"), x:96, y:66, view:"lounge
 
 const _boot3=boot;
 boot=function(){ ensureV3(); _boot3(); ensureV3(); achCheck(); renderNav(); renderMain(); };
+
+/* ═══════════ 실시간 의뢰 전용 시계 ═══════════ */
+const RUNPACE = 3;            // 현실 1초 = 의뢰 진행 3분
+let RUNTICK = null;
+function runRealTick(){
+  if(RUNTICK) clearInterval(RUNTICK);
+  RUNTICK = setInterval(()=>{
+    if(!S || !S.made || !S.run || S.run.done) return;
+    const now = Date.now();
+    if(!S.run.lastTick) S.run.lastTick = now;
+    let m = (now - S.run.lastTick)/1000 * RUNPACE;
+    S.run.lastTick = now;
+    if(m <= 0) return;
+    if(m > S.run.left) m = S.run.left;          // 자리를 비웠어도 의뢰 분량만큼만
+    S.run.left -= m;
+    S.run.acc  += m;
+    let guard = 0;
+    while(S.run.acc >= 2 && S.run && !S.run.done && guard++ < 400){ S.run.acc -= 2; runStep(); }
+    if(S.run && !S.run.done && S.run.left <= 0) endRun(true);
+  }, 1000);
+}
+const _bootRun = boot;
+boot = function(){ _bootRun(); if(S && S.run && !S.run.done) S.run.lastTick = Date.now(); runRealTick(); };
+const _startRunPace = startRun;
+startRun = function(stage, party){ _startRunPace(stage, party);
+  if(S.run) S.run.lastTick = Date.now(); runRealTick(); };
