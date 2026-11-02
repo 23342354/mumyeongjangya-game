@@ -546,7 +546,7 @@ function moveHall(id){
   const built=(S.home&&S.home.stage)||0;
   const msg = id==="dorm"
     ? (built?`기숙사로 들어가면 지금까지 지은 집 ${built}단계를 두고 갑니다. 옮길까요?`
-            :"기숙사로 들어갈까요? 월세는 없지만 집을 지을 수 없습니다.")
+            :"기숙사로 들어갈까요? 월세는 없지만 혜택 천장이 100%입니다.")
     : (built?`옮기면 지금까지 지은 집 ${built}단계를 두고 가고, 새 집을 처음부터 짓게 됩니다. 옮길까요?`
             :"이 구역으로 옮길까요? 이레마다 월세를 내야 합니다.");
   if(!confirm(msg)) return;
