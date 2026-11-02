@@ -293,6 +293,8 @@ const RUNFLAVOR=[
  "향 냄새가 채 가시기 전에 납땜 연기가 끼어든다.",
 ];
 function startRun(stage,party){
+  if(!questCheck(stage)) return;
+  if(S.run&&!S.run.done){ toast("이미 의뢰를 나가 있습니다.","bad"); return; }
   const q=questAt(stage);
   const room=party?S.quests.room:null;
   const pos=room?room.pos:"후열";
@@ -365,17 +367,18 @@ function endRun(ok){
   const R=S.run; if(!R||R.done) return;
   R.done=true;
   const q=R.q;
+  const cleared=ok&&(R.stage%10!==0||R.left<=0); // 관문은 끝까지 버틴 뒤에만 통과
   let hpL=rnd(q.rank.hp[0],q.rank.hp[1]), snL=rnd(q.rank.sn[0],q.rank.sn[1]);
   if(R.pos==="선봉") hpL=Math.round(hpL*1.1);
   if(R.pos==="지원"){ hpL=Math.round(hpL*.8); snL=Math.round(snL*.8); }
   if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
   if(!ok){ hpL=Math.round(hpL*1.7); snL=Math.round(snL*1.6); }
   damageHP(hpL); damageSN(snL);
-  const rin=gainRin(R.rin+ (ok?Math.round(120+R.stage*48):0));
-  const ex=gainExp(Math.round((60+R.stage*22)*R.kills*0.6+ (ok?90+R.stage*34:0)));
+  const rin=gainRin(R.rin+ (cleared?Math.round(120+R.stage*48):0));
+  const ex=gainExp(Math.round((60+R.stage*22)*R.kills*0.6+ (cleared?90+R.stage*34:0)));
   const kn=gainKnow(Math.round((10+R.stage*4)*Math.max(1,R.kills*0.5)));
-  if(ok){
-    if(R.stage>S.quests.cleared) S.quests.cleared=R.stage;
+  if(cleared){
+    questRecordClear(R.stage);
     ct("quest");
     if(q.rank.r==="Ⅳ"&&Math.random()<.3) S.sari++;
     if(q.rank.r==="Ⅴ") S.sari++;
@@ -383,8 +386,10 @@ function endRun(ok){
     pushNews(`[의뢰] ${S.name} 학생이 사건 ${q.no}(${q.rank.r}등급)을 해결했습니다.`);
   }
   pushRun(`<span class="turn">정산 · 처치 ${R.kills}체 · 륜 +${nf(rin)} · 경험치 +${nf(ex)} · 지식 +${nf(kn)} · 체력 −${hpL} · 이성 −${snL}</span>`);
-  pushRun(ok?`<span class="s">■ 의뢰를 해결하고 사무전으로 돌아왔다.</span>`:`<span class="h">■ 더 버티지 못하고 현장에서 철수했다.</span>`);
-  S.quests.log.unshift({no:q.no,t:q.t,win:ok,time:cal().str});
+  pushRun(cleared?`<span class="s">■ 의뢰를 해결하고 사무전으로 돌아왔다.</span>`
+    :ok?`<span class="turn">■ 관문 도중 귀환했다. 모은 몫만 정산되며 다음 구간은 열리지 않는다.</span>`
+    :`<span class="h">■ 더 버티지 못하고 현장에서 철수했다.</span>`);
+  S.quests.log.unshift({no:q.no,t:q.t,win:cleared,time:cal().str});
   if(S.quests.log.length>30) S.quests.log.pop();
   S.war.mine=(S.war.mine||0)+Math.round(12*q.rank.mul);
   achCheck(); renderTop(); renderNav(); save();
@@ -887,6 +892,7 @@ VIEWS.quest=()=>{
         ${R.done?`<button class="btn pri" onclick="runClear()">일지 닫기</button>`
           :`<button class="btn" onclick="runReturn()">혼자 귀환</button>
             <span class="tiny muted">지금 돌아가면 그때까지 모은 몫만 정산됩니다.</span>`}
+        ${!R.done&&R.stage%10===0?'<span class="tiny muted">관문은 도중에 귀환하면 통과로 인정되지 않습니다.</span>':""}
       </div></div>`;
   }
   return head1+_quest();

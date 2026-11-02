@@ -739,7 +739,7 @@ function newState(){
     inv:{},           // 상점 품목 보유
     buffs:[],         // {key,v,left,n}
     ward:false,
-    quests:{cleared:0, log:[], room:null},
+    quests:{cleared:0, gate:0, log:[], room:null},
     pass:3, passNext:720, outing:{done:{}, souv:[]},
     fest:{marks:0, todayMarks:0, basket:0, visits:0, stamps:[], souv:null, total:265000},
     rel:[], friends:[],
@@ -1343,6 +1343,26 @@ function sceneSVG(){
 }
 
 /* ───────────── 강의실 ───────────── */
+function subjectLessonCount(lv){ return Math.max(1,Math.floor(Number(lv)||0)+1); }
+function subjectLessonMinutes(d){ return d.lv===0?15:60; }
+function subjectLessonsLeft(d){
+  return Math.max(1,Math.ceil(subjectLessonCount(d.lv)*(1-clamp(Number(d.p)||0,0,100)/100)-1e-9));
+}
+function subjectNext(d){
+  let lv=d.lv, credit=subjectLessonCount(lv)*clamp(Number(d.p)||0,0,100)/100+1;
+  while(credit+1e-9>=subjectLessonCount(lv)){
+    credit=Math.max(0,credit-subjectLessonCount(lv)); lv++;
+  }
+  return {lv,p:credit/subjectLessonCount(lv)*100};
+}
+function lessonPlanMinutes(ids){
+  const subjects={}; let minutes=0;
+  ids.forEach(id=>{
+    const d=subjects[id]||S.sub[id];
+    minutes+=subjectLessonMinutes(d); subjects[id]=subjectNext(d);
+  });
+  return minutes;
+}
 let CLASSFILTER="전체", CLASSSORT="즐겨찾기";
 VIEWS.class=()=>{
   const eff=(2.16+S.course*0.18)*(1+mod("study"));
@@ -1353,7 +1373,7 @@ VIEWS.class=()=>{
       <button class="btn sm ghost" onclick="editPlan(${i})">+ 시간표 ${i+1} 만들기</button></div>`;
     const running=S.lesson && S.lesson.planIdx===i;
     return `<div class="sub ${running?"active":""}">
-      <div class="spread"><b>${esc(p.n)}</b><span class="tiny muted">총 ${p.list.length}시간</span></div>
+      <div class="spread"><b>${esc(p.n)}</b><span class="tiny muted">${p.list.length}교시 · 총 ${hhmm(lessonPlanMinutes(p.list))}</span></div>
       <div class="tiny muted" style="margin:4px 0 8px">${p.list.map((id,k)=>`${k+1}교시 ${SUBJECTS.find(s=>s.id===id).n}`).join(" · ")}</div>
       <div class="row">
         <button class="btn pri sm" ${running?"disabled":""} onclick="startLesson(${i})">${running?"듣는 중":"시간표 듣기"}</button>
@@ -1373,12 +1393,13 @@ VIEWS.class=()=>{
       <button class="starbtn ${d.fav?"on":""}" title="${d.fav?"즐겨찾기 해제":"즐겨찾기"}" onclick="favSub('${s.id}')">${ic("star",15)}</button>
       <h4>${s.n} <span class="lv">${d.lv}</span> ${isExam?'<span class="tag g">시험</span>':""}</h4>
       <div class="tiny muted">${NPC[s.pf].n} 교사 · ${st.n} 계열</div>
-      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${d.p}% ${capped?`<span style="color:var(--gold)">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
+      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${Number(d.p.toFixed(1))}% ${capped?`<span style="color:var(--gold)">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
       <div class="bar"><i style="width:${d.p}%"></i></div>
+      <div class="tiny muted" style="margin-top:5px">Lv ${d.lv+1}까지 ${subjectLessonsLeft(d)}교시 남음 · 이 레벨 총 ${subjectLessonCount(d.lv)}교시</div>
       <div class="tiny muted" style="margin:7px 0 4px">${s.d}</div>
       <div class="quote">${s.q}</div>
       <div class="row" style="margin-top:8px">
-        <button class="btn sm" onclick="quickLesson('${s.id}')">1교시 듣기</button>
+        <button class="btn sm" onclick="quickLesson('${s.id}')">1교시 듣기 · ${hhmm(subjectLessonMinutes(d))}</button>
         <span class="tiny muted" style="margin-left:auto">지식 +${Math.round((20+d.lv*5)*(1+mod("know")))}</span>
       </div></div>`;
   }).join("");
@@ -1394,7 +1415,7 @@ VIEWS.class=()=>{
       <div class="tiny muted" style="margin-top:6px">
         시간표 「${esc(S.plans[S.lesson.planIdx]?S.plans[S.lesson.planIdx].n:"즉석")}」 ${S.lesson.idx+1}/${S.lesson.plan.length}교시 ·
         다음: ${S.lesson.idx+1<S.lesson.plan.length?SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx+1]).n:"없음"}</div>
-      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 진행도 +25%, 지식 +${Math.round((20+S.sub[cur.id].lv*5)*(1+mod("know")))}</div>
+      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 1교시 인정 · Lv ${S.sub[cur.id].lv+1}까지 ${subjectLessonsLeft(S.sub[cur.id])}교시 · 지식 +${Math.round((20+S.sub[cur.id].lv*5)*(1+mod("know")))}</div>
       <div class="tiny" style="color:var(--jade);margin-top:4px">끝까지 들으면 경험치 +5%</div>
     </div>`:"";
 
@@ -1403,7 +1424,8 @@ VIEWS.class=()=>{
   <div class="card pad" style="margin-bottom:12px">
     <div class="spread"><div class="sect-t" style="margin:0">시간표</div>
       <button class="btn sm pri" onclick="examPlan()">${S.course}과정 시험 과목으로 짜기</button></div>
-    <div class="tiny muted" style="margin:6px 0 10px">교시를 최대 4시간까지 짜 두고 「시간표 듣기」로 차례로 이어 듣습니다.
+    <div class="tiny muted" style="margin:6px 0 10px">최대 4교시를 짜 두고 「시간표 듣기」로 차례로 이어 듣습니다.
+    <b>0→1레벨은 15분 수업 1교시</b>, 이후에는 1시간 수업을 2·3·4…교시씩 들어야 레벨이 오릅니다.
     <b style="color:var(--gold)">승급 시험은 지정 과목 세 개의 레벨로 채점</b>하므로, 과정이 바뀌면 시간표도 바꾸는 편이 좋습니다.</div>
     <div class="grid g3">${planCards}</div>
   </div>
@@ -1428,28 +1450,32 @@ function setCS(v){CLASSSORT=v;renderMain()} function setCF(v){CLASSFILTER=v;rend
 function favSub(id){ S.sub[id].fav=!S.sub[id].fav; renderMain(); save(); }
 function startLesson(i){
   const p=S.plans[i]; if(!p) return;
-  S.lesson={plan:[...p.list], idx:0, left:60, total:60, planIdx:i};
-  toast(`「${p.n}」 수업을 시작합니다.`); renderMain(); renderTop();
+  const minutes=subjectLessonMinutes(S.sub[p.list[0]]);
+  S.lesson={plan:[...p.list], idx:0, left:minutes, total:minutes, planIdx:i};
+  toast(`「${p.n}」 수업을 시작합니다.`); renderMain(); renderTop(); save();
 }
 function quickLesson(id){
-  S.lesson={plan:[id], idx:0, left:60, total:60, planIdx:-1};
-  toast(`${SUBJECTS.find(s=>s.id===id).n} 1교시를 시작합니다.`); renderMain();
+  const minutes=subjectLessonMinutes(S.sub[id]);
+  S.lesson={plan:[id], idx:0, left:minutes, total:minutes, planIdx:-1};
+  toast(`${SUBJECTS.find(s=>s.id===id).n} 1교시를 시작합니다.`); renderMain(); save();
 }
 function stopLesson(){ S.lesson=null; renderMain(); renderTop(); }
 function finishPeriod(){
   const L=S.lesson; const id=L.plan[L.idx]; const s=SUBJECTS.find(x=>x.id===id); const d=S.sub[id];
-  d.p+=25;
+  const next=subjectNext(d);
   gainKnow(20+d.lv*5);
   gainExp(28+d.lv*6+S.course*10);
   addMark(5);
-  if(d.p>=100){
-    d.p=0; d.lv++;
+  d.p=next.p;
+  while(d.lv<next.lv){
+    d.lv++;
     if(stat(s.st)<statCap(s.st)){ S.bonus[s.st]++; toast(`「${s.n}」 수료 · <b>${STATS.find(x=>x.k===s.st).n} +1</b>`,"good"); }
     else toast(`「${s.n}」 Lv ${d.lv} · ${STATS.find(x=>x.k===s.st).n}은(는) 이미 한계입니다.`);
   }
   const extra=L.left; // 음수 캐리
-  if(L.idx+1<L.plan.length){ L.idx++; L.left=60+extra; L.total=60; }
+  if(L.idx+1<L.plan.length){ L.idx++; L.total=subjectLessonMinutes(S.sub[L.plan[L.idx]]); L.left=L.total+extra; }
   else { S.lesson=null; toast("시간표를 모두 마쳤습니다."); }
+  renderTop(); renderNav(); if(VIEW==="class") renderMain(true); save();
 }
 function editPlan(i){
   const p=S.plans[i]||{n:`시간표 ${i+1}`, list:["s17"]};
@@ -1459,7 +1485,7 @@ function editPlan(i){
     return `
     <label class="f">시간표 이름</label>
     <input class="inp" id="pn" value="${esc(p.n)}" maxlength="12">
-    <label class="f">교시 (최대 4시간)</label>
+    <label class="f">교시 (최대 4교시)</label>
     <div id="rows">${list.map((id,k)=>`
       <div class="row" style="margin-bottom:6px">
         <span class="tiny muted" style="width:46px">${k+1}교시</span>
@@ -1489,6 +1515,11 @@ function buffStrip(){
 }
 
 /* ───────────── 수행(연구) ───────────── */
+function researchCost(r,lv){
+  if(r.id==="r1" && lv===0) return {mana:600,know:40,minutes:15};
+  return {mana:Math.round(1800*Math.pow(1.115,lv)*r.mana),
+    know:Math.round(70*Math.pow(1.115,lv)*r.know),minutes:Math.round(r.t*Math.pow(1.11,lv))};
+}
 VIEWS.research=()=>{
   const cur=S.study?RESEARCH.find(r=>r.id===S.study.id):null;
   const curBox=cur?`
@@ -1519,13 +1550,13 @@ VIEWS.research=()=>{
 
   const cards=RESEARCH.map(r=>{
     const lv=S.res[r.id], done=lv>=r.max, locked=r.req&&S.course<r.req;
-    const cm=Math.round(1800*Math.pow(1.115,lv)*r.mana), ck=Math.round(70*Math.pow(1.115,lv)*r.know);
-    const tm=Math.round(r.t*Math.pow(1.11,lv));
+    const cost=researchCost(r,lv), cm=cost.mana, ck=cost.know, tm=cost.minutes;
     const busy=!!S.study;
     return `<div class="sub ${locked?"":""}" style="${locked?"opacity:.45":""}">
       <div class="spread"><h4 style="margin:0">${r.n}</h4><span class="tiny muted">${lv} / ${r.max===999?"∞":r.max}</span></div>
       <div class="tiny muted" style="margin:5px 0 2px">${r.e}</div>
       <div class="tiny" style="color:var(--jade)">지금 받는 효과 · ${effText(r,lv)}</div>
+      ${r.id==="r1"&&lv===0?'<div class="tag g" style="margin-top:6px">입문 수행 · 시작 재화로 바로 가능</div>':""}
       ${locked?`<div class="tag" style="margin-top:8px">${r.req}과정부터</div>`
         :done?`<div class="tag g" style="margin-top:8px">연구 완료</div>`
         :`<div style="margin-top:8px">
@@ -1552,11 +1583,11 @@ function startStudy(id){
   const r=RESEARCH.find(x=>x.id===id), lv=S.res[id];
   if(r.req&&S.course<r.req){ toast(`${r.req}과정부터 가능합니다.`,"bad"); return; }
   if(lv>=r.max){ toast("이미 완료했습니다.","bad"); return; }
-  const cm=Math.round(1800*Math.pow(1.115,lv)*r.mana), ck=Math.round(70*Math.pow(1.115,lv)*r.know);
+  const cost=researchCost(r,lv), cm=cost.mana, ck=cost.know;
   if(S.mana<cm){ toast("파장이 부족합니다.","bad"); return; }
   if(S.know<ck){ toast("지식이 부족합니다.","bad"); return; }
   S.mana-=cm; S.know-=ck;
-  const tm=Math.round(r.t*Math.pow(1.11,lv));
+  const tm=cost.minutes;
   S.study={id, left:tm, total:tm};
   toast(`${r.n} ${lv+1}단계 수행을 시작했습니다.`); renderMain(); renderTop(); save();
 }
@@ -1660,6 +1691,35 @@ function simBattle(me,allies,foes,maxTurn,opts={}){
 }
 
 /* ═══════════════ 의뢰 ═══════════════ */
+const QUEST_MAX_STAGE=200;
+function questGate(){
+  const q=S.quests;
+  /* 예전 저장본은 순차 진행 기록을 기준으로 이미 지나온 관문을 보존합니다. */
+  if(q.gate===undefined) q.gate=Math.floor(clamp(Number(q.cleared)||0,0,QUEST_MAX_STAGE)/10)*10;
+  return q.gate;
+}
+function questOpenLimit(){ return Math.min(QUEST_MAX_STAGE,questGate()+10); }
+function questCanEnter(stage){
+  return Number.isInteger(stage) && stage>=1 && stage<=questOpenLimit();
+}
+function questCheck(stage){
+  if(questCanEnter(stage)) return true;
+  toast(Number.isInteger(stage)&&stage>=1&&stage<=QUEST_MAX_STAGE
+    ? `${questGate()+10}단계 관문을 통과해야 다음 구간에 갈 수 있습니다.`
+    : `의뢰는 1~${QUEST_MAX_STAGE}단계에서 선택해 주세요.`,"bad");
+  return false;
+}
+function questRecordClear(stage){
+  if(!questCanEnter(stage)) return false;
+  const gate=questGate();
+  S.quests.cleared=Math.max(Number(S.quests.cleared)||0,stage);
+  if(stage===gate+10){
+    S.quests.gate=stage;
+    toast(stage===QUEST_MAX_STAGE?"마지막 200단계 관문을 통과했습니다!"
+      : `${stage}단계 관문 통과 · ${stage+1}~${stage+9}단계와 ${stage+10}단계 관문이 열렸습니다.`,"good");
+  }
+  return true;
+}
 function questAt(stage){
   const seed=stage*7919;
   const r=(n)=>Math.floor((Math.sin(seed*n)*10000)%1000+1000)%1000;
@@ -1670,11 +1730,12 @@ function questAt(stage){
   const foes=1+Math.floor(stage/8)+ (rank.r==="Ⅴ"?1:0);
   return {stage, rank, ward, t, dur, foes, no:`${1024}-${String(stage).padStart(3,"0")}`};
 }
-let QFILTER=0;
+let QFILTER=null;
 VIEWS.quest=()=>{
-  const open=Math.min(200, S.quests.cleared+1);
-  const start=Math.max(1, open-7+QFILTER*8);
-  const list=[]; for(let i=start;i<Math.min(201,start+8);i++) list.push(questAt(i));
+  const open=questOpenLimit(), gate=questGate();
+  const current=Math.min(19,Math.floor(gate/10));
+  const page=QFILTER===null?current:clamp(QFILTER,0,19), start=page*10+1, checkpoint=start+9;
+  const list=[]; for(let i=start;i<=checkpoint;i++) list.push(questAt(i));
   const room=S.quests.room;
 
   const roomBox=room?(()=>{
@@ -1707,27 +1768,31 @@ VIEWS.quest=()=>{
       </div></div>`;
   })():"";
 
-  return head("명계 각 구역",ic("swords")+" 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">완료 ${S.quests.cleared}건</span>`)+`
+  return head("명계 각 구역",ic("swords")+" 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">최고 완료 ${S.quests.cleared}단계 · ${gate?gate+"단계 관문 통과":"첫 관문 도전 전"}</span>`)+`
   ${buffStrip()}
   ${roomBox}
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
-    <div class="row"><span class="tiny muted">사무전에 접수된 의뢰</span>
+    <div class="row"><b>${start}~${checkpoint-1}단계 <span class="tiny muted">· ${checkpoint}단계 관문</span></b>
       <div style="margin-left:auto" class="row">
-        <button class="btn sm" onclick="QFILTER=Math.max(QFILTER-1,-24);renderMain()">${ic("chevL",12)} 이전</button>
-        <button class="btn sm" onclick="QFILTER=Math.min(QFILTER+1,24);renderMain()">다음 ${ic("chevR",12)}</button>
-        <button class="btn sm ghost" onclick="QFILTER=0;renderMain()">현재</button>
+        <button class="btn sm" ${page===0?"disabled":""} onclick="QFILTER=${Math.max(page-1,0)};renderMain()">${ic("chevL",12)} 이전 구간</button>
+        <button class="btn sm" ${page===19?"disabled":""} onclick="QFILTER=${Math.min(page+1,19)};renderMain()">다음 구간 ${ic("chevR",12)}</button>
+        <button class="btn sm ghost" onclick="QFILTER=null;renderMain()">현재 구간</button>
       </div></div>
+    <div class="tiny muted" style="margin-top:8px">각 구간의 1~9단계는 순서와 관계없이 고릅니다.
+      <b>10·20·30…단계 관문을 통과해야 다음 구간이 열립니다.</b> 관문도 해당 구간이 열리면 바로 도전할 수 있습니다.</div>
   </div>
   <div class="grid g2">
     ${list.map(q=>{
-      const locked=q.stage>open;
+      const locked=!questCanEnter(q.stage), isGate=q.stage%10===0;
       const rew=questReward(q);
-      return `<div class="sub" style="${locked?"opacity:.4":""}">
+      return `<div class="sub" style="${isGate?"grid-column:1/-1;border-color:var(--gold2);":""}${locked?"opacity:.4":""}">
+        ${isGate?`<div class="sect-t">${q.stage}단계 관문 ${q.stage<=gate?'<span class="tag j">통과</span>':q.stage===QUEST_MAX_STAGE?'<span class="tag g">최종 관문</span>':`<span class="tag g">통과 시 ${q.stage+1}~${q.stage+9}단계 개방</span>`}</div>`:""}
         <div class="spread"><h4 style="margin:0">${q.stage}단계 · ${q.t}</h4>
           <span class="tag" style="border-color:${q.rank.c};color:${q.rank.c}">${q.rank.r} ${q.rank.n}</span></div>
         <div class="tiny muted" style="margin:4px 0 6px">사건번호 ${q.no} · ${q.ward.n} ${q.ward.t} · 예상 ${q.dur}분 · 적 ${q.foes}체</div>
         <div class="tiny" style="color:var(--jade)">보상 · 륜 ${nf(rew.rin)} · 경험치 ${nf(rew.exp)} · 지식 ${nf(rew.know)}${rew.sari?` · 사리 ${rew.sari}`:""}</div>
         <div class="tiny muted" style="margin-top:4px">예상 소모 · 체력 ${q.rank.hp[0]}~${q.rank.hp[1]} · 이성 ${q.rank.sn[0]}~${q.rank.sn[1]}</div>
+        ${locked?`<div class="tiny" style="margin-top:6px;color:var(--gold)">${Math.floor((q.stage-1)/10)*10}단계 관문 통과 후 입장</div>`:""}
         <div class="row" style="margin-top:9px">
           <button class="btn pri sm" ${locked?"disabled":""} onclick="runQuest(${q.stage},false)">혼자 출동</button>
           <button class="btn sm" ${locked?"disabled":""} onclick="makeRoom(${q.stage})">함께 의뢰 방 열기</button>
@@ -1740,7 +1805,7 @@ function questReward(q){
   return {rin:Math.round((120+k*48)*m), exp:Math.round((90+k*34)*m), know:Math.round((18+k*7)*m),
           sari:(q.rank.r==="Ⅳ"&&Math.random()<.3)||q.rank.r==="Ⅴ"?1:0};
 }
-function makeRoom(st){ S.quests.room={stage:st,pos:"후열",party:[]}; renderMain(); toast("함께 의뢰 방을 열었습니다. 다른 학생이 들어오기를 기다립니다."); }
+function makeRoom(st){ if(!questCheck(st)) return; S.quests.room={stage:st,pos:"후열",party:[]}; renderMain(); toast("함께 의뢰 방을 열었습니다. 다른 학생이 들어오기를 기다립니다."); }
 function leaveRoom(){ S.quests.room=null; renderMain(); }
 function setPos(p){ S.quests.room.pos=p; renderMain(); }
 function inviteParty(){
@@ -1759,6 +1824,7 @@ function inviteTeacher(){
   renderMain(); renderTop(); toast(`${NPC[t].n} 교사가 동행합니다.`,"good");
 }
 function runQuest(stage,party){
+  if(!questCheck(stage)) return;
   const q=questAt(stage);
   if(S.hp<=10){ toast("체력이 너무 낮습니다. 보건실에서 회복하세요.","bad"); return; }
   const room=party?S.quests.room:null;
@@ -1786,7 +1852,7 @@ function runQuest(stage,party){
     if(rw.sari) S.sari+=rw.sari;
     const loot=Math.random()<(0.22+mod("loot"));
     if(loot) S.lotus+=1;
-    if(stage>S.quests.cleared) S.quests.cleared=stage;
+    questRecordClear(stage);
     addMark(Math.round(6*q.rank.mul));
     reward={rin,ex,kn,sari:rw.sari,loot};
     pushNews(`[의뢰] ${S.name} 학생이 사건 ${q.no}(${q.rank.r}등급)을 해결했습니다.`);
@@ -1806,7 +1872,7 @@ function runQuest(stage,party){
       <div class="tiny muted" style="margin-top:6px">보고서 · 무엇을 보았고, 무엇을 선택했으며, 다른 방법이 있었는지 적어 제출할 것.</div>
     </div>
     <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal()">확인</button>
-      ${res.win&&stage===S.quests.cleared?`<button class="btn" onclick="closeModal();runQuest(${stage+1},false)">다음 단계 바로 출동</button>`:""}</div>`,"wide");
+      ${res.win&&questCanEnter(stage+1)?`<button class="btn" onclick="closeModal();runQuest(${stage+1},false)">다음 단계 바로 출동</button>`:""}</div>`,"wide");
   renderTop(); renderNav(); renderMain(); save();
 }
 

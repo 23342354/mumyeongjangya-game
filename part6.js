@@ -97,7 +97,7 @@ function syncRooms(force){
       S.sb.myRoom=mine?mine.id:null;
       (rows||[]).forEach(r=>{ if(r.status==="done" && r.result) claimRoom(r); });
       S.sb.state="ok"; S.sb.err="";
-      if(VIEW==="together") renderMain();
+      if(VIEW==="together" || VIEW==="quest") renderMain(true);
     })
     .catch(sbErr);
 }
@@ -107,6 +107,7 @@ const RKIND={tower:{n:"석탑",e:ic("tower")}, guard:{n:"결계의 탑",e:ic("sh
 function roomCreate(kind,stage,note){
   if(!sbOn()){ toast("먼저 공유 기록을 연결해 주세요.","bad"); return; }
   if(S.sb.myRoom){ toast("이미 들어가 있는 방이 있습니다.","bad"); return; }
+  if(kind==="quest" && !questCheck(stage)) return;
   sbSend("POST","rooms",[{kind, stage, host_id:S.sb.id, host_name:S.name, note:note||""}])
     .then(rows=>{
       const r=rows[0];
@@ -123,6 +124,9 @@ function roomMe(roomId){
 }
 function roomJoin(id){
   if(S.sb.myRoom){ toast("이미 들어가 있는 방이 있습니다.","bad"); return; }
+  const room=S.sb.rooms.find(r=>r.id===id);
+  if(!room){ toast("방 목록을 새로 고친 뒤 다시 들어가 주세요.","bad"); return; }
+  if(room.kind==="quest" && !questCheck(room.stage)) return;
   sbSend("POST","room_members?on_conflict=room_id,student_id",[roomMe(id)],"resolution=merge-duplicates,return=minimal")
     .then(()=>{ S.sb.myRoom=id; toast("방에 들어갔습니다."); syncRooms(true); save(); })
     .catch(e=>{ toast("들어가지 못했습니다 · "+esc(String(e.message||e)),"bad"); });
@@ -142,6 +146,7 @@ function roomClose(id){
 /* ─── 출발 — 참가자 전원의 힘을 합산해 판정 ─── */
 function roomDepart(id){
   const r=S.sb.rooms.find(x=>x.id===id); if(!r) return;
+  if(r.kind==="quest" && !questCheck(r.stage)) return;
   const ms=r.room_members||[];
   if(!ms.length){ toast("아무도 없습니다.","bad"); return; }
   const dps=ms.reduce((a,m)=>a+(+m.dps||0),0);
@@ -192,7 +197,7 @@ function claimRoom(r){
       if(res.stage>(S.tower2||0)) S.tower2=res.stage;
       gainRin(Math.round((700+res.stage*210)*1.5));
     }else{
-      if(res.stage>S.quests.cleared) S.quests.cleared=res.stage;
+      questRecordClear(res.stage);
       gainRin(Math.round((120+res.stage*48)*1.6)); ct&&ct("quest");
     }
     const it=mkGear(Math.round(res.stage*1.3+S.lvl*.3)); S.bag.push(it);
@@ -228,6 +233,7 @@ function togetherBody(){
     const dps=ms.reduce((a,m)=>a+(+m.dps||0),0), hp=ms.reduce((a,m)=>a+(+m.hpv||0),0);
     const host=r.host_id===S.sb.id, joined=ms.some(m=>m.student_id===S.sb.id);
     const K=RKIND[r.kind]||RKIND.tower;
+    const locked=r.kind==="quest"&&!questCanEnter(r.stage);
     return `<div class="sub" style="${joined?"border-color:var(--gold2)":""}">
       <div class="spread"><div><b>${K.e} ${K.n} ${r.stage}${r.kind==="quest"?"단계":"층"}</b>
         ${host?'<span class="tag g">내 방</span>':joined?'<span class="tag j">참가 중</span>':""}</div>
@@ -240,12 +246,13 @@ function togetherBody(){
           :`<span class="buffchip" style="color:var(--s6)">빈자리</span>`}).join("")}
       </div>
       <div class="tiny" style="color:var(--jade)">합산 초당 피해 ${nf(dps)} · 합산 생명력 ${nf(hp)}</div>
+      ${locked?`<div class="tiny muted" style="margin-top:5px">${questGate()+10}단계 관문을 먼저 통과해야 참가할 수 있습니다.</div>`:""}
       <div class="row" style="margin-top:8px">
-        ${host?`<button class="btn pri sm" onclick="roomDepart(${r.id})">지금 출발</button>
+        ${host?`<button class="btn pri sm" ${locked?"disabled":""} onclick="roomDepart(${r.id})">지금 출발</button>
                 <button class="btn sm red" onclick="roomClose(${r.id})">방 닫기</button>`
           :joined?`<button class="btn sm" onclick="roomLeave(${r.id})">나가기</button>
                    <span class="tiny muted">방장이 출발하기를 기다립니다</span>`
-          :`<button class="btn pri sm" ${S.sb.myRoom?"disabled":""} onclick="roomJoin(${r.id})">들어가기</button>`}
+          :`<button class="btn pri sm" ${S.sb.myRoom||locked?"disabled":""} onclick="roomJoin(${r.id})">들어가기</button>`}
       </div></div>`;
   };
 
@@ -281,12 +288,13 @@ function togetherBody(){
 }
 function roomMake(){
   const k=TKIND, K=RKIND[k];
-  const suggest = k==="tower" ? (S.tower||0)+1 : k==="guard" ? (S.tower2||0)+1 : Math.min(200,S.quests.cleared+1);
+  const suggest = k==="tower" ? (S.tower||0)+1 : k==="guard" ? (S.tower2||0)+1 : questOpenLimit();
   modal(`${K.e} ${K.n} 합동 방 열기`, `
     <label class="f">${k==="quest"?"단계":"층"}</label>
-    <input class="inp" id="r_stage" type="number" min="1" max="${k==="quest"?200:999}" value="${suggest}">
+    <input class="inp" id="r_stage" type="number" min="1" max="${k==="quest"?questOpenLimit():999}" value="${suggest}">
     <div class="tiny muted" style="margin-top:5px">내 기록은 ${k==="tower"?(S.tower||0)+"층":k==="guard"?(S.tower2||0)+"층":S.quests.cleared+"단계"}입니다.
     혼자서 버거운 곳을 적어 두면 사람이 모입니다.</div>
+    ${k==="quest"?`<div class="tiny muted" style="margin-top:5px">현재 1~${questOpenLimit()}단계에 참가할 수 있습니다. 함께 관문을 통과해도 다음 구간이 열립니다.</div>`:""}
     <label class="f">한 줄 덧붙이기 (선택 · 40자)</label>
     <input class="inp" id="r_note" maxlength="40" placeholder="예: 수호 성향 한 분만 더">
     <div class="row" style="margin-top:14px">
@@ -466,7 +474,7 @@ step=function(m){
   _step6(m);
   if(!S||!S.made||!S.sb||!sbOn()) return;
   if(Math.random()<0.02*m) syncUp(false);
-  if(VIEW==="together") syncRooms(false);
+  if(VIEW==="together" || VIEW==="quest") syncRooms(false);
 };
 const _go6=go;
 go=function(v){
@@ -474,7 +482,7 @@ go=function(v){
   if(!sbOn()) return;
   if(v==="roster"||v==="rank"||v==="hallv") { syncUp(false); syncRoster(false); }
   if(v==="hallv") pairFetch(true);
-  if(v==="together") syncRooms(true);
+  if(v==="together" || v==="quest") syncRooms(true);
 };
 const _openSettings6=openSettings;
 openSettings=function(){
