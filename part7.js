@@ -206,7 +206,9 @@ function gateLogin(){
     .catch(()=>{ gateBusy(false); gateMsg("서버에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.",1); gateShow(); });
 }
 /* 저장본을 자리에 앉히고 게임을 시작합니다 */
+const OLDHALL={h1:"dorm",h2:"dorm",h3:"dorm",h4:"dorm"};
 function acctBoot(blob){
+  if(blob && OLDHALL[blob.hall]) blob.hall=OLDHALL[blob.hall];   // 옛 숙사 → 기숙사
   try{
     if(blob && blob.made){ blob.sb=blob.sb||{}; blob.sb.id=ACCT.id;
       localStorage.setItem(SAVEKEY, JSON.stringify(blob)); }

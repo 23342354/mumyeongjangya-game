@@ -1,7 +1,7 @@
 "use strict";
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장 6
-   공유 기록(학생 명부 · 랭킹 · 숙사 집계) · 함께 가기(방)
+   공유 기록(학생 명부 · 랭킹 · 거주지 집계) · 함께 가기(방)
    Supabase 에 연결했을 때만 동작하며, 연결 전에는 기존 혼자 모드 그대로입니다.
    ═══════════════════════════════════════════════════ */
 
@@ -310,7 +310,7 @@ VIEWS.roster=()=>{
   </div>
   ${rows.length?`<div class="grid g3">
     ${rows.map(r=>{
-      const hall=HALLS.find(h=>h.id===r.hall);
+      const hall=homeOf(r.hall);
       const me=r.id===S.sb.id;
       return `<div class="sub" style="${me?"border-color:var(--gold2)":""}">
         <div class="row" style="align-items:flex-start;gap:10px">
@@ -333,7 +333,7 @@ VIEWS.roster=()=>{
     아직 올라온 학생이 없습니다. 「지금 올리고 새로 고침」을 눌러 보세요.</div></div>`}`;
 };
 
-/* ═══════════ 랭킹 · 숙사 — 진짜 기록으로 ═══════════ */
+/* ═══════════ 랭킹 · 거주지 — 진짜 기록으로 ═══════════ */
 const _rank=VIEWS.rank;
 VIEWS.rank=()=>{
   if(!sbOn() || !(S.sb.roster||[]).length) return _rank();
@@ -378,10 +378,10 @@ VIEWS.hallv=()=>{
   const real=`<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
     <div class="spread"><div class="sect-t" style="margin:0">실제 대항전 집계</div>
       <span class="tiny muted">${sbStateChip()} · 학생 ${R.length}명</span></div>
-    <div class="tiny muted" style="margin:4px 0 8px">명부에 올라온 러너들의 이번 주 점수를 숙사별 평균으로 셉니다(최소 5명으로 나눕니다).</div>
+    <div class="tiny muted" style="margin:4px 0 8px">명부에 올라온 러너들의 이번 주 점수를 거주지별 평균으로 셉니다(최소 5명으로 나눕니다).</div>
     ${rows.map((h2,i)=>`<div style="margin:8px 0">
       <div class="spread tiny"><span>${i+1} <b style="color:${h2.c}">${h2.n}</b>
-        ${h2.id===S.hall?'<span class="tag g">내 숙사</span>':""}</span>
+        ${h2.id===S.hall?'<span class="tag g">여기 삽니다</span>':""}</span>
         <span class="muted">${h2.cnt}명 · <b>${nf(h2.avg)}</b></span></div>
       <div class="bar" style="margin-top:3px"><i style="width:${h2.avg/top*100}%;background:linear-gradient(90deg,${h2.c}66,${h2.c})"></i></div></div>`).join("")}
   </div>`;
@@ -439,7 +439,7 @@ boardLike=function(id){
 function sbConnect(){
   modal("공유 기록 연결", `
     <div class="tiny muted" style="line-height:1.9;margin-bottom:12px">
-      Supabase 에 연결하면 <b>학생 명부 · 진짜 랭킹 · 숙사 대항전 집계 · 함께 가기 · 건의함</b>이 모두 함께 돌아갑니다.
+      Supabase 에 연결하면 <b>학생 명부 · 진짜 랭킹 · 거주지 대항전 집계 · 함께 가기 · 건의함</b>이 모두 함께 돌아갑니다.
       주소와 키를 만드는 방법은 함께 드린 안내서 「공유 기록 연결하기」를 보세요.<br>
       <b style="color:var(--red)">키는 웹 페이지에 그대로 실리므로 누구나 볼 수 있습니다.</b>
       서로 믿는 커뮤니티 안에서 쓰는 용도이며, 민감한 내용은 넣지 마세요.
@@ -548,10 +548,10 @@ hereHTML = function(){
     <div class="sect-t">사무전에 함께 있는 학생 ${list.length}명</div>
     <div class="grid g4">
       ${list.slice(0,12).map(r=>{
-        const h=HALLS.find(x=>x.id===r.hall);
+        const h=homeOf(r.hall);
         return `<div class="spread" style="background:var(--s1);border:1px solid var(--line);border-radius:7px;padding:6px 10px">
           <div><b style="font-size:12.5px">${esc(r.name||"이름 없음")}</b>
-          <div class="tiny muted">${h?esc(h.n):"숙사 미정"} · ${r.course||1}과정</div></div>
+          <div class="tiny muted">${h?esc(h.n):"거주지 미정"} · ${r.course||1}과정</div></div>
           ${S.friends.find(f=>f.n===r.name)?'<span class="tag g">인연</span>'
             :`<button class="btn sm ghost" onclick="addFriend('${esc(r.name||"").replace(/'/g,"")}')">동행 신청</button>`}
         </div>`;
@@ -582,12 +582,12 @@ wbMyRank = function(){
 
 /* ═══════════════════════════════════════════════════
    실시간 채팅 — 러너끼리 주고받습니다.
-   전체·숙사·계통은 범위가 같은 사람끼리, 페어·1:1 은 두 사람만 봅니다.
+   전체·이웃·계통은 범위가 같은 사람끼리, 페어·1:1 은 두 사람만 봅니다.
    교사·직원의 한마디는 각자 화면에만 뜨는 분위기 글이라 서버로 보내지 않습니다.
    ═══════════════════════════════════════════════════ */
 function pairKey(a,b){ return [String(a||""),String(b||"")].sort().join("|"); }
 function chatScope(tab){
-  if(tab==="숙사")  return S.hall||"";
+  if(tab==="이웃")  return S.hall||"";
   if(tab==="계통")  return S.line||"";
   if(tab==="페어"){ const p=(S.rel||[]).find(r=>r.a==="페어"); return p?pairKey(S.name,p.n):""; }
   if(tab==="1:1")   return S.dmWith ? pairKey(S.sb.id, S.dmWith.id) : "";
@@ -598,7 +598,7 @@ chatVisible = function(m){
   if(m.tab!==S.chatTab) return false;
   if(m.local) return true;                       // 교사 한마디 등 내 화면 전용
   const need=chatScope(S.chatTab);
-  if(["숙사","계통","페어","1:1"].includes(S.chatTab)) return (m.scope||"")===need;
+  if(["이웃","계통","페어","1:1"].includes(S.chatTab)) return (m.scope||"")===need;
   return true;
 };
 

@@ -643,12 +643,24 @@ const SHOP = [
 /* 칭호 */
 const TITLES = ["첫 번째 밤","무명의 관조자","골목의 저승차사","법륜을 세는 자","잠들지 않는 등","여섯 구역을 걸은 자","파장을 맞추는 손","업을 읽는 눈","귀향제의 손님","종소리를 들은 자"];
 
-/* 숙사 */
+/* 거주지 — 기숙사 또는 제1~7구역 */
 const HALLS = [
- {id:"h1", n:"무명당", h:"無明堂", c:"var(--violet)", b:"공격력 +12% · 생명력 +5%",            d:"창이 없는 동. 등불 하나로 밤을 난다."},
- {id:"h2", n:"법륜당", h:"法輪堂", c:"var(--gold)", b:"지식 획득 +15% · 수업 효율 +5%",       d:"수행실이 붙어 있어 밤에도 독경 소리가 샌다."},
- {id:"h3", n:"연화당", h:"蓮華堂", c:"var(--red)", b:"사역귀 파견 보상 +25% · 파장 재생 +10%", d:"안뜰에 연못이 있다. 사역귀를 풀어 두기 좋다."},
- {id:"h4", n:"수월당", h:"水月堂", c:"var(--jadeD)", b:"륜 획득 +15% · 전리품 +10% · 수수료 낮음", d:"수면에 비친 달만 보이는 동. 가장 조용해 셈하기 좋다."},
+ {id:"dorm", n:"기숙사",  h:"寄宿舍", c:"var(--gold)",   b:"수업 효율 +8% · 지식 획득 +6% · 체력·이성 회복 +6%",
+  d:"사무전 안. 통금은 오전 2시. 강의실과 서가가 가까워 책을 끼고 살기 좋다."},
+ {id:"w1", n:"제1구역", h:"第一區", c:"var(--warn)",   b:"륜 획득 +14% · 중개소 수수료 2%p 낮음 · 체력·이성 회복 +6%",
+  d:"향 냄새 나는 죄. 넓은 대로와 고급 주거지, 데슐랭 식당가. 셈이 밝은 사람들 사이에 산다."},
+ {id:"w2", n:"제2구역", h:"第二區", c:"var(--violet)", b:"경험치 +11% · 체력·이성 회복 +14% · 지식 획득 +3%",
+  d:"벽이 많은 동네. 화가와 음악가의 작업실이 밤새 불을 밝힌다. 늦게 자도 아무도 뭐라 하지 않는다."},
+ {id:"w3", n:"제3구역", h:"第三區", c:"var(--jade)",   b:"공격력 +10% · 치명타 +3%p · 치명 피해 +25%",
+  d:"몸을 바꾸는 거리. 의체 제작자와 해커의 구역. 다친 데를 고치는 값이 가장 싸다."},
+ {id:"w4", n:"제4구역", h:"第四區", c:"var(--blue)",   b:"파장 재생 +14% · 양조 효율 +10%",
+  d:"가짜 낮. 일륜日輪이 떠 있는 발전 구역. 명계에서 유일하게 빛이 있는 곳."},
+ {id:"w5", n:"제5구역", h:"第五區", c:"var(--red)",    b:"전리품 확률 +12% · 업귀 피해 +10%",
+  d:"게시판의 거리. 용병들의 술집 벽에 현상수배서가 쉴 새 없이 바뀐다."},
+ {id:"w6", n:"제6구역", h:"第六區", c:"var(--pink)",   b:"생명력 +14% · 방어력 +8% · 회복력 +8%",
+  d:"바닥의 아래. 빈민촌이자 범죄 구역. 여기서 자란 몸은 쉽게 꺾이지 않는다."},
+ {id:"w7", n:"제7구역", h:"第七區", c:"var(--ok)",     b:"사역귀 파견 보상 +25% · 파장 재생 +8%",
+  d:"검은 바다. 도시가 끝나고 바다가 시작되는 곳. 새벽 시장에서 어물과 해조가 올라온다."},
 ];
 
 /* 관계 종류 */
@@ -709,7 +721,7 @@ function newState(){
   return {
     made:false, v:1,
     name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"",
-    hall:"h1", title:"첫 번째 별", intro:"", bio:"", color:"var(--gold)", av:"lantern", avImg:null, avSrc:"",
+    hall:"dorm", title:"첫 번째 별", intro:"", bio:"", color:"var(--gold)", av:"lantern", avImg:null, avSrc:"",
     base:{atk:3,def:3,agi:3,men:2,res:2},
     bonus:{atk:0,def:0,agi:0,men:0,res:0},
     course:1, exp:0, lvl:1,
@@ -743,6 +755,7 @@ function load(){
        const o=JSON.parse(r); const base=newState();
        /* 채팅 기록 비우기 — 표식을 올리면 그 다음 접속 때 한 번 더 비웁니다.
           chatFrom 보다 먼저 올라온 글은 서버에 남아 있어도 가져오지 않습니다. */
+       if(o.hall && /^h[1-4]$/.test(o.hall)) o.hall="dorm";   // 옛 숙사 → 기숙사
        if((o.chatReset||0) < 2){ o.msgs=[]; o.chatReset=2; o.chatFrom=Date.now(); }
        if(o.av && ICLEGACY[o.av]) o.av=ICLEGACY[o.av];
        if(o.av && !ICONS[o.av]) o.av="lantern";
@@ -865,12 +878,9 @@ function hhmm(mins){ mins=Math.max(0,Math.ceil(mins));
 /* ── 능력치 / 보정 ───────────────── */
 function stat(k){ return S.base[k]+S.bonus[k]; }
 function statCap(k){ return STATCAP[k][clamp(S.course-1,0,6)]; }
-function hallBonus(k){
-  const h=S.hall;
-  if(h==="h1"&&k==="men") return 1;
-  if(h==="h4"&&k==="res") return 1;
-  return 0;
-}
+function hallBonus(k){ return 0; }   /* 거주지 혜택은 part3의 HALLBONUS 표가 담당합니다 */
+/* 거주지 찾기 — 모르는 값이 들어와도 기숙사로 떨어뜨려 화면이 죽지 않게 합니다 */
+function homeOf(id){ return HALLS.find(h=>h.id===id) || HALLS[0]; }
 function effStat(k){
   let v=stat(k)+hallBonus(k);
   const hpR=S.hp/100, snR=S.sn/100;
@@ -880,7 +890,7 @@ function effStat(k){
   if(k==="def") v*=1+mod("defP");
   return Math.max(1,Math.round(v));
 }
-/* 누적 보정치: 연구 + 버프 + 서고 + 날씨 + 숙사 */
+/* 누적 보정치: 연구 + 버프 + 서고 + 날씨 + 거주지 */
 function mod(key){
   let v=0;
   const R=S.res;
@@ -896,8 +906,6 @@ function mod(key){
   if(key==="crit")  v+=R.r12*.03;
   if(key==="atkP")  v+=R.r13*.02;
   if(key==="hpP")   v+=R.r13*.02;
-  if(key==="know"&&S.hall==="h2") v+=.08;
-  if(key==="rest"&&S.hall==="h3") v+=.25;
   S.buffs.forEach(b=>{ if(b.key===key) v+=b.v; });
   if(S.book){ const b=BOOKS.find(x=>x.id===S.book.id); if(b&&b.k===key) v+=b.v; }
   const w=WEATHERS[S.weather]; if(w.k===key) v+=w.v;
@@ -1030,7 +1038,7 @@ function renderTop(){
     ${avatarHTML(34)}
     <div>
       <div class="me-name">${esc(S.name)} <span class="muted tiny">·</span></div>
-      <div class="me-sub">${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
+      <div class="me-sub">${homeOf(S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
     </div>
     <div class="res-wrap">
       <div class="res" title="파장 — 수행에 쓰입니다. 한도까지만 모입니다">${ic("droplet",13)}<b style="color:var(--blue)">파장</b> ${nf(S.mana)}<span style="color:var(--s7)">/${nf(maxMana())}</span></div>
@@ -1075,7 +1083,7 @@ function renderNav(){
   }).join("");
 
   const sRow=k=>{const c=statCap(k),v=stat(k),e=effStat(k);
-    return `<div class="mini-stat" title="수업으로 오른 값 ${v} (한계 ${c}) · 분배·숙사·법구 포함 ${e}">
+    return `<div class="mini-stat" title="수업으로 오른 값 ${v} (한계 ${c}) · 분배·거주지·법구 포함 ${e}">
       <span>${STATS.find(s=>s.k===k).n}</span>
       <b>${e} <span class="muted tiny">수업 ${v}/${c}</span></b></div>`;};
 
@@ -1103,7 +1111,7 @@ function renderNav(){
     <div class="mini-stat"><span>전투력</span><b style="color:var(--gold)">${nf(power())}</b></div>
     ${STATS.map(s=>sRow(s.k)).join("")}
     <hr class="hr">
-    <div class="tiny muted">${HALLS.find(h=>h.id===S.hall).n} 혜택 · ${typeof hallBenefitText==="function"?hallBenefitText(S.hall):HALLS.find(h=>h.id===S.hall).b}</div>
+    <div class="tiny muted">${homeOf(S.hall).n} 혜택 · ${typeof hallBenefitText==="function"?hallBenefitText(S.hall):homeOf(S.hall).b}</div>
   </div>`;
 }
 function navOpen(g){ return NAVOPEN[g.id]!==undefined ? NAVOPEN[g.id] : g.sub.some(s=>s.id===VIEW); }
@@ -1116,7 +1124,7 @@ function go(v){
 }
 
 /* ── 채팅 ── */
-const CHATTABS=["전체","숙사","계통","페어","1:1"];
+const CHATTABS=["전체","이웃","계통","페어","1:1"];
 function renderChat(){
   const list=S.msgs.filter(chatVisible).sort(chatSort).slice(-120);
   $("#chatcol").innerHTML=`
@@ -1129,7 +1137,7 @@ function renderChat(){
         <button class="${S.chatMode==="RP"?"on":""}" onclick="setChatMode('RP')">RP</button>
         <button class="${S.chatMode==="사담"?"on":""}" onclick="setChatMode('사담')">사담</button>
       </span>
-      <span class="tiny muted" style="margin-left:auto">${S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="숙사"?HALLS.find(h=>h.id===S.hall).n:"전원"}</span>
+      <span class="tiny muted" style="margin-left:auto">${S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="이웃"?homeOf(S.hall).n:"전원"}</span>
     </div>
     <div class="chat-log" id="chatlog">
       ${list.map(m=>`<div class="cmsg">
@@ -1175,7 +1183,7 @@ function freshLine(pool){
 }
 function npcChat(tab){
   /* 모브 학생은 말하지 않습니다. 교사·직원만 가끔 한마디 합니다. */
-  tab=tab||pick(["전체","전체","숙사"]);
+  tab=tab||pick(["전체","전체","이웃"]);
   const k=pick(Object.keys(NPC)), n=NPC[k];
   addMsg(tab, n.n, fmtChat(freshLine(n.line)), n.c, n.role);
 }
@@ -1212,7 +1220,7 @@ VIEWS.plaza=()=>{
 
   const festDays=Math.max(0, 6 - (c.day%10));
   return head("명계력 "+c.y+"년 "+c.m+" "+c.dd+"일",ic("gate")+" 사무전 광장",
-    `${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정`)+`
+    `${homeOf(S.hall).n} · ${S.course}과정`)+`
 
   <div class="story-card" style="margin-bottom:12px">
     <div class="spread">
@@ -2179,7 +2187,7 @@ VIEWS.fest=()=>{
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="spread"><b>문 앞 공양 바구니</b><span class="tag ${S.fest.basket?"":"g"}">${S.fest.basket?"오늘 열었습니다":"열 수 있습니다"}</span></div>
-      <div class="tiny muted" style="margin:6px 0 10px">축제 동안 하루 한 번, 숙사 방문 앞에 놓인 바구니를 열 수 있습니다. 대개 사역귀 간식·연등·부적가루·축제 표식이 들어 있으나, 가끔 장난이 들어 있기도 합니다.</div>
+      <div class="tiny muted" style="margin:6px 0 10px">축제 동안 하루 한 번, 이웃 방문 앞에 놓인 바구니를 열 수 있습니다. 대개 사역귀 간식·연등·부적가루·축제 표식이 들어 있으나, 가끔 장난이 들어 있기도 합니다.</div>
       <button class="btn pri sm" ${S.fest.basket?"disabled":""} onclick="openBasket()">바구니 열기</button>
     </div>
     <div class="card pad">
@@ -2567,7 +2575,7 @@ function openMe(tab){ if(tab) METAB=tab; drawMe(); }
 function drawMe(){
   const tabs=["학생증","프리셋","편집","꾸미기","인연","관계"];
   let b="";
-  const hall=HALLS.find(h=>h.id===S.hall);
+  const hall=homeOf(S.hall);
 
   if(METAB==="학생증"){
     b=`<div class="tiny muted" style="margin-bottom:10px">다른 학생이 채팅이나 친구 목록에서 내 이름을 누르면 이렇게 보입니다.</div>
@@ -2646,7 +2654,7 @@ function drawMe(){
         <button class="${S.line==="마무기"?"on":""}" onclick="setLine('마무기')">마무기</button></span>
         <input class="inp" id="e_wep" style="flex:1" maxlength="14" placeholder="무기 종류 (예: 장검 / 권총 / 거울)" value="${esc(S.weapon)}">
       </div>
-      <label class="f">숙사</label>
+      <label class="f">거주지</label>
       <div class="row">${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="setHall('${h.id}')">${h.n} <span class="tiny">· ${h.b}</span></button>`).join("")}</div>
       <label class="f">한 줄 소개 (40자)</label>
       <input class="inp" id="e_intro" maxlength="40" value="${esc(S.intro)}" placeholder="예: 3구역 출신, 야간 순찰 자원병">
@@ -2751,7 +2759,7 @@ function showSaveText(txt){
 /* ═══════════════ 입학 (캐릭터 생성) ═══════════════ */
 let MK=null;
 function openCreate(){
-  MK={name:"", line:"장인", weapon:"장검", hall:"h1", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
+  MK={name:"", line:"장인", weapon:"장검", hall:"dorm", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
       st:{atk:3,def:3,agi:3,men:2,res:2}};
   drawCreate();
 }
@@ -2803,7 +2811,7 @@ function drawCreate(){
               <button class="btn sm" onclick="mkSt('${s.k}',-1)">−</button>
               <b style="width:22px;text-align:center;color:var(--gold)">${MK.st[s.k]}</b>
               <button class="btn sm" onclick="mkSt('${s.k}',1)">+</button></div></div>`).join("")}
-          <label class="f">숙사</label>
+          <label class="f">거주지</label>
           ${HALLS.map(h=>`<div class="spread" style="padding:4px 0">
             <div><b>${h.n}</b> <span class="tiny muted">${h.h}</span><div class="tiny muted">${h.d}</div></div>
             <button class="btn sm ${MK.hall===h.id?"pri":""}" onclick="MK.hall='${h.id}';drawCreate()">${h.b}</button></div>`).join("")}

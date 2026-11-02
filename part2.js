@@ -736,7 +736,7 @@ VIEWS.stats=()=>{
     const base=stat(s.k), hall=hallBonus(s.k), al=S.alloc[s.k], ge=gearStat(s.k);
     return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${s.n}</b> <span class="tiny muted">${s.d}</span>
-        <div class="tiny muted">기본 ${base} · 분배 <span style="color:var(--jade)">+${al}</span> · 숙사 +${hall} · 법구 <span style="color:var(--gold)">+${ge}</span></div></div>
+        <div class="tiny muted">기본 ${base} · 분배 <span style="color:var(--jade)">+${al}</span> · 거주지 +${hall} · 법구 <span style="color:var(--gold)">+${ge}</span></div></div>
       <div class="row">
         <b style="width:36px;text-align:right;color:var(--gold);font-size:16px">${effStat(s.k)}</b>
         <button class="btn sm" ${S.pts<1?"disabled":""} onclick="alloc('${s.k}',1)">+1</button>

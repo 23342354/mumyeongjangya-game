@@ -2,7 +2,7 @@
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장 4
    연금 공방(조제 · 물약 선반 · 재료 보관함)
-   숙사 혜택 재편 — 성장에 따라 1/10에서 최대까지
+   거주지 혜택 재편 — 성장에 따라 1/10에서 최대까지
    ═══════════════════════════════════════════════════ */
 
 /* ─── 조제 재료 · 산지 ─── */
@@ -46,18 +46,28 @@ const POTIONS=[
   mat:{종모래:3,심연정:1,인광:4}, buf:[["crit",.08],["critD",.20]], d:"2시간 치명타 확률 +8%, 치명타 피해 +20%", req:5},
 ];
 
-/* ─── 숙사 혜택 — 성장에 따라 1/10에서 최대까지 ─── */
+/* ─── 거주지 혜택 — 성장에 따라 1/10에서 최대까지 ─── */
 const HALLMAX={
- h1:{atkP:.12, hpP:.05},                         // 무명당 — 창 없는 동
- h2:{know:.15, study:.05},                       // 법륜당 — 수행실·독경
- h3:{petOut:.25, mana:.10},                      // 연화당 — 안뜰 연못
- h4:{gold:.15, loot:.10, fee:.02},               // 수월당 — 수면에 비친 달
+ /* 거주지 혜택 — 효과마다 실제 크기가 달라서, 체감 가치를 맞춰 총량을 비슷하게 잡았습니다.
+    (공격력 1% ≒ 초당 피해 1%, 치명타 1%p ≒ 1.1%, 수업 효율 1% ≒ 1.4% 가치 … 로 환산) */
+ dorm:{study:.08, know:.06, rest:.06},            // 기숙사 — 강의실·서가가 가깝다
+ w1:  {gold:.14, rest:.06, fee:.02},              // 제1구역 — 고급 주거지·식당가
+ w2:  {exp:.11, rest:.14, know:.03},              // 제2구역 — 밤새 불 켠 작업실
+ w3:  {atkP:.10, crit:.03, critD:.25},            // 제3구역 — 의체와 해커
+ w4:  {mana:.14, brew:.10},                       // 제4구역 — 일륜 발전 구역
+ w5:  {loot:.12, boss:.10},                       // 제5구역 — 용병과 현상수배
+ w6:  {hpP:.14, defP:.08, heal:.08},              // 제6구역 — 바닥의 아래
+ w7:  {petOut:.25, mana:.08},                     // 제7구역 — 검은 바다
 };
 const HALLLABEL={
- h1:[["공격력","atkP"],["생명력","hpP"]],
- h2:[["지식 획득","know"],["수업 효율","study"]],
- h3:[["사역귀 파견 보상","petOut"],["파장 재생","mana"]],
- h4:[["륜 획득","gold"],["전리품 확률","loot"]],
+ dorm:[["수업 효율","study"],["지식 획득","know"],["체력·이성 회복","rest"]],
+ w1:  [["륜 획득","gold"],["체력·이성 회복","rest"]],
+ w2:  [["경험치","exp"],["체력·이성 회복","rest"],["지식 획득","know"]],
+ w3:  [["공격력","atkP"],["치명타 확률","crit"],["치명 피해","critD"]],
+ w4:  [["파장 재생","mana"],["양조 효율","brew"]],
+ w5:  [["전리품 확률","loot"],["업귀 피해","boss"]],
+ w6:  [["생명력","hpP"],["방어력","defP"],["회복력","heal"]],
+ w7:  [["사역귀 파견 보상","petOut"],["파장 재생","mana"]],
 };
 function hallGrowth(id){
   if(id===S.hall) return clamp((S.war.mine||0)/6000, 0, 1);
@@ -207,10 +217,10 @@ VIEWS.alche=()=>{
   </div>`;
 };
 
-/* ═══════════ 숙사 화면 재작성 ═══════════ */
+/* ═══════════ 거주지 화면 재작성 ═══════════ */
 VIEWS.hallv=()=>{
   syncHall();
-  const w=warScores(), me=HALLS.find(h=>h.id===S.hall);
+  const w=warScores(), me=homeOf(S.hall);
   const top=w[0].sc;
   const benefit=(id)=>{
     const f=hallFactor(id), base=HALLMAX[id];
@@ -218,44 +228,44 @@ VIEWS.hallv=()=>{
     if(base.fee) rows.push(`중개소 판매 수수료 구간마다 ${(base.fee*f*100).toFixed(0)}%p 낮음 (첫 구간 ${(5-base.fee*f*100).toFixed(0)}% · 기본 5%)`);
     return rows.join(", ");
   };
-  return head("네 숙사의 한 주",ic("castle")+" 숙사", `${me.n} ${me.h}`)+`
+  return head("여덟 거주지의 한 주",ic("castle")+" 거주지", `${me.n} ${me.h}`)+`
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
-      <div class="spread"><div class="sect-t" style="margin:0">숙사 대항전</div>
+      <div class="spread"><div class="sect-t" style="margin:0">거주지 대항전</div>
         <span class="tiny muted">${6-(cal().day%7)}일 ${23-cal().h}시간 남음</span></div>
       ${w.map((h,i)=>`<div style="margin:8px 0">
-        <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">내 숙사</span>':""}</span>
+        <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">여기 삽니다</span>':""}</span>
           <span class="muted">활동 ${180+(h.sc%95)}명 · <b>${nf(h.sc)}</b></span></div>
         <div class="bar" style="margin-top:3px"><i style="width:${h.sc/top*100}%;background:linear-gradient(90deg,${h.c}66,${h.c})"></i></div></div>`).join("")}
       <div class="card pad" style="background:var(--s1);margin-top:10px">
         <div class="tiny muted" style="line-height:1.85">
         <b>대항전 규칙</b><br>
-        · <b>인원 보정</b> — 숙사 점수는 이번 주 100점 이상 활동한 학생의 <b>평균</b>입니다. 인원이 많은 숙사가 유리하지 않습니다.<br>
-        · 모든 숙사가 같은 점수·같은 활동이면 어느 숙사든 같은 점수를 받습니다 (숙사 특기 배점 없음).<br>
-        · <b>보상</b> — 숙사 순위 보상(연등, 그 숙사 학생 모두) 1위 18 · 2위 15 · 3위 12 · 4위 10<br>
+        · <b>인원 보정</b> — 거주지 점수는 이번 주 100점 이상 활동한 학생의 <b>평균</b>입니다. 인원이 많은 쪽이 유리하지 않습니다.<br>
+        · 모든 거주지가 같은 점수·같은 활동이면 어느 쪽이든 같은 점수를 받습니다 (거주지 특기 배점 없음).<br>
+        · <b>보상</b> — 거주지 순위 보상(연등, 그 거주지 학생 모두) 1위 18 · 2위 15 · 3위 12 · 4~8위 10<br>
         · 개인 점수 보상(연등, 순위와 별개) 2,000점 이상 +5 · 6,000점 이상 +10 · 1만점 이상 +15<br>
         내 이번 주 점수 <b style="color:var(--gold)">${nf(S.war.mine||0)}</b>${(S.war.mine||0)>=2000?' · <span style="color:var(--jade)">개인 보상 구간 달성</span>':""}.
         수업 시간, 처치, 보스, 시험, 연무제, 조제, 파견, 수행, 각인, 과제가 모두 점수가 됩니다.</div>
       </div>
     </div>
     <div class="card pad">
-      <div class="sect-t">숙사 성장</div>
-      <div class="tiny muted" style="margin-bottom:10px">대항전 점수가 쌓일수록 숙사 혜택이 <b>1/10에서 최대 값까지</b> 커집니다. 혜택은 <b>현재 / 최대</b>로 표시합니다.</div>
+      <div class="sect-t">거주지 성장</div>
+      <div class="tiny muted" style="margin-bottom:10px">대항전 점수가 쌓일수록 거주지 혜택이 <b>1/10에서 최대 값까지</b> 커집니다. 혜택은 <b>현재 / 최대</b>로 표시합니다.</div>
       ${HALLS.map(h=>{
         const g=hallGrowth(h.id)*100;
         return `<div style="margin-bottom:12px">
           <div class="spread"><b style="color:${h.c}">${h.n} <span class="tiny muted">${h.h}</span></b>
-            ${h.id===S.hall?'<span class="tag g">내 숙사</span>':""}</div>
+            ${h.id===S.hall?'<span class="tag g">여기 삽니다</span>':""}</div>
           <div class="tiny" style="color:var(--jade);margin:3px 0">${benefit(h.id)}</div>
-          <div class="spread tiny muted"><span>숙사 성장</span><span>${g.toFixed(0)}%</span></div>
+          <div class="spread tiny muted"><span>거주지 성장</span><span>${g.toFixed(0)}%</span></div>
           <div class="bar jd" style="margin-top:3px"><i style="width:${g}%"></i></div></div>`}).join("")}
       <hr class="hr">
-      <div class="row"><span class="tiny muted">숙사 옮기기</span>
+      <div class="row"><span class="tiny muted">거주지 옮기기</span>
         ${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="moveHall('${h.id}')">${h.n}</button>`).join("")}</div>
     </div>
   </div>
   <div class="card pad">
-    <div class="sect-t">숙사 공헌도 순위 <span class="muted">이번 주 대항전 개인 점수</span></div>
+    <div class="sect-t">거주지 공헌도 순위 <span class="muted">이번 주 대항전 개인 점수</span></div>
     <table class="t">
       ${[["유스탄",4614],["시엘 발루아",3846],["하얀",3477],["위사 누",3120],["코멧",2884]]
         .map((r,i)=>`<tr><td style="width:26px">${i+1}</td><td>${r[0]} ${i===0?'<span class="tag">거울 뒤편의 주인</span>':""}</td>
@@ -271,7 +281,7 @@ VIEWS.hallv=()=>{
 const _C=C;
 C=function(){ const c=_C(); c.heal=+(c.heal+mod("heal")).toFixed(2); return c; };
 
-/* 파견 — 지역에 맞는 조제 재료와 숙사 보너스 */
+/* 파견 — 지역에 맞는 조제 재료와 거주지 보너스 */
 const _recall4=recall;
 recall=function(i){
   const p=S.pets.list[i];
@@ -287,7 +297,7 @@ recall=function(i){
   if(key){
     const amt=Math.max(1, Math.round((rnd(2,4)*h/4)*(1+bonus)));
     S.ing[key]=(S.ing[key]||0)+amt;
-    toast(`${matName(key)} +${amt}${add>0?` · 숙사 보정 륜 +${nf(add)}`:""}`,"good");
+    toast(`${matName(key)} +${amt}${add>0?` · 거주지 보정 륜 +${nf(add)}`:""}`,"good");
   }
   renderTop(); renderNav(); renderMain(); save();
 };
@@ -320,11 +330,11 @@ listMine=function(id){
   const feeR=Math.max(.01, baseFee-hallFee());
   const net=Math.round(gross*(1-feeR));
   S.bag.splice(i,1); gainRin(net);
-  toast(`중개소에서 즉시 팔렸습니다 · 륜 +${nf(net)} <span class="muted">(수수료 ${(feeR*100).toFixed(0)}%${hallFee()>0?`, ${HALLS.find(h=>h.id===S.hall).n} 보정`:""})</span>`,"good");
+  toast(`중개소에서 즉시 팔렸습니다 · 륜 +${nf(net)} <span class="muted">(수수료 ${(feeR*100).toFixed(0)}%${hallFee()>0?`, ${homeOf(S.hall).n} 보정`:""})</span>`,"good");
   renderTop(); renderMain(); save();
 };
 
-/* 숙사 혜택은 성장치가 바뀔 때마다 갱신 */
+/* 거주지 혜택은 성장치가 바뀔 때마다 갱신 */
 const _step4=step;
 step=function(m){ if(S&&S.made&&S.ing) syncHall(); _step4(m); };
 const _moveHall=moveHall;
