@@ -1,7 +1,7 @@
 "use strict";
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장 3
-   기록실 · 랭킹 · 거주지 대항전 · 휴게실 · 세계관
+   기록실 · 랭킹 · 거처 · 휴게실 · 세계관
    경매 · 매점 확장 · 사역귀 용품점 · 실시간 의뢰 일지
    ═══════════════════════════════════════════════════ */
 
@@ -148,7 +148,8 @@ function ensureV3(){
   d("ach",[]);
   d("storyRead",[]);
   d("hall",S.hall);
-  d("war",{mine:0,week:0});
+  d("war",{mine:0,week:0});      // 활동량 집계용으로만 남아 있습니다
+  d("home",{stage:0, due:0, auto:true});
   d("lounge",{pts:0,stage:0,today:{rin:false,mana:false,mat:false},month:0});
   d("auc",{phase:"idle",left:0,next:0,lots:[],hist:[],slot:0});
   d("mile",0);
@@ -197,15 +198,8 @@ function achCheck(){
 }
 function achPts(){ return ACH.filter(a=>S.ach.includes(a.id)).reduce((s,a)=>s+a.p,0); }
 
-/* ═══════════ 거주지 대항전 ═══════════ */
 const HALLBONUS={ dorm:{}, w1:{}, w2:{}, w3:{}, w4:{}, w5:{}, w6:{}, w7:{} };
-function warScores(){
-  /* 연결 전에는 비교할 상대가 없으므로 내 점수만 셉니다 (part6 이 실제 러너로 덮어씁니다) */
-  const base={}; HALLS.forEach(h=>base[h.id]=0);
-  base[S.hall]+=Math.round((S.war.mine||0)/40);
-  return HALLS.map(h=>({...h, sc:base[h.id], me:h.id===S.hall}))
-              .sort((a,b)=>b.sc-a.sc);
-}
+/* 구역 대항전은 없어졌습니다 — 거주지 혜택은 집을 지어 키웁니다 (part4) */
 const _clubOpt=typeof clubOpt==="function"?clubOpt:null;
 const _mod3=mod;
 mod=function(key){
@@ -545,56 +539,20 @@ VIEWS.rank=()=>{
   </div>`;
 };
 
-VIEWS.hallv=()=>{
-  const w=warScores(), me=homeOf(S.hall);
-  const top=w[0].sc;
-  return head("여덟 거주지의 한 주",ic("castle")+" 거주지", `${me.n} ${me.h}`)+`
-  <div class="grid g2" style="margin-bottom:14px">
-    <div class="card pad">
-      <div class="spread"><div class="sect-t" style="margin:0">거주지 대항전</div>
-        <span class="tiny muted">${6-(cal().day%7)}일 남음</span></div>
-      ${w.map((h,i)=>`<div style="margin:8px 0">
-        <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">여기 삽니다</span>':""}</span>
-          <span class="muted">활동 ${180+(h.sc%95)}명 · <b>${nf(h.sc)}</b></span></div>
-        <div class="bar" style="margin-top:3px"><i style="width:${h.sc/top*100}%;background:linear-gradient(90deg,${h.c}66,${h.c})"></i></div></div>`).join("")}
-      <div class="card pad" style="background:var(--s1);margin-top:10px">
-        <div class="tiny muted" style="line-height:1.85">
-        <b>대항전 규칙</b><br>
-        · 거주지 점수는 이번 주 100점 이상 활동한 학생의 평균입니다. 인원이 많은 쪽이 유리하지 않습니다.<br>
-        · 모든 거주지가 같은 점수·같은 활동이면 어느 쪽이든 같은 점수를 받습니다.<br>
-        · 보상 — 거주지 순위 보상(연등, 그 거주지 학생 모두) 1위 18 · 2위 15 · 3위 12 · 4위 10<br>
-        · 개인 점수 보상 2,000점 이상 +5 · 6,000점 이상 +10 · 1만점 이상 +15<br>
-        내 이번 주 점수 <b style="color:var(--gold)">${nf(S.war.mine||0)}</b>. 수업 시간, 처치, 보스, 시험, 연무제, 파견, 수행, 각인, 과제가 모두 점수가 됩니다.</div>
-      </div>
-    </div>
-    <div class="card pad">
-      <div class="sect-t">거주지 성장</div>
-      <div class="tiny muted" style="margin-bottom:8px">대항전 점수가 쌓일수록 거주지 혜택이 커집니다. 혜택은 현재 / 최대로 표시합니다.</div>
-      ${HALLS.map(h=>{
-        const g=clamp(60+(h.id===S.hall?(S.war.mine||0)/80:(h.h.charCodeAt(0)*7)%40),0,100);
-        return `<div style="margin-bottom:10px">
-          <div class="spread tiny"><b style="color:${h.c}">${h.n}</b><span class="muted">성장 ${g.toFixed(0)}%</span></div>
-          <div class="tiny" style="color:var(--jade)">${typeof hallBenefitText==="function"?hallBenefitText(h.id):h.b}</div>
-          <div class="bar jd" style="margin-top:3px"><i style="width:${g}%"></i></div></div>`}).join("")}
-      <hr class="hr">
-      <div class="row"><span class="tiny muted">거주지 옮기기</span>
-        ${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="moveHall('${h.id}')">${h.n}</button>`).join("")}</div>
-    </div>
-  </div>
-  <div class="card pad">
-    <div class="sect-t">거주지 공헌도 순위 <span class="muted">이번 주 대항전 개인 점수</span></div>
-    <table class="t">
-      ${[["유스탄",4004],["로베르 테넌",3609],["하얀",3477],["위사 누",3120],["코멧",2884]]
-        .map((r,i)=>`<tr><td style="width:26px">${i+1}</td><td>${r[0]}</td><td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      <tr style="background:var(--s2)"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
-        <td style="text-align:right"><b>${nf(S.war.mine||0)}</b></td></tr>
-    </table>
-  </div>`;
-};
+/* 거처 화면은 part4 에서 만듭니다 */
+
 function moveHall(id){
   if(S.hall===id) return;
-  if(!confirm("거주지를 옮기면 이번 주 대항전 점수가 초기화됩니다. 옮길까요?")) return;
-  S.hall=id; S.war.mine=0; renderTop(); renderNav(); renderMain(); save();
+  const built=(S.home&&S.home.stage)||0;
+  const msg = id==="dorm"
+    ? (built?`기숙사로 들어가면 지금까지 지은 집 ${built}단계를 두고 갑니다. 옮길까요?`
+            :"기숙사로 들어갈까요? 월세는 없지만 집을 지을 수 없습니다.")
+    : (built?`옮기면 지금까지 지은 집 ${built}단계를 두고 가고, 새 집을 처음부터 짓게 됩니다. 옮길까요?`
+            :"이 구역으로 옮길까요? 이레마다 월세를 내야 합니다.");
+  if(!confirm(msg)) return;
+  S.hall=id;
+  if(S.home){ S.home.stage=0; S.home.due=0; }   // 집은 두고 갑니다
+  renderTop(); renderNav(); renderMain(); save();
   toast(`${homeOf(id).n}으로 옮겼습니다.`,"good");
 }
 
@@ -627,7 +585,7 @@ VIEWS.lounge=()=>{
           .map(([k,n,c])=>`<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
           <div><b>${n}</b><div class="tiny muted">${c}</div></div>
           <button class="btn sm ${L.today[k]?"":"pri"}" ${L.today[k]?"disabled":""} onclick="donateLounge('${k}')">${L.today[k]?"오늘 완료":"납부"}</button></div>`).join("")}
-        <div class="tiny muted" style="margin-top:8px">달이 바뀌면 30점 이상 납부한 학생에게 완료한 단계마다 연등 5개가 우편으로 전달됩니다. 휴게실 복원은 거주지 대항전 점수와 별개입니다.</div>
+        <div class="tiny muted" style="margin-top:8px">달이 바뀌면 30점 이상 납부한 학생에게 완료한 단계마다 연등 5개가 우편으로 전달됩니다. 휴게실 복원은 집 짓기와 별개로, 같은 거주지 학생들이 함께 올립니다.</div>
       </div>
       <div class="card pad">
         <div class="sect-t">이번 달 복원에 힘을 보탠 학생</div>
@@ -1043,7 +1001,7 @@ NAVDEF.push(
                                           {id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"merchant",n:"떠돌이 상인"},{id:"shop",n:"매점"},{id:"petshop",n:"사역귀 용품점"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록·랭킹", sub:[{id:"world",n:"세계관"},{id:"record",n:"업적·도감"},{id:"rank",n:"랭킹"},
-                                          {id:"hallv",n:"거주지"},{id:"lounge",n:"휴게실"}]},
+                                          {id:"hallv",n:"거처"},{id:"lounge",n:"휴게실"}]},
 );
 PLACES.push({id:"loungep", n:"휴게실", e:ic("sofa"), x:96, y:66, view:"lounge"});
 

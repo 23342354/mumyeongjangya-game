@@ -69,11 +69,31 @@ const HALLLABEL={
  w6:  [["생명력","hpP"],["방어력","defP"],["회복력","heal"]],
  w7:  [["사역귀 파견 보상","petOut"],["파장 재생","mana"]],
 };
+/* ═══════════ 거처 — 월세와 집 짓기 ═══════════
+   · 기숙사 : 월세 없음, 집을 지을 수 없음. 대신 혜택이 처음부터 100% 입니다.
+   · 구역   : 매주 월세를 냅니다. 집을 넓힐수록 혜택이 10% → 120% 까지 자랍니다.
+              월세가 밀리면 혜택이 멈춥니다(쫓겨나지는 않습니다).                      */
+const HOMESTAGE=[0.10, 0.32, 0.54, 0.76, 0.98, 1.20];   // 단계별 혜택 배율
+const RENT={ dorm:0, w1:9000, w2:5000, w3:6000, w4:6500, w5:5500, w6:2500, w7:4000 };
+const HOMECOST=[
+ {rin:12000,  mat:{가루:20,  뿌리:6},            lotus:6,  n:"방 한 칸",   d:"침상과 등롱 하나를 들였다."},
+ {rin:40000,  mat:{가루:60,  뿌리:12, 꽃:8},     lotus:8,  n:"부엌",       d:"불을 쓸 수 있게 되었다."},
+ {rin:120000, mat:{가루:150, 어물:20, 열매:15},  lotus:10, n:"작업방",     d:"법구를 늘어놓을 자리가 생겼다."},
+ {rin:320000, mat:{가루:320, 약초:30, 꽃:20},    lotus:12, n:"안뜰",       d:"사역귀를 풀어 둘 만한 공간."},
+ {rin:800000, mat:{가루:700, 혼백:6,  어물:40},  lotus:20, n:"다락과 서가", d:"이제 여기를 집이라 불러도 되겠다."},
+];
+function homeS(){ if(!S.home) S.home={stage:0, due:0, auto:true}; return S.home; }
+function isDorm(id){ return (id||S.hall)==="dorm"; }
+function rentOf(id){ const h=homeS(); return Math.round((RENT[id||S.hall]||0)*(1+h.stage*0.35)); }
+function rentDue(){ return Math.max(0, homeS().due - S.t); }      // 남은 명계 분
+function rentLate(){ return !isDorm() && homeS().due>0 && S.t>homeS().due; }
 function hallGrowth(id){
-  if(id===S.hall) return clamp((S.war.mine||0)/6000, 0, 1);
-  return clamp(0.45+((id.charCodeAt(1)*37)%50)/100, 0, 1);
+  if(isDorm(id)) return 1;                       // 기숙사는 항상 최대
+  if(id!==S.hall) return 0;                      // 살지 않는 곳은 혜택이 없습니다
+  if(rentLate()) return 0;                       // 월세가 밀리면 멈춤
+  return HOMESTAGE[clamp(homeS().stage,0,5)];
 }
-function hallFactor(id){ return 0.1 + 0.9*hallGrowth(id); }
+function hallFactor(id){ return clamp(hallGrowth(id), 0, 1.2); }
 /* part3의 mod 래퍼가 읽는 표를 지금 성장치로 갱신한다 */
 function syncHall(){
   const f=hallFactor(S.hall), base=HALLMAX[S.hall]||{};
@@ -217,64 +237,144 @@ VIEWS.alche=()=>{
   </div>`;
 };
 
-/* ═══════════ 거주지 화면 재작성 ═══════════ */
+/* ═══════════ 거처 화면 ═══════════ */
+function homeAct(){
+  const h=homeS(), dorm=isDorm();
+  if(dorm) return `<div class="card pad">
+    <div class="sect-t">기숙사</div>
+    <div class="tiny muted" style="line-height:1.9">
+      사무전이 내어 준 방입니다. <b>월세가 없고</b>, 혜택이 처음부터 전부 붙습니다.<br>
+      대신 <b>집을 넓힐 수 없습니다.</b> 구역으로 나가 집을 지으면 혜택을 최대 120%까지 키울 수 있습니다.
+    </div></div>`;
+  const next=HOMECOST[h.stage];
+  const rent=rentOf(), late=rentLate();
+  const matRow=(m)=>Object.entries(m).map(([k,v])=>{
+    const have=(S.mat&&S.mat[k])||0;
+    return `<span class="tag ${have>=v?"g":""}">${k} ${nf(have)}/${nf(v)}</span>`;
+  }).join(" ");
+  return `<div class="card pad">
+    <div class="spread"><div class="sect-t" style="margin:0">월세</div>
+      <span class="tiny ${late?"":"muted"}" style="${late?"color:var(--red)":""}">
+        ${late?"미납 — 혜택이 멈췄습니다":(h.due?`다음 납부까지 ${hhmm(rentDue())}`:"아직 계약 전")}</span></div>
+    <div class="tiny muted" style="margin-bottom:8px">
+      이레마다 <b style="color:var(--gold)">${nf(rent)} 륜</b>. 집이 넓어질수록 오릅니다.
+      밀려도 쫓겨나지는 않지만, 낼 때까지 거주지 혜택이 붙지 않습니다.</div>
+    <div class="row">
+      <button class="btn ${late?"pri":""}" onclick="payRent()">${h.due?"이레치 내기":"계약하고 첫 달 내기"}
+        <span class="tiny muted">${nf(rent)}</span></button>
+      <button class="btn sm ${h.auto?"pri":""}" onclick="toggleRentAuto()">
+        자동 납부 ${h.auto?"켜짐":"꺼짐"}</button>
+    </div>
+    <div class="tiny muted" style="margin-top:6px">자동 납부를 켜 두면 륜이 있을 때 알아서 빠집니다.</div>
+  </div>
+  <div class="card pad" style="margin-top:14px">
+    <div class="spread"><div class="sect-t" style="margin:0">집 짓기</div>
+      <span class="tiny muted">${h.stage} / 5 단계</span></div>
+    <div class="bar" style="margin:6px 0 10px"><i style="width:${h.stage/5*100}%"></i></div>
+    ${HOMECOST.map((c,i2)=>`<div class="spread tiny" style="padding:3px 0;${i2<h.stage?"opacity:.55":""}">
+      <span>${i2<h.stage?ic("check",11):`<b>${i2+1}</b>`} ${c.n}
+        <span class="muted">· ${c.d}</span></span>
+      <span class="muted">혜택 ${(HOMESTAGE[i2+1]*100).toFixed(0)}%</span></div>`).join("")}
+    ${next?`<div class="card pad" style="background:var(--s1);margin-top:10px">
+      <div class="tiny" style="color:var(--gold);margin-bottom:4px">다음 — ${next.n}</div>
+      <div class="tiny muted" style="margin-bottom:6px">${next.d}</div>
+      <div class="row" style="gap:5px;margin-bottom:8px">
+        <span class="tag ${S.rin>=next.rin?"g":""}">륜 ${nf(S.rin)}/${nf(next.rin)}</span>
+        ${matRow(next.mat)}</div>
+      <div class="tiny muted" style="margin-bottom:8px">완성하면 연등 +${next.lotus}</div>
+      <button class="btn pri" onclick="buildHome()">짓는다</button></div>`
+     :`<div class="tiny" style="color:var(--ok);margin-top:10px">집을 다 지었습니다. 혜택이 최대(120%)로 붙습니다.</div>`}
+    <div class="tiny muted" style="margin-top:8px">재료는 약초밭·낚시·법구 분해에서 모읍니다.</div>
+  </div>`;
+}
 VIEWS.hallv=()=>{
   syncHall();
-  const w=warScores(), me=homeOf(S.hall);
-  const top=w[0].sc;
+  const me=homeOf(S.hall), h=homeS();
   const benefit=(id)=>{
     const f=hallFactor(id), base=HALLMAX[id];
-    const rows=HALLLABEL[id].map(([n,k])=>`${n} +${(base[k]*f*100).toFixed(0)}% / +${(base[k]*100).toFixed(0)}%`);
-    if(base.fee) rows.push(`중개소 판매 수수료 구간마다 ${(base.fee*f*100).toFixed(0)}%p 낮음 (첫 구간 ${(5-base.fee*f*100).toFixed(0)}% · 기본 5%)`);
-    return rows.join(", ");
+    const rows=HALLLABEL[id].map(([n,k])=>`${n} +${(base[k]*f*100).toFixed(0)}%`);
+    if(base.fee) rows.push(`중개소 수수료 ${(base.fee*f*100).toFixed(1)}%p 낮음`);
+    return rows.join(" · ");
   };
-  return head("여덟 거주지의 한 주",ic("castle")+" 거주지", `${me.n} ${me.h}`)+`
+  const max=(id)=>{
+    const base=HALLMAX[id];
+    const rows=HALLLABEL[id].map(([n,k])=>`${n} +${(base[k]*100).toFixed(0)}%`);
+    if(base.fee) rows.push(`수수료 ${(base.fee*100).toFixed(0)}%p`);
+    return rows.join(" · ");
+  };
+  return head("지금 사는 곳",ic("castle")+" 거처",
+    `${me.n} ${me.h} · ${isDorm()?"기숙사":h.stage+"단계"}`)+`
   <div class="grid g2" style="margin-bottom:14px">
-    <div class="card pad">
-      <div class="spread"><div class="sect-t" style="margin:0">거주지 대항전</div>
-        <span class="tiny muted">${6-(cal().day%7)}일 ${23-cal().h}시간 남음</span></div>
-      ${w.map((h,i)=>`<div style="margin:8px 0">
-        <div class="spread tiny"><span>${i+1} <b style="color:${h.c}">${h.n}</b> ${h.me?'<span class="tag g">여기 삽니다</span>':""}</span>
-          <span class="muted">활동 ${180+(h.sc%95)}명 · <b>${nf(h.sc)}</b></span></div>
-        <div class="bar" style="margin-top:3px"><i style="width:${h.sc/top*100}%;background:linear-gradient(90deg,${h.c}66,${h.c})"></i></div></div>`).join("")}
-      <div class="card pad" style="background:var(--s1);margin-top:10px">
-        <div class="tiny muted" style="line-height:1.85">
-        <b>대항전 규칙</b><br>
-        · <b>인원 보정</b> — 거주지 점수는 이번 주 100점 이상 활동한 학생의 <b>평균</b>입니다. 인원이 많은 쪽이 유리하지 않습니다.<br>
-        · 모든 거주지가 같은 점수·같은 활동이면 어느 쪽이든 같은 점수를 받습니다 (거주지 특기 배점 없음).<br>
-        · <b>보상</b> — 거주지 순위 보상(연등, 그 거주지 학생 모두) 1위 18 · 2위 15 · 3위 12 · 4~8위 10<br>
-        · 개인 점수 보상(연등, 순위와 별개) 2,000점 이상 +5 · 6,000점 이상 +10 · 1만점 이상 +15<br>
-        내 이번 주 점수 <b style="color:var(--gold)">${nf(S.war.mine||0)}</b>${(S.war.mine||0)>=2000?' · <span style="color:var(--jade)">개인 보상 구간 달성</span>':""}.
-        수업 시간, 처치, 보스, 시험, 연무제, 조제, 파견, 수행, 각인, 과제가 모두 점수가 됩니다.</div>
+    <div>
+      <div class="card pad">
+        <div class="spread"><div class="sect-t" style="margin:0">${me.n} <span class="muted">${me.h}</span></div>
+          <span class="tag" style="border-color:${me.c};color:${me.c}">
+            혜택 ${(hallFactor(S.hall)*100).toFixed(0)}%</span></div>
+        <div class="tiny muted" style="margin-bottom:8px">${me.d}</div>
+        <div class="tiny" style="color:var(--gold)">${benefit(S.hall)||"월세가 밀려 혜택이 멈췄습니다"}</div>
+        <div class="tiny muted" style="margin-top:4px">다 키웠을 때 — ${max(S.hall)}</div>
       </div>
+      ${homeAct()}
     </div>
     <div class="card pad">
-      <div class="sect-t">거주지 성장</div>
-      <div class="tiny muted" style="margin-bottom:10px">대항전 점수가 쌓일수록 거주지 혜택이 <b>1/10에서 최대 값까지</b> 커집니다. 혜택은 <b>현재 / 최대</b>로 표시합니다.</div>
-      ${HALLS.map(h=>{
-        const g=hallGrowth(h.id)*100;
-        return `<div style="margin-bottom:12px">
-          <div class="spread"><b style="color:${h.c}">${h.n} <span class="tiny muted">${h.h}</span></b>
-            ${h.id===S.hall?'<span class="tag g">여기 삽니다</span>':""}</div>
-          <div class="tiny" style="color:var(--jade);margin:3px 0">${benefit(h.id)}</div>
-          <div class="spread tiny muted"><span>거주지 성장</span><span>${g.toFixed(0)}%</span></div>
-          <div class="bar jd" style="margin-top:3px"><i style="width:${g}%"></i></div></div>`}).join("")}
-      <hr class="hr">
-      <div class="row"><span class="tiny muted">거주지 옮기기</span>
-        ${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="moveHall('${h.id}')">${h.n}</button>`).join("")}</div>
+      <div class="sect-t">거주지 고르기</div>
+      <div class="tiny muted" style="margin-bottom:10px">옮기면 <b>짓던 집은 두고 갑니다</b>(단계 0으로).
+        기숙사는 월세가 없는 대신 집을 지을 수 없습니다.</div>
+      ${HALLS.map(x=>`<div class="sub" style="margin-bottom:8px;${x.id===S.hall?"border-color:"+x.c:""}">
+        <div class="spread"><div><b style="color:${x.c}">${x.n}</b>
+          <span class="tiny muted">${x.h}</span>
+          ${x.id===S.hall?'<span class="tag g" style="margin-left:6px">여기 삽니다</span>':""}</div>
+          <span class="tiny muted">${RENT[x.id]?`이레 ${nf(RENT[x.id])} 륜~`:"월세 없음"}</span></div>
+        <div class="tiny muted" style="margin-top:3px">${max(x.id)}</div>
+        ${x.id===S.hall?"":`<button class="btn sm" style="margin-top:6px" onclick="moveHall('${x.id}')">여기로 옮기기</button>`}
+      </div>`).join("")}
     </div>
-  </div>
-  <div class="card pad">
-    <div class="sect-t">거주지 공헌도 순위 <span class="muted">이번 주 대항전 개인 점수</span></div>
-    <table class="t">
-      ${[["유스탄",4614],["시엘 발루아",3846],["하얀",3477],["위사 누",3120],["코멧",2884]]
-        .map((r,i)=>`<tr><td style="width:26px">${i+1}</td><td>${r[0]} ${i===0?'<span class="tag">거울 뒤편의 주인</span>':""}</td>
-        <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      <tr style="background:var(--s2)"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
-        <td style="text-align:right"><b>${nf(S.war.mine||0)}</b></td></tr>
-    </table>
   </div>`;
 };
+function payRent(){
+  const h=homeS();
+  if(isDorm()){ toast("기숙사는 월세가 없습니다."); return; }
+  const r=rentOf();
+  if(S.rin<r){ toast("륜이 부족합니다.","bad"); return; }
+  S.rin-=r;
+  const base = (h.due && S.t<h.due) ? h.due : S.t;      // 밀렸으면 지금부터, 아니면 이어서
+  h.due = base + 7*1440;
+  toast(`월세 ${nf(r)} 륜을 냈습니다. 다음 납부까지 ${hhmm(h.due-S.t)}`,"good");
+  syncHall(); renderTop(); renderMain(); save();
+}
+function toggleRentAuto(){ const h=homeS(); h.auto=!h.auto; renderMain(); save();
+  toast(h.auto?"자동 납부를 켰습니다.":"자동 납부를 껐습니다."); }
+function buildHome(){
+  const h=homeS();
+  if(isDorm()){ toast("기숙사에서는 집을 지을 수 없습니다. 구역으로 옮겨 보세요.","bad"); return; }
+  const c=HOMECOST[h.stage];
+  if(!c){ toast("이미 다 지었습니다."); return; }
+  if(S.rin<c.rin){ toast("륜이 부족합니다.","bad"); return; }
+  for(const [k,v] of Object.entries(c.mat))
+    if(((S.mat&&S.mat[k])||0) < v){ toast(`${k}이(가) 부족합니다.`,"bad"); return; }
+  S.rin-=c.rin;
+  Object.entries(c.mat).forEach(([k,v])=>{ S.mat[k]-=v; });
+  h.stage++; S.lotus+=c.lotus;
+  pushNews(`[거처] ${homeOf(S.hall).n}의 집에 「${c.n}」이 생겼습니다.`);
+  toast(`「${c.n}」 완성 · 연등 +${c.lotus} · 혜택 ${(HOMESTAGE[h.stage]*100).toFixed(0)}%`,"good");
+  if(typeof achCheck==="function") achCheck();
+  syncHall(); renderTop(); renderMain(); save();
+}
+/* 자동 납부 — 창을 닫아 두어도 륜이 있으면 알아서 빠집니다 */
+const _stepRent=step;
+step=function(m){
+  _stepRent(m);
+  if(!S||!S.made||isDorm()) return;
+  const h=homeS();
+  if(!h.due) return;
+  if(S.t>h.due && h.auto){
+    const r=rentOf();
+    if(S.rin>=r){ S.rin-=r; h.due+=7*1440;
+      if(S.t>h.due) h.due=S.t+7*1440;
+      pushNews(`[거처] 월세 ${nf(r)} 륜이 자동으로 빠져나갔습니다.`); syncHall(); }
+  }
+};
+
 
 /* ═══════════ 연결 ═══════════ */
 /* 치유·보호막 위력에 물약 효과 반영 */
