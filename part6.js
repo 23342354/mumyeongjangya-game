@@ -642,14 +642,21 @@ sendChat = function(){
   if(sbOn() && S.chatTab==="1:1" && !S.dmWith){
     toast("먼저 대화할 사람을 고르세요.","bad"); return;
   }
+  const tab=S.chatTab;
   _sendChatSb();
-  if(sbOn()) chatPush(S.chatTab, fmtChat(raw), S.chatMode==="RP"?"RP":"오너");
+  /* 내가 쓴 글에도 채널 표식을 붙입니다.
+     이게 없으면 숙사·계통·페어·1:1 처럼 범위가 있는 탭에서 내 말이 걸러져
+     상대 말만 보이고 핑퐁이 되지 않습니다. */
+  const mine=S.msgs[S.msgs.length-1];
+  if(mine && mine.tab===tab && mine.who===S.name){ mine.scope=chatScope(tab); mine.mine=true; }
+  renderChat();
+  if(sbOn()) chatPush(tab, fmtChat(raw), S.chatMode==="RP"?"RP":"오너");
 };
 /* 교사 한마디는 내 화면에만 */
 const _npcChatSb = npcChat;
 npcChat = function(tab){
-  _npcChatSb(tab);
-  const m=S.msgs[S.msgs.length-1]; if(m) m.local=true;
+  _npcChatSb("전체");                       // 교사·직원은 전체 채팅에서만
+  const m=S.msgs[S.msgs.length-1]; if(m){ m.local=true; m.tab="전체"; }
 };
 
 /* ─── 1:1 상대 고르기 · 연결 상태 알림 ─── */
