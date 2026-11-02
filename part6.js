@@ -753,6 +753,15 @@ function pairFetch(force){
       rows=rows||[];
       const before=(P.inbox||[]).length;
       P.mine  = rows.find(r=>r.status==="accepted") || null;
+      /* 공동 일세는 두 거처 중 높은 가격입니다. 납부 전 상대 거처를 직접 확인합니다. */
+      P.partner=null;
+      if(P.mine){
+        const other=encodeURIComponent(pairOther(P.mine).id);
+        const fields="id,name,hall,home_stage,home_due,home_late,run_ward,run_stage,run_left,run_kills,updated_at";
+        const peers=await sbGet(`students?select=${fields}&id=eq.${other}&limit=1`);
+        if(S!==state) return false;
+        P.partner=(peers||[])[0]||null;
+      }
       P.inbox = rows.filter(r=>r.status==="pending" && String(r.to_id)===String(S.sb.id));
       P.sent  = rows.filter(r=>r.status==="pending" && String(r.from_id)===String(S.sb.id));
       if(P.inbox.length>before){
@@ -760,7 +769,7 @@ function pairFetch(force){
         toast(`${esc(n.from_name||"누군가")} 님이 페어를 신청했습니다.`,"good");
         pushNews(`[인연] ${n.from_name} 학생이 페어를 신청했습니다.`);
       }
-      /* 업데이트 전에 개인이 낸 월세도 남은 기간을 페어에게 나눕니다. */
+      /* 업데이트 전에 개인이 낸 일세도 남은 기간을 페어에게 나눕니다. */
       if(P.mine && Number(homeS().due)>Number(P.mine.rent_due||0)){
         const r=await sbSend("POST","rpc/pair_rent",{
           p_pair_id:P.mine.id, p_student_id:S.sb.id, p_action:"sync",
@@ -769,7 +778,7 @@ function pairFetch(force){
         if(S!==state) return false;
         if(r && String(r.pair_id)===String(P.mine&&P.mine.id)) P.mine.rent_due=Number(r.due)||0;
       }
-      syncHall(); renderTop();
+      syncHall(); renderTop(); renderNav();
       if(VIEW==="rel" || VIEW==="hallv") renderMain(true);
       save();
       renderChat();
@@ -780,7 +789,7 @@ function pairFetch(force){
   return PAIRFETCHTASK;
 }
 
-/* ─── 페어 공동 월세 — 서버에서 한 번만 결제하고 두 사람이 기간을 공유 ─── */
+/* ─── 페어 공동 일세 — 서버에서 한 번만 결제하고 두 사람이 기간을 공유 ─── */
 function pairRentActive(){
   const p=S.pair&&S.pair.mine;
   return !!(sbOn() && p && p.status==="accepted" &&
@@ -791,7 +800,7 @@ let PAIRRENTPROMISE=null, PAIRRENTAT=0;
 function pairRentTick(){
   if(!sbOn()) return false;
   const h=homeS(), due=rentPaidUntil();
-  if(h.rentPending || (!isDorm() && h.auto && due>0 && S.t>due)){
+  if(h.rentPending || (!isDorm() && h.auto && due>0 && S.t>=due)){
     if(!PAIRRENTPROMISE && Date.now()-PAIRRENTAT>=30000) payPairRent(true);
   }
   return true; // 연결된 게임의 자동 납부는 반드시 최신 페어 상태부터 확인합니다.
@@ -804,19 +813,20 @@ function payPairRent(automatic){
     let pending=h.rentPending;
     if(!pending){
       if(!await pairFetch(true)){
-        if(!automatic) toast("월세 정보를 불러오지 못했습니다. 연결을 확인한 뒤 다시 눌러 주세요.","bad");
+        if(!automatic) toast("일세 정보를 불러오지 못했습니다. 연결을 확인한 뒤 다시 눌러 주세요.","bad");
         return;
       }
       if(S!==state) return;
       if(!pairRentActive()){ payLocalRent(automatic); return; }
-      if(isDorm()){ if(!automatic) toast("기숙사는 월세가 없습니다."); return; }
+      if(isDorm()){ if(!automatic) toast("기숙사는 일세가 없습니다."); return; }
       const due=rentPaidUntil();
-      if(automatic && (!h.auto || !due || S.t<=due)) return;
-      const cost=rentOf();
+      if(automatic && (!h.auto || !due || S.t<due)) return;
+      const cost=rentCharge();
+      if(cost===null){ if(!automatic) toast("페어의 거처를 확인하지 못했습니다. 상대가 한 번 접속한 뒤 다시 눌러 주세요.","bad"); return; }
       if(S.rin<cost){ if(!automatic) toast("륜이 부족합니다.","bad"); return; }
       const p=S.pair.mine;
       pending={id:S.sb.id+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2),
-        pairId:p.id, studentId:S.sb.id, cost, automatic:!!automatic,
+        pairId:p.id, studentId:S.sb.id, cost, automatic:!!automatic, periodMinutes:RENT_PERIOD_MINUTES,
         expectedDue:Number(p.rent_due)||0, personalDue:Number(h.due)||0};
       /* 처리 중에는 비용을 먼저 보관합니다. 같은 요청을 재전송해도 다시 차감하지 않습니다. */
       S.rin-=cost; h.rentPending=pending;
@@ -829,7 +839,7 @@ function payPairRent(automatic){
     });
     if(S!==state) return;
     if(!result || String(result.request_id)!==pending.id || typeof result.charged!=="boolean")
-      throw new Error("월세 응답을 확인하지 못했습니다.");
+      throw new Error("일세 응답을 확인하지 못했습니다.");
     if(!result.charged) S.rin+=pending.cost;
     if(S.pair&&S.pair.mine&&String(S.pair.mine.id)===String(pending.pairId)){
       S.pair.mine.rent_due=Number(result.due)||0;
@@ -837,18 +847,19 @@ function payPairRent(automatic){
     }
     delete h.rentPending;
     if(result.charged){
-      pushNews(`[거처] ${S.name} 학생이 페어 월세 ${nf(pending.cost)} 륜을 ${pending.automatic?"자동으로 ":""}냈습니다. 두 사람에게 함께 적용됩니다.`);
-      if(!automatic) toast(`월세 ${nf(pending.cost)} 륜을 냈습니다. 페어 두 사람 모두 이레 연장되었습니다.`,"good");
+      const period=Number(result.period_minutes)||pending.periodMinutes||7*1440;
+      pushNews(`[거처] ${S.name} 학생이 페어 일세 ${rentMoney(pending.cost)} 륜을 ${pending.automatic?"자동으로 ":""}냈습니다. 두 사람에게 함께 적용됩니다.`);
+      if(!automatic) toast(`일세 ${rentMoney(pending.cost)} 륜을 냈습니다. 페어 두 사람 모두 ${hhmm(period)} 연장되었습니다.`,"good");
     }else if(!automatic){
       toast(result.reason==="inactive"?"페어가 변경되어 납부를 취소했습니다. 륜은 돌려드렸습니다.":"페어의 납부 내역을 적용했습니다. 추가로 차감하지 않았습니다.","good");
     }
-    syncHall(); renderTop(); if(VIEW==="hallv") renderMain(true);
+    syncHall(); renderTop(); renderNav(); if(VIEW==="hallv") renderMain(true);
     save(); syncUp(true);
     if(typeof acctPush==="function") acctPush(true);
   })().catch(()=>{
     if(S===state && !automatic) toast(h.rentPending
-      ? "납부 결과를 확인 중입니다. 재시도해도 월세를 다시 차감하지 않습니다."
-      : "월세를 처리하지 못했습니다. 연결을 확인해 주세요.","bad");
+      ? "납부 결과를 확인 중입니다. 재시도해도 일세를 다시 차감하지 않습니다."
+      : "일세를 처리하지 못했습니다. 연결을 확인해 주세요.","bad");
   }).finally(()=>{ PAIRRENTPROMISE=null; });
   return PAIRRENTPROMISE;
 }
@@ -992,7 +1003,8 @@ function pairRow(){
   const P=pairEnsure();
   if(!sbOn() || !P.mine) return null;
   const o=pairOther(P.mine);
-  const r=(S.sb.roster||[]).find(x=>String(x.id)===String(o.id));
+  const r=P.partner&&String(P.partner.id)===String(o.id)
+    ? P.partner : (S.sb.roster||[]).find(x=>String(x.id)===String(o.id));
   return r ? Object.assign({}, r, {_nick:o.nick}) : null;
 }
 function pairTitle(r){
@@ -1016,17 +1028,19 @@ function pairHomeHTML(){
   const top=dorm?4:5, st=clamp(r.home_stage||0,0,top);
   const fac=HOMESTAGE[st]||0;
   const shared=pairRentDue(), due=Math.max(Number(r.home_due)||0,shared);
-  const late=!dorm && (due>0 ? nowMin()>due : !!r.home_late);
+  const late=!dorm && (due>0 ? nowMin()>=due : !!r.home_late);
   const sharedPaid=!dorm && shared>nowMin();
+  const activeFac=dorm||(!late&&due>nowMin())?fac:0;
   return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
     <div class="spread"><div class="sect-t" style="margin:0">페어의 거처</div>${pairSeen(r)}</div>
     <div class="spread" style="margin-top:4px">
       <div>${pairTitle(r)} <span class="tiny muted">· ${esc(h.n)} ${esc(h.h)}</span>
         <div class="tiny muted">${dorm?"방 꾸미기":"집 짓기"} ${st} / ${top} 단계
-          ${dorm?"· 월세 없음":late?'· <span style="color:var(--red)">월세 미납</span>':sharedPaid?"· 페어 월세 적용 중":due?"· 월세 납부 완료":"· 아직 계약 전"}</div></div>
-      <span class="tag" style="border-color:${h.c};color:${h.c}">혜택 ${Math.round((late?0:fac)*100)}%</span></div>
+          ${dorm?"· 일세 없음":late?'· <span style="color:var(--red)">일세 미납</span>':sharedPaid?"· 페어 일세 적용 중":due?"· 일세 납부 완료":"· 아직 계약 전"}</div></div>
+      <span class="tag" style="border-color:${h.c};color:${h.c}">혜택 ${Math.round(activeFac*100)}%</span></div>
     <div class="bar" style="margin-top:8px"><i style="width:${st/top*100}%"></i></div>
-    <div class="tiny muted" style="margin-top:6px">${esc(h.b)}</div>
+    <div class="tiny muted" style="margin-top:6px">${esc(hallBenefitsAt(r.hall,activeFac))}</div>
+    ${dorm?"":`<div class="tiny muted" style="margin-top:4px">구역 특화 효과 ${HALLMULT[r.hall]}배 · 거처 기준 하루 ${rentMoney(rentOf(r.hall,st))} 륜</div>`}
   </div>`;
 }
 

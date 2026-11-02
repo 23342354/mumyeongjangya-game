@@ -177,9 +177,10 @@ grant  insert, update on suggestions to anon;
 -- delete from rooms where created_at < now() - interval '1 day';
 
 
--- ── 페어 공동 월세 ────────────────────────────────────────────
--- 페어 월세 공유 업데이트 · 기존 캐릭터와 기록을 지우지 않습니다.
+-- ── 페어 공동 일세 ────────────────────────────────────────────
+-- 페어 일세 공유 업데이트 · 기존 캐릭터와 기록을 지우지 않습니다.
 -- 기존 운영자는 Supabase → SQL Editor에서 이 파일 전체를 한 번 실행하세요.
+-- 이후 납부부터 24시간씩 연장됩니다. 이전에 낸 기간과 확정된 납부 기록은 그대로 보존됩니다.
 -- 여러 번 실행해도 이미 납부한 기간은 보존됩니다.
 
 begin;
@@ -251,18 +252,21 @@ begin
     return jsonb_build_object('pair_id', p_pair_id, 'due', v_due, 'charged', false, 'reason', 'shared');
   end if;
 
-  if v_pair.rent_due > p_expected_due then
+  -- 실수형 기한은 JSON 변환 과정에서 아주 작은 소수점 차이가 날 수 있습니다.
+  -- 같은 납부 기간을 이미 처리된 결제로 오인하지 않도록 1초 이내 차이는 허용합니다.
+  -- 실제 납부는 하루씩 연장되므로 동시 납부의 중복 방지는 그대로 유지됩니다.
+  if v_pair.rent_due > p_expected_due + (1.0 / 60.0) then
     v_reason := 'already_paid';
   elsif p_action = 'auto' and v_due >= v_now then
     v_reason := 'already_paid';
   else
-    v_due := greatest(v_due, v_now) + 7 * 1440;
+    v_due := greatest(v_due, v_now) + 1440;
     v_charged := true;
     v_reason := 'paid';
   end if;
 
   v_result := jsonb_build_object('pair_id', p_pair_id, 'request_id', p_request_id,
-    'student_id', p_student_id, 'due', v_due, 'charged', v_charged, 'reason', v_reason);
+    'student_id', p_student_id, 'due', v_due, 'charged', v_charged, 'reason', v_reason, 'period_minutes', 1440);
   update public.pairs
     set rent_due = v_due,
         rent_receipts = rent_receipts || jsonb_build_object(p_request_id, v_result)

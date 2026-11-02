@@ -46,10 +46,10 @@ const POTIONS=[
   mat:{종모래:3,심연정:1,인광:4}, buf:[["crit",.08],["critD",.20]], d:"2시간 치명타 확률 +8%, 치명타 피해 +20%", req:5},
 ];
 
-/* ─── 거주지 혜택 — 성장에 따라 1/10에서 최대까지 ─── */
+/* ─── 거주지 혜택 — 낮은 번호일수록 비싸고 강한 특화 효과 ─── */
+const HALLMULT={dorm:1, w1:12, w2:8, w3:5, w4:3, w5:2, w6:1.5, w7:1};
 const HALLMAX={
- /* 거주지 혜택 — 효과마다 실제 크기가 달라서, 체감 가치를 맞춰 총량을 비슷하게 잡았습니다.
-    (공격력 1% ≒ 초당 피해 1%, 치명타 1%p ≒ 1.1%, 수업 효율 1% ≒ 1.4% 가치 … 로 환산) */
+ /* 구역 특색은 유지하고, 특화 효과에 HALLMULT를 곱합니다. 수수료 우대는 별도입니다. */
  dorm:{study:.08, know:.06, rest:.06},            // 기숙사 — 강의실·서가가 가깝다
  w1:  {gold:.14, rest:.06, fee:.02},              // 제1구역 — 고급 주거지·식당가
  w2:  {exp:.11, rest:.14, know:.03},              // 제2구역 — 밤새 불 켠 작업실
@@ -59,6 +59,9 @@ const HALLMAX={
  w6:  {hpP:.14, defP:.08, heal:.08},              // 제6구역 — 바닥의 아래
  w7:  {petOut:.25, mana:.08},                     // 제7구역 — 검은 바다
 };
+Object.entries(HALLMAX).forEach(([id,base])=>{
+  Object.keys(base).forEach(k=>{ if(k!=="fee") base[k]*=HALLMULT[id]; });
+});
 const HALLLABEL={
  dorm:[["수업 효율","study"],["지식 획득","know"],["체력·이성 회복","rest"]],
  w1:  [["륜 획득","gold"],["체력·이성 회복","rest"]],
@@ -69,12 +72,13 @@ const HALLLABEL={
  w6:  [["생명력","hpP"],["방어력","defP"],["회복력","heal"]],
  w7:  [["사역귀 파견 보상","petOut"],["파장 재생","mana"]],
 };
-/* ═══════════ 거처 — 월세와 집 짓기 ═══════════
-   · 기숙사 : 월세 없음, 집을 지을 수 없음. 대신 혜택이 처음부터 100% 입니다.
-   · 구역   : 매주 월세를 냅니다. 집을 넓힐수록 혜택이 10% → 120% 까지 자랍니다.
-              월세가 밀리면 혜택이 멈춥니다(쫓겨나지는 않습니다).                      */
+/* ═══════════ 거처 — 일세와 집 짓기 ═══════════
+   · 기숙사 : 일세 없음. 방을 네 단계 꾸며 혜택 100%까지 키웁니다.
+   · 구역   : 한 번 납부할 때 24시간 연장. 집을 지으면 구역 효과의 0~120%를 받습니다.
+              미계약·미납 중에는 혜택이 멈춥니다(쫓겨나지는 않습니다). */
 const HOMESTAGE=[0, 0.25, 0.50, 0.75, 1.00, 1.20];      // 단계별 혜택 배율 — 전부 0에서 시작합니다
-const RENT={ dorm:0, w1:9000, w2:5000, w3:6000, w4:6500, w5:5500, w6:2500, w7:4000 };
+const RENT_PERIOD_MINUTES=1440;
+const RENT={ dorm:0, w1:1000000, w2:350000, w3:120000, w4:40000, w5:15000, w6:5000, w7:1500 };
 const HOMECOST=[
  {rin:12000,  mat:{가루:20,  뿌리:6},            lotus:6,  n:"방 한 칸",   d:"침상과 등롱 하나를 들였다."},
  {rin:40000,  mat:{가루:60,  뿌리:12, 꽃:8},     lotus:8,  n:"부엌",       d:"불을 쓸 수 있게 되었다."},
@@ -82,8 +86,8 @@ const HOMECOST=[
  {rin:320000, mat:{가루:320, 약초:30, 꽃:20},    lotus:12, n:"안뜰",       d:"사역귀를 풀어 둘 만한 공간."},
  {rin:800000, mat:{가루:700, 혼백:6,  어물:40},  lotus:20, n:"다락과 서가", d:"이제 여기를 집이라 불러도 되겠다."},
 ];
-/* 기숙사도 0 에서 시작합니다. 다만 사무전이 내어 준 방이라 월세가 없고,
-   꾸밀 수 있는 단계가 네 칸까지(혜택 100%)입니다. 구역은 다섯 칸(120%)이지만 월세를 냅니다. */
+/* 기숙사도 0 에서 시작합니다. 다만 사무전이 내어 준 방이라 일세가 없고,
+   꾸밀 수 있는 단계가 네 칸까지(혜택 100%)입니다. 구역은 다섯 칸(120%)이지만 일세를 냅니다. */
 const DORMCOST=[
  {rin:7000,   mat:{가루:12, 뿌리:4},   lotus:4,  n:"침구와 등롱", d:"딱딱한 침상에 요를 깔았다."},
  {rin:24000,  mat:{가루:40, 꽃:6},     lotus:6,  n:"책상",        d:"창 없는 벽에 붙여 두었다."},
@@ -94,16 +98,27 @@ function homeS(){ if(!S.home) S.home={stage:0, due:0, auto:true}; return S.home;
 function isDorm(id){ return (id||S.hall)==="dorm"; }
 function homePlan(id){ return isDorm(id) ? DORMCOST : HOMECOST; }
 function homeMax(id){ return homePlan(id).length; }      // 기숙사 4칸 · 구역 5칸
-function rentOf(id){ const h=homeS(); return Math.round((RENT[id||S.hall]||0)*(1+h.stage*0.35)); }
+function rentOf(id,stage){
+  id=id||S.hall;
+  if(stage===undefined) stage=id===S.hall?homeS().stage:0;
+  return Math.round((RENT[id]||0)*(1+clamp(Number(stage)||0,0,homeMax(id))*0.35));
+}
+function rentCharge(){
+  if(typeof pairRentActive!=="function" || !pairRentActive()) return rentOf();
+  const r=pairRow();
+  if(!r || !Object.prototype.hasOwnProperty.call(RENT,r.hall)) return null;
+  return Math.max(rentOf(),rentOf(r.hall,r.home_stage));
+}
+function rentMoney(n){ return Math.round(Number(n)||0).toLocaleString("ko-KR"); }
 function rentPaidUntil(){
   const shared=typeof pairRentDue==="function" ? pairRentDue() : 0;
   return Math.max(Number(homeS().due)||0, shared);
 }
-function rentDue(){ return Math.max(0, rentPaidUntil() - S.t); }  // 개인·페어 중 더 긴 납부 기간
-function rentLate(){ const due=rentPaidUntil(); return !isDorm() && due>0 && S.t>due; }
+function rentDue(){ return Math.max(0, rentPaidUntil() - nowMin()); }  // 화면은 마지막 틱이 아닌 현재 시각 기준
+function rentLate(){ const due=rentPaidUntil(); return !isDorm() && due>0 && S.t>=due; }
 function hallGrowth(id){
   if(id!==S.hall) return 0;                      // 살지 않는 곳은 혜택이 없습니다
-  if(rentLate()) return 0;                       // 월세가 밀리면 멈춤
+  if(!isDorm(id) && rentPaidUntil()<=S.t) return 0; // 계약 전·일세 만료 시 비싼 구역의 혜택도 멈춤
   return HOMESTAGE[clamp(homeS().stage, 0, homeMax(id))];
 }
 function hallFactor(id){ return clamp(hallGrowth(id), 0, 1.2); }
@@ -117,11 +132,18 @@ function syncHall(){
 function hallFee(){ return (HALLMAX[S.hall]&&HALLMAX[S.hall].fee||0)*hallFactor(S.hall); }
 
 function hallBenefitText(id){
-  const f=hallFactor(id), base=HALLMAX[id]||{};
-  const rows=(HALLLABEL[id]||[]).map(([n,k])=>`${n} +${(base[k]*f*100).toFixed(0)}% / +${(base[k]*100).toFixed(0)}%`);
-  if(base.fee) rows.push(`중개소 수수료 ${(base.fee*f*100).toFixed(0)}%p 낮음`);
-  return rows.join(", ");
+  const current=hallBenefitsAt(id,hallFactor(id));
+  const maximum=hallBenefitsAt(id,HOMESTAGE[homeMax(id)]);
+  return `현재 — ${current} / 최대 — ${maximum}`;
 }
+function hallBenefitsAt(id,factor){
+  const base=HALLMAX[id]||{}, pct=v=>Number((v*100).toFixed(1));
+  const rows=(HALLLABEL[id]||[]).map(([n,k])=>`${n} +${pct(base[k]*factor)}${k==="crit"?"%p":"%"}`);
+  if(base.fee) rows.push(`중개소 수수료 ${pct(base.fee*factor)}%p 낮음`);
+  return rows.join(" · ");
+}
+/* 입학·지도·거처 등에서 쓰는 설명도 같은 수치에서 만듭니다. */
+HALLS.forEach(h=>{ h.b=hallBenefitsAt(h.id,HOMESTAGE[homeMax(h.id)])+" (최대 성장 시)"; });
 
 /* ═══════════ 상태 ═══════════ */
 function ensureV4(){
@@ -255,35 +277,36 @@ function homeAct(){
   const h=homeS(), dorm=isDorm();
   const plan=homePlan(), top=homeMax();
   const next=plan[h.stage];
-  const rent=rentOf(), late=rentLate(), due=rentPaidUntil();
+  const rent=rentCharge(), late=rentLate(), due=rentPaidUntil();
   const paired=typeof pairRentActive==="function" && pairRentActive();
   const matRow=(m)=>Object.entries(m).map(([k,v])=>{
     const have=(S.mat&&S.mat[k])||0;
     return `<span class="tag ${have>=v?"g":""}">${k} ${nf(have)}/${nf(v)}</span>`;
   }).join(" ");
   const rentCard = dorm ? `<div class="card pad">
-    <div class="sect-t">월세 없음</div>
+    <div class="sect-t">일세 없음</div>
     <div class="tiny muted" style="line-height:1.9">
-      사무전이 내어 준 방이라 <b>월세를 내지 않습니다.</b> 대신 꾸밀 수 있는 자리가
+      사무전이 내어 준 방이라 <b>일세를 내지 않습니다.</b> 대신 꾸밀 수 있는 자리가
       <b>네 칸(혜택 100%)</b>까지입니다. 구역으로 나가면 다섯 칸(120%)까지 넓힐 수 있지만
-      이레마다 월세를 내야 합니다.
+      하루마다 일세를 내야 합니다.
     </div></div>` : `<div class="card pad">
-    <div class="spread"><div class="sect-t" style="margin:0">월세</div>
+    <div class="spread"><div class="sect-t" style="margin:0">일세</div>
       <span class="tiny ${late?"":"muted"}" style="${late?"color:var(--red)":""}">
         ${late?"미납 — 혜택이 멈췄습니다":(due?`다음 납부까지 ${hhmm(rentDue())}`:"아직 계약 전")}</span></div>
     <div class="tiny muted" style="margin-bottom:8px">
-      이레마다 <b style="color:var(--gold)">${nf(rent)} 륜</b>. 집이 넓어질수록 오릅니다.
+      24시간마다 <b style="color:var(--gold)">${rent===null?"페어의 거처 확인 중":rentMoney(rent)+" 륜"}</b>.
+      숫자가 작은 구역일수록 비싸고, 집 단계마다 기본 일세의 35%가 더해집니다.
       밀려도 쫓겨나지는 않지만, 낼 때까지 거주지 혜택이 붙지 않습니다.</div>
     <div class="row">
-      <button class="btn ${late?"pri":""}" onclick="payRent()">${h.rentPending?"납부 결과 다시 확인":due?"이레치 내기":"계약하고 이레치 내기"}
-        <span class="tiny muted">${nf(rent)}</span></button>
+      <button class="btn ${late?"pri":""}" onclick="payRent()">${h.rentPending?"납부 결과 다시 확인":due?"하루치 내기":"계약하고 하루치 내기"}
+        <span class="tiny muted">${rent===null?"거처 확인":rentMoney(rent)}</span></button>
       <button class="btn sm ${h.auto?"pri":""}" onclick="toggleRentAuto()">
         자동 납부 ${h.auto?"켜짐":"꺼짐"}</button>
     </div>
     <div class="tiny muted" style="margin-top:6px">${paired
-      ? "페어 중 한 명만 내면 두 사람 모두 같은 기간 적용됩니다. 자동 납부도 함께 적용됩니다."
+      ? `페어 중 한 명만 내면 두 사람 모두 24시간 적용됩니다. 두 사람 중 더 높은 일세를 한 번 냅니다. 내 거처 기준 ${rentMoney(rentOf())} 륜/일.`
       : "자동 납부를 켜 두면 륜이 있을 때 알아서 빠집니다."}</div>
-    ${h.rentPending?'<div class="tiny muted" style="margin-top:6px">월세를 처리 중입니다. 연결이 돌아오면 같은 납부 건으로 다시 확인합니다.</div>':""}
+    ${h.rentPending?'<div class="tiny muted" style="margin-top:6px">일세를 처리 중입니다. 연결이 돌아오면 같은 납부 건으로 다시 확인합니다.</div>':""}
   </div>`;
   return rentCard + `
   <div class="card pad" style="margin-top:14px">
@@ -309,18 +332,8 @@ function homeAct(){
 VIEWS.hallv=()=>{
   syncHall();
   const me=homeOf(S.hall), h=homeS();
-  const benefit=(id)=>{
-    const f=hallFactor(id), base=HALLMAX[id];
-    const rows=HALLLABEL[id].map(([n,k])=>`${n} +${(base[k]*f*100).toFixed(0)}%`);
-    if(base.fee) rows.push(`중개소 수수료 ${(base.fee*f*100).toFixed(1)}%p 낮음`);
-    return rows.join(" · ");
-  };
-  const max=(id)=>{
-    const base=HALLMAX[id];
-    const rows=HALLLABEL[id].map(([n,k])=>`${n} +${(base[k]*100).toFixed(0)}%`);
-    if(base.fee) rows.push(`수수료 ${(base.fee*100).toFixed(0)}%p`);
-    return rows.join(" · ");
-  };
+  const benefit=id=>hallBenefitsAt(id,hallFactor(id));
+  const max=id=>hallBenefitsAt(id,HOMESTAGE[homeMax(id)]);
   return head("지금 사는 곳",ic("castle")+" 거처",
     `${me.n} ${me.h} · ${h.stage} / ${homeMax()} 단계`)+`
   ${typeof pairHomeHTML==="function" ? pairHomeHTML() : ""}
@@ -331,20 +344,22 @@ VIEWS.hallv=()=>{
           <span class="tag" style="border-color:${me.c};color:${me.c}">
             혜택 ${(hallFactor(S.hall)*100).toFixed(0)}%</span></div>
         <div class="tiny muted" style="margin-bottom:8px">${me.d}</div>
-        <div class="tiny" style="color:var(--gold)">${benefit(S.hall)||"월세가 밀려 혜택이 멈췄습니다"}</div>
+        ${isDorm()?"":`<div class="tiny muted" style="margin-bottom:6px">구역 특화 효과 ${HALLMULT[S.hall]}배 · 기본 일세 ${rentMoney(RENT[S.hall])} 륜</div>`}
+        <div class="tiny" style="color:var(--gold)">${benefit(S.hall)||"일세가 밀려 혜택이 멈췄습니다"}</div>
         <div class="tiny muted" style="margin-top:4px">다 키웠을 때 — ${max(S.hall)}</div>
       </div>
       ${homeAct()}
     </div>
     <div class="card pad">
       <div class="sect-t">거주지 고르기</div>
-      <div class="tiny muted" style="margin-bottom:10px">옮기면 <b>꾸며 둔 것은 두고 갑니다</b>(단계 0으로).
-        기숙사는 월세가 없는 대신 천장이 100%, 구역은 월세를 내는 대신 120%까지 갑니다.</div>
+      <div class="tiny muted" style="margin-bottom:10px">숫자가 작은 구역일수록 일세와 특화 효과가 크게 올라갑니다.
+        옮기면 <b>꾸며 둔 것은 두고 갑니다</b>(단계 0으로).
+        기숙사는 무료이며, 구역은 계약 후 집 단계에 따라 특화 효과의 최대 120%를 받습니다.</div>
       ${HALLS.map(x=>`<div class="sub" style="margin-bottom:8px;${x.id===S.hall?"border-color:"+x.c:""}">
         <div class="spread"><div><b style="color:${x.c}">${x.n}</b>
           <span class="tiny muted">${x.h}</span>
           ${x.id===S.hall?'<span class="tag g" style="margin-left:6px">여기 삽니다</span>':""}</div>
-          <span class="tiny muted">${RENT[x.id]?`이레 ${nf(RENT[x.id])} 륜~ · 최대 120%`:"월세 없음 · 최대 100%"}</span></div>
+          <span class="tiny muted">${RENT[x.id]?`하루 ${rentMoney(RENT[x.id])} 륜~ · 특화 ${HALLMULT[x.id]}배`:"일세 없음 · 최대 100%"}</span></div>
         <div class="tiny muted" style="margin-top:3px">${max(x.id)}</div>
         ${x.id===S.hall?"":`<button class="btn sm" style="margin-top:6px" onclick="moveHall('${x.id}')">여기로 옮기기</button>`}
       </div>`).join("")}
@@ -357,17 +372,17 @@ function payRent(){
 }
 function payLocalRent(automatic){
   const h=homeS();
-  if(h.rentPending){ if(!automatic) toast("먼저 연결을 복구해 진행 중인 월세 납부를 확인해 주세요.","bad"); return; }
-  if(isDorm()){ toast("기숙사는 월세가 없습니다."); return; }
-  if(automatic && (!h.auto || !h.due || S.t<=h.due)) return;
+  if(h.rentPending){ if(!automatic) toast("먼저 연결을 복구해 진행 중인 일세 납부를 확인해 주세요.","bad"); return; }
+  if(isDorm()){ toast("기숙사는 일세가 없습니다."); return; }
+  if(automatic && (!h.auto || !h.due || S.t<h.due)) return;
   const r=rentOf();
   if(S.rin<r){ if(!automatic) toast("륜이 부족합니다.","bad"); return; }
   S.rin-=r;
   const base = (h.due && S.t<h.due) ? h.due : S.t;      // 밀렸으면 지금부터, 아니면 이어서
-  h.due = base + 7*1440;
-  if(automatic) pushNews(`[거처] 월세 ${nf(r)} 륜이 자동으로 빠져나갔습니다.`);
-  else toast(`월세 ${nf(r)} 륜을 냈습니다. 다음 납부까지 ${hhmm(h.due-S.t)}`,"good");
-  syncHall(); renderTop(); renderMain(); save();
+  h.due = base + RENT_PERIOD_MINUTES;
+  if(automatic) pushNews(`[거처] 일세 ${rentMoney(r)} 륜이 자동으로 빠져나갔습니다.`);
+  else toast(`일세 ${rentMoney(r)} 륜을 냈습니다. 다음 납부까지 ${hhmm(h.due-S.t)}`,"good");
+  syncHall(); renderTop(); renderNav(); renderMain(); save();
   if(typeof syncUp==="function") syncUp(true);
 }
 function toggleRentAuto(){ const h=homeS(); h.auto=!h.auto; renderMain(); save();
@@ -385,9 +400,10 @@ function buildHome(){
   pushNews(`[거처] ${homeOf(S.hall).n}의 ${isDorm()?"방":"집"}에 「${c.n}」이 생겼습니다.`);
   toast(`「${c.n}」 완성 · 연등 +${c.lotus} · 혜택 ${(HOMESTAGE[h.stage]*100).toFixed(0)}%`,"good");
   if(typeof achCheck==="function") achCheck();
-  syncHall(); renderTop(); renderMain(); save();
+  syncHall(); renderTop(); renderNav(); renderMain(); save();
+  if(typeof syncUp==="function") syncUp(true);
 }
-/* 자동 납부 — 창을 닫아 두어도 륜이 있으면 알아서 빠집니다 */
+/* 자동 납부 — 접속 중 또는 다음 접속 시 잔액이 있으면 갱신합니다. */
 const _stepRent=step;
 step=function(m){
   _stepRent(m);
@@ -396,7 +412,7 @@ step=function(m){
   if(isDorm()) return;
   const h=homeS();
   if(!h.due) return;
-  if(S.t>h.due && h.auto){
+  if(S.t>=h.due && h.auto){
     payLocalRent(true);
   }
 };
@@ -464,7 +480,8 @@ listMine=function(id){
 const _step4=step;
 step=function(m){ if(S&&S.made&&S.ing) syncHall(); _step4(m); };
 const _moveHall=moveHall;
-moveHall=function(id){ _moveHall(id); syncHall(); };
+moveHall=function(id){ const before=S.hall; _moveHall(id); syncHall();
+  if(before!==S.hall && typeof syncUp==="function") syncUp(true); };
 
 /* 내비 · 지도 */
 (()=>{ const g=NAVDEF.find(x=>x.id==="craft");
