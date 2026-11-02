@@ -17,6 +17,23 @@ create table if not exists accounts (
   seen_at    timestamptz default now()
 );
 
+-- ── 0-2. 페어 (전생의 죄업으로 묶인 두 사람) ─────────────────
+--  한 줄이 두 사람의 관계 하나입니다. 신청 → 수락/거절 로 흘러갑니다.
+create table if not exists pairs (
+  id         bigint generated always as identity primary key,
+  from_id    text not null,
+  from_name  text not null,
+  to_id      text not null,
+  to_name    text not null,
+  status     text default 'pending',   -- pending | accepted | declined | broken
+  nick_from  text default '',          -- 신청한 쪽이 부르는 애칭
+  nick_to    text default '',          -- 받은 쪽이 부르는 애칭
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists pairs_from_idx on pairs (from_id);
+create index if not exists pairs_to_idx   on pairs (to_id);
+
 -- ── 1. 학생 명부 ────────────────────────────────────────────
 create table if not exists students (
   id          text primary key,
@@ -113,6 +130,7 @@ create or replace view suggestions_public as
 
 -- ── 4. 접근 권한 ────────────────────────────────────────────
 alter table accounts     enable row level security;
+alter table pairs        enable row level security;
 alter table students     enable row level security;
 alter table rooms        enable row level security;
 alter table room_members enable row level security;
@@ -120,6 +138,7 @@ alter table suggestions  enable row level security;
 alter table messages     enable row level security;
 
 drop policy if exists p_accounts_all     on accounts;
+drop policy if exists p_pairs_all        on pairs;
 drop policy if exists p_students_all     on students;
 drop policy if exists p_rooms_all        on rooms;
 drop policy if exists p_room_members_all on room_members;
@@ -128,6 +147,7 @@ drop policy if exists p_sugg_insert      on suggestions;
 drop policy if exists p_sugg_update      on suggestions;
 
 create policy p_accounts_all     on accounts     for all using (true) with check (true);
+create policy p_pairs_all        on pairs        for all using (true) with check (true);
 create policy p_students_all     on students     for all using (true) with check (true);
 create policy p_rooms_all        on rooms        for all using (true) with check (true);
 create policy p_room_members_all on room_members for all using (true) with check (true);

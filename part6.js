@@ -328,6 +328,7 @@ VIEWS.roster=()=>{
         ${r.intro?`<div class="tiny muted" style="margin-top:6px">${esc(r.intro)}</div>`:""}
         <div class="tiny muted" style="margin-top:6px">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
         <div class="tiny muted" style="margin-top:3px;color:var(--s6)">${ago(r.updated_at)}</div>
+        ${pairBtn(r)}
       </div>`}).join("")}
   </div>`:`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
     아직 올라온 학생이 없습니다. 「지금 올리고 새로 고침」을 눌러 보세요.</div></div>`}`;
@@ -691,4 +692,190 @@ dmTo = function(n){
   const r=(S.sb.roster||[]).find(x=>x.name===n);
   if(r){ dmPick(r.id); toast(`${n} 학생과의 1:1 창을 열었습니다.`); }
   else { S.chatTab="1:1"; S.dmWith=null; renderChat(); toast("명부에 없는 학생입니다.","bad"); }
+};
+
+/* ═══════════════════════════════════════════════════
+   페어 — 전생의 하나의 죄업으로 묶인 두 사람
+
+   혼자 적어 두는 기록이 아니라, 신청하면 상대에게 가고
+   상대가 수락해야 맺어집니다. 한 사람에게 하나만 맺을 수 있습니다.
+   ═══════════════════════════════════════════════════ */
+/* 명부 카드에 붙는 페어 단추 */
+function pairBtn(r){
+  if(!sbOn() || !r || String(r.id)===String(S.sb.id)) return "";
+  const P=pairEnsure();
+  const paired = P.mine && String(pairOther(P.mine).id)===String(r.id);
+  const sent   = (P.sent||[]).some(x=>String(x.to_id)===String(r.id));
+  const got    = (P.inbox||[]).some(x=>String(x.from_id)===String(r.id));
+  let btn="";
+  if(paired)      btn=`<span class="tag g">페어</span>`;
+  else if(got)    btn=`<button class="btn sm pri pairbtn" onclick="go('rel')">페어 신청 받음 · 답하기</button>`;
+  else if(sent)   btn=`<span class="tiny muted">페어 신청함 · 답을 기다리는 중</span>`;
+  else if(P.mine) btn="";
+  else            btn=`<button class="btn sm ghost pairbtn" onclick="pairSend('${String(r.id).replace(/'/g,"")}')">페어 신청</button>`;
+  return btn?`<div class="row" style="margin-top:7px">${btn}</div>`:"";
+}
+function pairEnsure(){ if(!S.pair) S.pair={mine:null, inbox:[], sent:[], at:0}; return S.pair; }
+function pairIdKey(a,b){ return [String(a||""),String(b||"")].sort().join("|"); }
+function pairOther(row){ return String(row.from_id)===String(S.sb.id)
+  ? {id:row.to_id, name:row.to_name, nick:row.nick_from}
+  : {id:row.from_id, name:row.from_name, nick:row.nick_to}; }
+
+const PAIRMS=20000;
+let PAIRBUSY=false;
+function pairFetch(force){
+  const P=pairEnsure();
+  if(!sbOn() || PAIRBUSY) return Promise.resolve();
+  const now=Date.now();
+  if(!force && P.at && now-P.at<PAIRMS) return Promise.resolve();
+  P.at=now; PAIRBUSY=true;
+  const id=encodeURIComponent(S.sb.id);
+  return sbGet(`pairs?select=*&or=(from_id.eq.${id},to_id.eq.${id})&order=id.desc&limit=60`)
+    .then(rows=>{
+      rows=rows||[];
+      const before=(P.inbox||[]).length;
+      P.mine  = rows.find(r=>r.status==="accepted") || null;
+      P.inbox = rows.filter(r=>r.status==="pending" && String(r.to_id)===String(S.sb.id));
+      P.sent  = rows.filter(r=>r.status==="pending" && String(r.from_id)===String(S.sb.id));
+      if(P.inbox.length>before){
+        const n=P.inbox[0];
+        toast(`${esc(n.from_name||"누군가")} 님이 페어를 신청했습니다.`,"good");
+        pushNews(`[인연] ${n.from_name} 학생이 페어를 신청했습니다.`);
+      }
+      if(VIEW==="rel") renderMain(true);
+      renderChat();
+    })
+    .catch(()=>{})
+    .then(()=>{ PAIRBUSY=false; });
+}
+function pairSend(toId){
+  const P=pairEnsure();
+  if(!sbOn()){ toast("공유 기록을 연결해야 페어를 맺을 수 있습니다.","bad"); return; }
+  if(String(toId)===String(S.sb.id)){ toast("자기 자신과는 맺을 수 없습니다.","bad"); return; }
+  if(P.mine){ toast("이미 페어가 있습니다. 하나만 맺을 수 있습니다.","bad"); return; }
+  const r=(S.sb.roster||[]).find(x=>x.id===toId);
+  if(!r){ toast("명부에서 찾을 수 없습니다.","bad"); return; }
+  if(P.sent.some(x=>String(x.to_id)===String(toId))){ toast("이미 신청해 두었습니다. 상대의 답을 기다려 주세요."); return; }
+  pairBusyBtn(true);
+  sbSend("POST","pairs",[{from_id:S.sb.id, from_name:S.name, to_id:toId, to_name:r.name||"", status:"pending"}],"return=minimal")
+    .then(()=>{ toast(`${esc(r.name||"")} 님에게 페어를 신청했습니다. 수락하면 맺어집니다.`,"good");
+                return pairFetch(true); })
+    .catch(()=>toast("신청을 보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.","bad"))
+    .then(()=>{ pairBusyBtn(false); renderMain(); });
+}
+function pairBusyBtn(on){ document.querySelectorAll(".pairbtn").forEach(b=>b.disabled=!!on); }
+function pairAccept(id){
+  const P=pairEnsure();
+  if(P.mine){ toast("이미 페어가 있습니다. 먼저 지금 페어를 풀어 주세요.","bad"); return; }
+  pairBusyBtn(true);
+  /* 상대가 그 사이 다른 사람과 맺었을 수 있으니 한 번 더 확인합니다 */
+  const row=(P.inbox||[]).find(x=>x.id===id);
+  const other=row?encodeURIComponent(row.from_id):"";
+  sbGet(`pairs?select=id,status&or=(from_id.eq.${other},to_id.eq.${other})&status=eq.accepted&limit=1`)
+    .then(busy=>{
+      if(busy && busy.length){ toast("상대가 이미 다른 사람과 페어를 맺었습니다.","bad"); return pairDecline(id, true); }
+      return sbSend("PATCH",`pairs?id=eq.${id}`,{status:"accepted", updated_at:new Date().toISOString()},"return=minimal")
+        .then(()=>{ toast("페어를 맺었습니다. 둘만의 자리가 열렸습니다.","good");
+                    pushNews(`[인연] ${row?row.from_name:"누군가"} 학생과 페어를 맺었습니다.`);
+                    return pairFetch(true); });
+    })
+    .catch(()=>toast("수락하지 못했습니다. 잠시 뒤 다시 시도해 주세요.","bad"))
+    .then(()=>{ pairBusyBtn(false); renderMain(); });
+}
+function pairDecline(id, quiet){
+  pairBusyBtn(true);
+  return sbSend("PATCH",`pairs?id=eq.${id}`,{status:"declined", updated_at:new Date().toISOString()},"return=minimal")
+    .then(()=>{ if(!quiet) toast("신청을 거절했습니다."); return pairFetch(true); })
+    .catch(()=>{ if(!quiet) toast("처리하지 못했습니다.","bad"); })
+    .then(()=>{ pairBusyBtn(false); renderMain(); });
+}
+function pairCancel(id){
+  pairBusyBtn(true);
+  sbSend("PATCH",`pairs?id=eq.${id}`,{status:"broken", updated_at:new Date().toISOString()},"return=minimal")
+    .then(()=>{ toast("신청을 거두었습니다."); return pairFetch(true); })
+    .catch(()=>toast("처리하지 못했습니다.","bad"))
+    .then(()=>{ pairBusyBtn(false); renderMain(); });
+}
+function pairBreak(){
+  const P=pairEnsure(); if(!P.mine) return;
+  const o=pairOther(P.mine);
+  if(!confirm(`${o.name} 님과의 페어를 풀까요? 둘만의 자리도 닫힙니다.`)) return;
+  pairBusyBtn(true);
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{status:"broken", updated_at:new Date().toISOString()},"return=minimal")
+    .then(()=>{ toast("페어를 풀었습니다."); return pairFetch(true); })
+    .catch(()=>toast("처리하지 못했습니다.","bad"))
+    .then(()=>{ pairBusyBtn(false); renderMain(); });
+}
+function pairNick(){
+  const P=pairEnsure(); if(!P.mine) return;
+  const o=pairOther(P.mine);
+  const cur=o.nick||"";
+  const v=prompt(`${o.name} 님을 부르는 애칭 (8자까지, 비우면 지움)`, cur);
+  if(v===null) return;
+  const field = String(P.mine.from_id)===String(S.sb.id) ? "nick_from" : "nick_to";
+  const body={}; body[field]=v.trim().slice(0,8); body.updated_at=new Date().toISOString();
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,body,"return=minimal")
+    .then(()=>pairFetch(true)).then(()=>renderMain())
+    .catch(()=>toast("애칭을 바꾸지 못했습니다.","bad"));
+}
+
+/* 페어 채팅은 이름이 아니라 계정 아이디로 묶습니다 */
+const _chatScopePair=chatScope;
+chatScope=function(tab){
+  if(tab==="페어"){ const P=pairEnsure(); return P.mine ? pairIdKey(P.mine.from_id, P.mine.to_id) : ""; }
+  return _chatScopePair(tab);
+};
+
+/* 명부·채팅과 함께 주기적으로 받아 옵니다 */
+const _stepPair=step;
+step=function(m){ _stepPair(m); if(sbOn() && Math.random()<0.03) pairFetch(); };
+const _bootPair=boot;
+boot=function(){ _bootPair(); pairEnsure(); if(sbOn()) pairFetch(true); };
+
+/* ─── 인연·관계 화면에 페어 칸 ─── */
+function pairHTML(){
+  const P=pairEnsure();
+  if(!sbOn()) return `<div class="card pad" style="margin-bottom:14px">
+    <div class="sect-t">페어</div>
+    <div class="tiny muted">공유 기록을 연결하면 다른 러너에게 페어를 신청할 수 있습니다.</div></div>`;
+  const o=P.mine?pairOther(P.mine):null;
+  return `<div class="card pad" style="margin-bottom:14px${P.mine?";border-color:var(--gold2)":""}">
+    <div class="spread"><div class="sect-t" style="margin:0">페어</div>
+      <span class="tiny muted">한 사람에게 하나만</span></div>
+    ${o?`<div class="spread" style="margin-top:6px">
+        <div><b style="color:var(--gold)">${esc(o.name)}</b>
+          ${o.nick?`<span class="tiny muted">· ${esc(o.nick)}이라 부릅니다</span>`:""}
+          <div class="tiny muted">전생의 하나의 죄업으로 묶였습니다. 채팅 「페어」 탭이 열려 있습니다.</div></div>
+        <div class="row">
+          <button class="btn sm ghost pairbtn" onclick="pairNick()">애칭</button>
+          <button class="btn sm ghost pairbtn" onclick="pairBreak()">풀기</button></div></div>`
+     :`<div class="tiny muted" style="margin-top:4px">아직 페어가 없습니다. 학생 명부에서 신청해 보세요.</div>
+        <button class="btn sm" style="margin-top:8px" onclick="go('roster')">학생 명부로</button>`}
+    ${(P.inbox||[]).length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+      <div class="tiny" style="color:var(--gold);margin-bottom:6px">받은 신청 ${P.inbox.length}</div>
+      ${P.inbox.map(r=>`<div class="spread" style="padding:5px 0">
+        <span><b>${esc(r.from_name)}</b> <span class="tiny muted">님이 페어를 신청했습니다</span></span>
+        <div class="row"><button class="btn sm pri pairbtn" onclick="pairAccept(${r.id})">수락</button>
+          <button class="btn sm ghost pairbtn" onclick="pairDecline(${r.id})">거절</button></div></div>`).join("")}
+    </div>`:""}
+    ${(P.sent||[]).length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+      <div class="tiny muted" style="margin-bottom:6px">보낸 신청</div>
+      ${P.sent.map(r=>`<div class="spread" style="padding:5px 0">
+        <span class="tiny"><b>${esc(r.to_name)}</b> 님의 답을 기다리는 중</span>
+        <button class="btn sm ghost pairbtn" onclick="pairCancel(${r.id})">거두기</button></div>`).join("")}
+    </div>`:""}
+  </div>`;
+}
+const _relView=VIEWS.rel;
+VIEWS.rel=()=>{
+  const h=_relView();
+  return h.replace('<div class="grid g2">', pairHTML()+'<div class="grid g2">');
+};
+
+/* 학생증 등에 쓰는 페어 이름 */
+pairName = function(){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return "";
+  const o=pairOther(P.mine);
+  return o.nick ? `${o.name} (${o.nick})` : o.name;
 };

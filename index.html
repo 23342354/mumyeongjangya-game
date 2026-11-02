@@ -664,7 +664,7 @@ const HALLS = [
 ];
 
 /* 관계 종류 */
-const RELKIND = ["페어","단짝","친구","라이벌","앙숙","선배·후배","후배·선배","스승·제자","제자·스승","룸메이트","파트너","가족"];
+const RELKIND = ["단짝","친구","라이벌","앙숙","선배·후배","후배·선배","스승·제자","제자·스승","룸메이트","파트너","가족"];
 
 /* 명계력 */
 const MONTHS=["무명달","향월달","연화달","수월달","업화달","법륜달","홍등달","귀향달","재월달","명월달","심연달","종월달"];
@@ -881,6 +881,8 @@ function statCap(k){ return STATCAP[k][clamp(S.course-1,0,6)]; }
 function hallBonus(k){ return 0; }   /* 거주지 혜택은 part3의 HALLBONUS 표가 담당합니다 */
 /* 거주지 찾기 — 모르는 값이 들어와도 기숙사로 떨어뜨려 화면이 죽지 않게 합니다 */
 function homeOf(id){ return HALLS.find(h=>h.id===id) || HALLS[0]; }
+/* 페어 이름 — 공유 기록이 연결됐을 때만 값이 있습니다 (part6 에서 덮어씁니다) */
+function pairName(){ return ""; }
 function effStat(k){
   let v=stat(k)+hallBonus(k);
   const hpR=S.hp/100, snR=S.sn/100;
@@ -2465,8 +2467,8 @@ function useItem(id){
 VIEWS.rel=()=>{
   return head("사무전 교류",ic("candle")+" 인연 · 관계", `맺은 관계 ${S.rel.length} / 50`)+`
   <div class="card pad" style="margin-bottom:14px">
-    <div class="tiny muted">학생 정보창의 「관계 신청」으로 신청하고, 상대가 수락하면 두 학생의 정보창 「관계」 탭에 표시됩니다.
-    페어는 전생의 하나의 죄업으로 묶인 상대이므로, 한 사람에게 하나만 맺을 수 있습니다.</div>
+    <div class="tiny muted">아래 <b>페어</b>는 신청하면 상대에게 가고, 상대가 수락해야 맺어집니다. 한 사람에게 하나만 맺을 수 있습니다.<br>
+    그 밖의 <b>관계</b>는 내가 상대를 어떻게 여기는지 적어 두는 칸입니다. 상대의 화면에는 나타나지 않으니, 서로 맞춰 적어 주세요.</div>
   </div>
   <div class="grid g2">
     <div class="card pad">
@@ -2519,7 +2521,7 @@ function relSave(n, idx){
   if(idx!=null&&idx>=0) S.rel[idx]={n,a,b,nick};
   else { if(S.rel.find(r=>r.n===n)){ toast("이미 맺은 관계가 있습니다.","bad"); return; } S.rel.push({n,a,b,nick}); }
   if(!S.friends.find(f=>f.n===n)) addFriend(n);
-  closeModal(); renderMain(); toast(`${n} 님이 관계를 수락했습니다.`,"good"); save();
+  closeModal(); renderMain(); toast(`${n} 님과의 관계를 적어 두었습니다.`,"good"); save();
 }
 function relCut(i){ if(confirm("관계를 끊을까요?")){ S.rel.splice(i,1); renderMain(); save(); } }
 function dmTo(n){ S.chatTab="1:1"; addMsg("1:1",n,fmtChat(pick(CHATPOOL.RP)),"var(--violetL)"); renderChat(); toast(`${n}과(와)의 1:1 창을 열었습니다.`); }
@@ -2586,7 +2588,7 @@ function drawMe(){
           <div class="tiny" style="color:var(--gold)">${esc(S.title)}</div>
           <div style="font-size:21px;font-weight:600;color:${S.color}">${esc(S.name)}</div>
           <div class="tiny muted">${ic("lantern",12)} ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div>
-          <div class="tiny muted">${ic("beads",12)} ${S.rel.find(r=>r.a==="페어")?`페어 ${esc(S.rel.find(r=>r.a==="페어").n)}`:"페어 미정"}</div>
+          <div class="tiny muted">${ic("beads",12)} ${typeof pairName==="function"&&pairName()?`페어 ${esc(pairName())}`:"페어 미정"}</div>
           <div class="tiny muted">${esc(S.intro||"한 줄 소개가 없습니다")}</div>
         </div>
         <div style="text-align:right">
