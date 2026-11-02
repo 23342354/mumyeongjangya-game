@@ -93,7 +93,7 @@ function syncRooms(force){
 }
 
 /* ─── 방 만들기 · 참가 · 나가기 ─── */
-const RKIND={tower:{n:"석탑",e:"🗼"}, guard:{n:"결계의 탑",e:"🛡"}, quest:{n:"의뢰",e:"⚔"}};
+const RKIND={tower:{n:"석탑",e:ic("tower")}, guard:{n:"결계의 탑",e:ic("shield")}, quest:{n:"의뢰",e:ic("swords")}};
 function roomCreate(kind,stage,note){
   if(!sbOn()){ toast("먼저 공유 기록을 연결해 주세요.","bad"); return; }
   if(S.sb.myRoom){ toast("이미 들어가 있는 방이 있습니다.","bad"); return; }
@@ -200,11 +200,11 @@ function claimRoom(r){
 /* ═══════════ 화면 — 함께 가기 ═══════════ */
 let TKIND="tower";
 VIEWS.together=()=>{
-  if(!sbOn()) return head("합동 출발","🤝 함께 가기","공유 기록이 연결되지 않았습니다")+`
+  if(!sbOn()) return head("합동 출발",ic("handshake")+" 함께 가기","공유 기록이 연결되지 않았습니다")+`
     <div class="card pad" style="border-color:var(--gold2)">
       <div class="tiny muted" style="line-height:1.9">
         다른 학생과 함께 탑을 오르려면 모두의 기록이 한곳에 모여야 합니다.
-        설정(⚙)의 <b>공유 기록 연결</b>에 주소와 키를 넣어 주세요.
+        설정(${ic("gear",13)})의 <b>공유 기록 연결</b>에 주소와 키를 넣어 주세요.
         만드는 방법은 함께 드린 안내서 「공유 기록 연결하기」를 보시면 됩니다.</div>
       <button class="btn pri" style="margin-top:12px" onclick="sbConnect()">공유 기록 연결</button>
     </div>`;
@@ -227,7 +227,7 @@ VIEWS.together=()=>{
         ${[0,1,2,3].map(i=>{ const m=ms[i];
           return m?`<span class="buffchip" style="${m.student_id===S.sb.id?"border-color:var(--gold2)":""}">
             ${esc(m.name)} <span class="muted">${m.course}과정</span></span>`
-          :`<span class="buffchip" style="color:#5a5370">빈자리</span>`}).join("")}
+          :`<span class="buffchip" style="color:#66259e">빈자리</span>`}).join("")}
       </div>
       <div class="tiny" style="color:var(--jade)">합산 초당 피해 ${nf(dps)} · 합산 생명력 ${nf(hp)}</div>
       <div class="row" style="margin-top:8px">
@@ -239,7 +239,7 @@ VIEWS.together=()=>{
       </div></div>`;
   };
 
-  return head("합동 출발","🤝 함께 가기", `${sbStateChip()} · 열린 방 ${rooms.length}개`)+`
+  return head("합동 출발",ic("handshake")+" 함께 가기", `${sbStateChip()} · 열린 방 ${rooms.length}개`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:12px">
     <div class="spread"><div class="sect-t" style="margin:0">방 만들기</div>
@@ -254,7 +254,7 @@ VIEWS.together=()=>{
     </div>
   </div>
 
-  ${S.sb.state==="err"?`<div class="card pad" style="margin-bottom:12px;border-color:#8e2f27;padding:10px 14px">
+  ${S.sb.state==="err"?`<div class="card pad" style="margin-bottom:12px;border-color:#a31256;padding:10px 14px">
     <span class="tag r">연결 실패</span> <span class="tiny">${esc(S.sb.err)}</span>
     <button class="btn sm" style="margin-left:8px" onclick="sbConnect()">연결 고치기</button></div>`:""}
 
@@ -293,7 +293,7 @@ function sbStateChip(){
   return `<span class="tag j">연결됨</span>`;
 }
 VIEWS.roster=()=>{
-  if(!sbOn()) return head("사무전 학생 명부","👥 학생 명부","공유 기록이 연결되지 않았습니다")+`
+  if(!sbOn()) return head("사무전 학생 명부",ic("users")+" 학생 명부","공유 기록이 연결되지 않았습니다")+`
     <div class="card pad" style="border-color:var(--gold2)">
       <div class="tiny muted" style="line-height:1.9">연결하면 같은 커뮤니티의 러너들이 여기에 나타납니다.
       지금은 교류 화면에 보이는 학생들이 모두 NPC입니다.</div>
@@ -301,7 +301,7 @@ VIEWS.roster=()=>{
   const rows=S.sb.roster||[];
   const ago=t=>{ const d=(Date.now()-new Date(t).getTime())/60000;
     return d<2?"방금":d<60?Math.floor(d)+"분 전":d<1440?Math.floor(d/60)+"시간 전":Math.floor(d/1440)+"일 전"; };
-  return head("사무전 학생 명부","👥 학생 명부", `${sbStateChip()} · ${rows.length}명`)+`
+  return head("사무전 학생 명부",ic("users")+" 학생 명부", `${sbStateChip()} · ${rows.length}명`)+`
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
     <div class="tiny muted">같은 건의함·명부를 쓰는 러너들입니다. 내 기록은 몇 분마다 자동으로 올라갑니다.</div>
     <button class="btn sm" style="margin-top:8px" onclick="syncRoster(true);syncUp(true)">지금 올리고 새로 고침</button>
@@ -312,9 +312,9 @@ VIEWS.roster=()=>{
       const me=r.id===S.sb.id;
       return `<div class="sub" style="${me?"border-color:var(--gold2)":""}">
         <div class="row" style="align-items:flex-start;gap:10px">
-          ${r.av_img?`<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid ${hall?hall.c:"#caa548"};flex:none">
+          ${r.av_img?`<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid ${hall?hall.c:"#c92de5"};flex:none">
             <img src="${r.av_img}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
-            :`<div style="width:44px;height:44px;border-radius:50%;border:2px solid ${hall?hall.c:"#caa548"};display:grid;place-items:center;font-size:19px;background:#0f0c1c;flex:none">${esc(r.av||"🏮")}</div>`}
+            :`<div style="width:44px;height:44px;border-radius:50%;border:2px solid ${hall?hall.c:"#c92de5"};display:grid;place-items:center;background:#150820;flex:none">${ic(r.av||"lantern",22)}</div>`}
           <div style="flex:1;min-width:0">
             <div class="tiny" style="color:var(--gold)">${esc(r.title||"")}</div>
             <b>${esc(r.name)}</b> ${me?'<span class="tag g">나</span>':""}
@@ -325,7 +325,7 @@ VIEWS.roster=()=>{
         </div>
         ${r.intro?`<div class="tiny muted" style="margin-top:6px">${esc(r.intro)}</div>`:""}
         <div class="tiny muted" style="margin-top:6px">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
-        <div class="tiny muted" style="margin-top:3px;color:#5f586f">${ago(r.updated_at)}</div>
+        <div class="tiny muted" style="margin-top:3px;color:#5a4285">${ago(r.updated_at)}</div>
       </div>`}).join("")}
   </div>`:`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
     아직 올라온 학생이 없습니다. 「지금 올리고 새로 고침」을 눌러 보세요.</div></div>`}`;
@@ -342,13 +342,13 @@ VIEWS.rank=()=>{
     return `<div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">${title}</div>
         <span class="tiny muted">내 순위 ${myIdx>=0?myIdx+1:"—"}위 / ${R.length}명</span></div>
-      <table class="t">${rows.map((r,i)=>`<tr${r.id===S.sb.id?' style="background:#1b1733"':""}>
+      <table class="t">${rows.map((r,i)=>`<tr${r.id===S.sb.id?' style="background:#270e3c"':""}>
         <td style="width:26px">${i+1}</td>
         <td>${r.id===S.sb.id?`<b style="color:var(--gold)">${esc(r.name)}</b>`:esc(r.name)}
           <span class="tiny muted">${r.course}과정 · Lv ${r.lvl}</span></td>
         <td style="text-align:right">${nf(r[key])}${unit||""}</td></tr>`).join("")}</table></div>`;
   };
-  return head("사무전의 기록","🏅 랭킹", `${sbStateChip()} · 학생 ${R.length}명`)+`
+  return head("사무전의 기록",ic("medal")+" 랭킹", `${sbStateChip()} · 학생 ${R.length}명`)+`
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
     <div class="tiny muted">같은 커뮤니티 러너들의 실제 기록입니다. 물약·요리 같은 시간제 효과는 전투력에 포함되지 않습니다.</div>
     <button class="btn sm" style="margin-top:8px" onclick="syncUp(true);syncRoster(true)">내 기록 올리기</button>

@@ -6,18 +6,18 @@
    ═══════════════════════════════════════════════════ */
 
 const BCAT=[
- {k:"건의", c:"#caa548", d:"이렇게 바뀌면 좋겠다"},
- {k:"버그", c:"#d2563f", d:"잘못 동작하는 것"},
- {k:"문의", c:"#6f8fd0", d:"궁금한 것"},
- {k:"칭찬", c:"#5fae7a", d:"좋았던 것"},
- {k:"기타", c:"#9b93ac", d:"그 밖에"},
+ {k:"건의", c:"#c92de5", d:"이렇게 바뀌면 좋겠다"},
+ {k:"버그", c:"#e72a82", d:"잘못 동작하는 것"},
+ {k:"문의", c:"#5f97e0", d:"궁금한 것"},
+ {k:"칭찬", c:"#3ecf9a", d:"좋았던 것"},
+ {k:"기타", c:"#9a8ab5", d:"그 밖에"},
 ];
 const BSTATUS={
- "접수":  {c:"#9b93ac", d:"아직 읽지 않았습니다"},
- "확인":  {c:"#6f8fd0", d:"운영진이 읽었습니다"},
- "반영":  {c:"#5fae7a", d:"반영되었습니다"},
- "보류":  {c:"#d8a44a", d:"지금은 어렵습니다"},
- "답변":  {c:"#9d7fd0", d:"답변이 달렸습니다"},
+ "접수":  {c:"#9a8ab5", d:"아직 읽지 않았습니다"},
+ "확인":  {c:"#5f97e0", d:"운영진이 읽었습니다"},
+ "반영":  {c:"#3ecf9a", d:"반영되었습니다"},
+ "보류":  {c:"#cd3be7", d:"지금은 어렵습니다"},
+ "답변":  {c:"#ab71de", d:"답변이 달렸습니다"},
 };
 
 function ensureV5(){
@@ -180,7 +180,7 @@ VIEWS.board=()=>{
 
   const banner = boardOn()
     ? (B.state==="err"
-        ? `<div class="card pad" style="margin-bottom:12px;border-color:#8e2f27;padding:10px 14px">
+        ? `<div class="card pad" style="margin-bottom:12px;border-color:#a31256;padding:10px 14px">
              <span class="tag r">연결 실패</span> <span class="tiny">${esc(B.err)}</span>
              <div class="tiny muted" style="margin-top:4px">연결 주소가 맞는지, 웹 앱 접근 권한이 「모든 사용자」인지 확인해 주세요.</div>
              <button class="btn sm" style="margin-top:8px" onclick="boardFetch(true)">다시 시도</button>
@@ -194,7 +194,7 @@ VIEWS.board=()=>{
          <span class="tiny muted">아직 연결되지 않아 이 브라우저에만 쌓입니다. 운영진에게 전달되지 않습니다.</span>
          <button class="btn sm pri" style="float:right" onclick="boardConnect()">건의함 연결하기</button></div>`;
 
-  return head("사무전 민원 접수함","📮 건의함",
+  return head("사무전 민원 접수함",ic("mailbox")+" 건의함",
     `${boardOn()?"모두가 함께 보는 게시판":"내 브라우저에만 저장"}`)+`
   ${banner}
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">

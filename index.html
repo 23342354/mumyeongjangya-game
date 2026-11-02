@@ -16,53 +16,67 @@
 @font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-Medium.woff') format('woff');font-weight:500;font-display:swap}
 @font-face{font-family:'IbmPlexSans';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-07@1.0/IBMPlexSansKR-SemiBold.woff') format('woff');font-weight:600;font-display:swap}
 :root{
-  --ink:#0a0812; --ink2:#120f1e; --ink3:#1a1630; --ink4:#221d3c;
-  --line:#2f2949; --line2:#443b66;
-  --tx:#e9e3d6; --dim:#9b93ac; --dim2:#6f6885;
-  --gold:#caa548; --gold2:#8e7330;
-  --red:#d2563f; --red2:#8e2f27;
-  --jade:#4fb3a3; --violet:#9d7fd0; --blue:#6f8fd0;
-  --ok:#5fae7a; --warn:#d8a44a;
-  --glow:0 0 18px rgba(202,165,72,.18);
+  --ink:#0a0616; --ink2:#150a28; --ink3:#1f0f3a; --ink4:#2b1550;
+  --line:#3d1e6b; --line2:#5b2f94;
+  --tx:#ece4f9; --dim:#a797c4; --dim2:#7a6a9c;
+  --gold:#e05cf5; --gold2:#9a27b4;
+  --red:#ff4d9e; --red2:#a8215e;
+  --jade:#3fe0dc; --violet:#b07cff; --blue:#6aa6ff;
+  --ok:#43dfa4; --warn:#ffa94d;
+  --glow:0 0 18px rgba(224,92,245,.20);
+  --neon:0 0 10px rgba(224,92,245,.55);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+html{background:var(--ink)}
 body{
-  background:var(--ink); color:var(--tx);
+  background:transparent; color:var(--tx);
   font-family:'IBM Plex Sans KR','IbmPlexSans','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   font-size:14px; line-height:1.72; letter-spacing:-.003em;
   font-weight:400;
   -webkit-font-smoothing:antialiased;
-  background-image:
-    radial-gradient(1200px 500px at 15% -5%, rgba(157,127,208,.10), transparent 60%),
-    radial-gradient(900px 420px at 95% 0%, rgba(210,86,63,.09), transparent 60%);
-  background-attachment:fixed;
 }
+/* ── 배경 · 네온 명계 ──────────────── */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:url("bg.webp") center top/cover no-repeat;
+  filter:saturate(1.05);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(1100px 520px at 18% 0%, rgba(176,124,255,.16), transparent 62%),
+    radial-gradient(900px 460px at 92% 4%, rgba(255,77,158,.12), transparent 62%),
+    linear-gradient(180deg, rgba(10,6,22,.40) 0%, rgba(10,6,22,.68) 46%, rgba(8,4,18,.86) 100%);
+}
+/* ── 아이콘 ────────────────────────── */
+.ic{display:inline-block;vertical-align:-.16em;flex:none}
+button .ic, .res .ic, .buffchip .ic{vertical-align:-.2em}
 button{font-family:inherit; cursor:pointer}
 input,select,textarea{font-family:inherit}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#2c2745;border-radius:9px}
-::-webkit-scrollbar-thumb:hover{background:#3b3460}
+::-webkit-scrollbar-thumb{background:#381557;border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:#4d1c78}
 
 /* ── 상단바 ───────────────────────── */
-#topbar{position:sticky;top:0;z-index:60;background:linear-gradient(180deg,#120f1ef2,#0d0a18f2);
+#topbar{position:sticky;top:0;z-index:60;background:linear-gradient(180deg,#1a0b30e8,#0b0520e8);
   border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
 .tb1{display:flex;align-items:center;gap:14px;padding:9px 16px}
 .seal{width:34px;height:34px;border-radius:50%;border:1px solid var(--gold2);
   display:grid;place-items:center;font-size:15px;color:var(--gold);
-  background:radial-gradient(circle at 35% 30%,#2a2340,#15111f);box-shadow:var(--glow);flex:none}
+  background:radial-gradient(circle at 35% 30%,#341350,#190927);box-shadow:var(--glow);flex:none}
 .me-name{font-weight:600;font-size:15px;letter-spacing:-.01em}
 .me-sub{font-size:11.5px;color:var(--dim)}
 .res-wrap{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.res{display:flex;align-items:center;gap:6px;background:#17132a;border:1px solid var(--line);
+.res{display:flex;align-items:center;gap:6px;background:#200c31cc;border:1px solid var(--line);
   border-radius:7px;padding:4px 10px;font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .res b{font-weight:600;letter-spacing:0}
 .res .ri{font-size:12px;opacity:.95}
 .tb2{display:flex;align-items:center;gap:10px;padding:5px 16px 8px;font-size:11.5px;color:var(--dim);
-  border-top:1px solid #1d1932;flex-wrap:wrap}
-.buffchip{display:inline-flex;align-items:center;gap:5px;background:#17132a;border:1px solid #2b2545;
-  border-radius:20px;padding:2px 9px;color:#bdb4cd}
+  border-top:1px solid #270e3d;flex-wrap:wrap}
+.buffchip{display:inline-flex;align-items:center;gap:5px;background:#200c31;border:1px solid #371456;
+  border-radius:20px;padding:2px 9px;color:#c39ae7}
 .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 
 /* ── 레이아웃 ─────────────────────── */
@@ -75,7 +89,7 @@ input,select,textarea{font-family:inherit}
 }
 @media(max-width:780px){#app{grid-template-columns:1fr;padding:10px} #navcol{order:2} #chatcol{order:3}}
 
-.card{background:linear-gradient(180deg,#141127,#100d1e);border:1px solid var(--line);border-radius:10px}
+.card{background:linear-gradient(180deg,#1d0b2dd6,#160823e8);backdrop-filter:blur(3px);border:1px solid var(--line);border-radius:10px}
 .pad{padding:14px 16px}
 .sect-t{font-size:11px;color:var(--dim2);letter-spacing:.1em;margin:0 0 8px;font-weight:600}
 
@@ -83,42 +97,42 @@ input,select,textarea{font-family:inherit}
 .nav-g{margin-bottom:4px}
 .nav-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;color:var(--tx);
   font-size:13.5px;cursor:pointer;user-select:none}
-.nav-h:hover{background:#191430}
-.nav-h.on{background:linear-gradient(90deg,#241d42,#1a1630);color:#f1e9d8;box-shadow:inset 2px 0 0 var(--gold)}
-.nav-h .ic{width:16px;text-align:center;opacity:.85;font-size:13px}
+.nav-h:hover{background:#230d37}
+.nav-h.on{background:linear-gradient(90deg,#31124d,#240d39);color:#f0d4f5;box-shadow:inset 2px 0 0 var(--gold)}
+.nav-h .navic{width:17px;display:grid;place-items:center;opacity:.9;flex:none}
 .nav-h .ar{margin-left:auto;font-size:10px;color:var(--dim2)}
 .nav-sub{overflow:hidden;max-height:0;transition:max-height .22s ease;pointer-events:none}
 .nav-sub.open{max-height:300px;pointer-events:auto}
 .nav-i{padding:7px 12px 7px 38px;font-size:13px;color:var(--dim);border-radius:7px;cursor:pointer}
-.nav-i:hover{background:#17132c;color:var(--tx)}
-.nav-i.on{color:var(--gold);background:#1b1733}
+.nav-i:hover{background:#210c33;color:var(--tx)}
+.nav-i.on{color:var(--gold);background:#270e3c}
 .nav-i .bd{float:right;font-size:10px;color:var(--red);}
 
 /* 내 정보 패널 */
 .mini-stat{display:flex;justify-content:space-between;font-size:12.5px;padding:2.5px 0;color:var(--dim);font-variant-numeric:tabular-nums}
 .mini-stat b{color:var(--tx);font-weight:600}
-.bar{height:5px;background:#201b38;border-radius:4px;overflow:hidden}
+.bar{height:5px;background:#2b1043;border-radius:4px;overflow:hidden}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold2),var(--gold));border-radius:4px;transition:width .4s}
-.bar.hp>i{background:linear-gradient(90deg,#8e2f27,#d2563f)}
-.bar.sn>i{background:linear-gradient(90deg,#4a3b86,#9d7fd0)}
-.bar.jd>i{background:linear-gradient(90deg,#2f6f66,#4fb3a3)}
+.bar.hp>i{background:linear-gradient(90deg,#a31256,#e72a82)}
+.bar.sn>i{background:linear-gradient(90deg,#64259c,#ab71de)}
+.bar.jd>i{background:linear-gradient(90deg,#168688,#26d9dc)}
 
 /* 공통 UI */
-.btn{background:#1e1938;border:1px solid var(--line2);color:var(--tx);border-radius:7px;
+.btn{background:#2a0f42;border:1px solid var(--line2);color:var(--tx);border-radius:7px;
   padding:7px 14px;font-size:12.5px;transition:.15s}
-.btn:hover{background:#2a2350;border-color:#5b4f87}
-.btn.pri{background:linear-gradient(180deg,#b8902f,#8e6c20);border-color:#d8b35a;color:#1a1408;font-weight:600}
+.btn:hover{background:#3c165d;border-color:#6f29ad}
+.btn.pri{background:linear-gradient(180deg,#b319ce,#87139b);border-color:#d149e9;color:#1a041e;font-weight:600}
 .btn.pri:hover{filter:brightness(1.12)}
-.btn.red{background:#4a1f1c;border-color:#8e2f27;color:#f0c6bd}
-.btn.red:hover{background:#5e2723}
+.btn.red{background:#5c0a30;border-color:#a31256;color:#f0bdd5}
+.btn.red:hover{background:#740d3d}
 .btn.sm{padding:4px 10px;font-size:11.5px}
 .btn:disabled{opacity:.38;cursor:not-allowed}
 .btn.ghost{background:transparent}
 .tag{display:inline-block;font-size:10.5px;padding:1.5px 7px;border-radius:5px;border:1px solid var(--line2);color:var(--dim)}
 .tag.g{border-color:var(--gold2);color:var(--gold)}
 .tag.r{border-color:var(--red2);color:var(--red)}
-.tag.j{border-color:#2f6f66;color:var(--jade)}
-.tag.v{border-color:#4a3b86;color:var(--violet)}
+.tag.j{border-color:#168688;color:var(--jade)}
+.tag.v{border-color:#64259c;color:var(--violet)}
 h1.page{font-size:25px;margin:2px 0 3px;font-weight:600;letter-spacing:-.01em}
 .page-kicker{font-size:11px;color:var(--gold2);letter-spacing:.16em;font-weight:500}
 .page-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;
@@ -138,54 +152,54 @@ h1.page{font-size:25px;margin:2px 0 3px;font-weight:600;letter-spacing:-.01em}
 
 /* 광장 */
 .scene{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
-  height:236px;background:linear-gradient(180deg,#140f24 0%,#1d1430 45%,#241530 100%)}
-.scene svg{position:absolute;inset:0;width:100%;height:100%}
+  height:236px;background:linear-gradient(180deg,#1b0a29 0%,#230d37 45%,#240d38 100%)}
+.scene>svg:not(.ic){position:absolute;inset:0;width:100%;height:100%}
 .scene .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
   padding:10px 12px;font-size:11.5px}
-.sbadge{background:#0c0916cc;border:1px solid #37304f;border-radius:6px;padding:3px 9px;
-  display:inline-flex;gap:8px;align-items:center;color:#cdc5d8}
-.story-card{background:linear-gradient(135deg,#2a2033,#1d1728);border:1px solid #4a3b50;border-radius:10px;padding:14px 16px}
+.sbadge{background:#0e0620cc;border:1px solid #421867;border-radius:6px;padding:3px 9px;
+  display:inline-flex;gap:8px;align-items:center;color:#d1b0ed}
+.story-card{background:linear-gradient(135deg,#2b1043,#210c33);border:1px solid #481a71;border-radius:10px;padding:14px 16px}
 .pips{display:flex;gap:4px}
-.pips i{width:7px;height:7px;border-radius:50%;background:#4a4160;display:block}
+.pips i{width:7px;height:7px;border-radius:50%;background:#541f82;display:block}
 .pips i.on{background:var(--gold)}
 .ticker{overflow:hidden}
 .ticker-row{display:flex;gap:9px;align-items:center;font-size:12.5px;padding:4px 0}
 
 /* 과목/연구 카드 */
-.sub{background:#15122a;border:1px solid var(--line);border-radius:9px;padding:11px 12px;position:relative}
+.sub{background:#1f0b31d9;border:1px solid var(--line);border-radius:9px;padding:11px 12px;position:relative}
 .sub:hover{border-color:var(--line2)}
 .sub.active{border-color:var(--gold2);box-shadow:var(--glow)}
 .sub h4{margin:0 0 2px;font-size:14px;font-weight:600}
 .sub .lv{color:var(--gold);font-weight:600}
-.starbtn{position:absolute;right:10px;top:9px;background:none;border:0;color:#4a4160;font-size:14px;padding:0}
+.starbtn{position:absolute;right:10px;top:9px;background:none;border:0;color:#541f82;font-size:14px;padding:0}
 .starbtn.on{color:var(--gold)}
 .quote{border-left:2px solid var(--line2);padding:4px 0 4px 10px;color:var(--dim);font-size:11.5px;letter-spacing:.01em;line-height:1.8}
 
 /* 테이블 */
 table.t{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-table.t th,table.t td{padding:6px 8px;border-bottom:1px solid #221d38;text-align:left}
+table.t th,table.t td{padding:6px 8px;border-bottom:1px solid #2c1045;text-align:left}
 table.t th{color:var(--dim2);font-weight:600;font-size:11px;letter-spacing:.08em}
 
 /* 채팅 */
 #chatcol{position:sticky;top:96px}
 .chat-tabs{display:flex;gap:2px;padding:7px 8px 0;flex-wrap:wrap}
 .ctab{font-size:12px;padding:4px 9px;border-radius:6px 6px 0 0;color:var(--dim);cursor:pointer}
-.ctab.on{background:#1e1938;color:var(--gold)}
+.ctab.on{background:#2a0f42;color:var(--gold)}
 .chat-log{height:430px;overflow-y:auto;padding:8px 10px;font-size:12px;line-height:1.55;border-top:1px solid var(--line)}
 .cmsg{display:flex;gap:6px;padding:3px 0;align-items:flex-start}
-.ctime{color:#5a5370;font-size:10.5px;flex:none;width:34px;padding-top:1px}
+.ctime{color:#66259e;font-size:10.5px;flex:none;width:34px;padding-top:1px}
 .cname{font-weight:600;flex:none}
-.cbody em{color:#b9aed0;font-style:italic}
-.ctitle{font-size:9.5px;border:1px solid #3a3358;border-radius:4px;padding:0 4px;color:#8e86a6;flex:none}
+.cbody em{color:#c297e7;font-style:italic}
+.ctitle{font-size:9.5px;border:1px solid #481a71;border-radius:4px;padding:0 4px;color:#9a55d7;flex:none}
 .chat-in{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
-.chat-in input{flex:1;background:#120f22;border:1px solid var(--line);border-radius:6px;
+.chat-in input{flex:1;background:#1a0928;border:1px solid var(--line);border-radius:6px;
   color:var(--tx);padding:7px 9px;font-size:12px;outline:none}
 .chat-in input:focus{border-color:var(--line2)}
 
 /* 모달 */
-.mask{position:fixed;inset:0;background:#05040ad9;z-index:200;display:flex;align-items:center;
+.mask{position:fixed;inset:0;background:#09041499;z-index:200;display:flex;align-items:center;
   justify-content:center;padding:18px;backdrop-filter:blur(3px)}
-.modal{background:linear-gradient(180deg,#171329,#110e20);border:1px solid var(--line2);
+.modal{background:linear-gradient(180deg,#1f0b31,#180925);border:1px solid var(--line2);
   border-radius:12px;width:min(640px,100%);max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px #000a}
 .modal.wide{width:min(900px,100%)}
 .mhead{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
@@ -193,53 +207,53 @@ table.t th{color:var(--dim2);font-weight:600;font-size:11px;letter-spacing:.08em
 .mbody{padding:16px 18px}
 .tabs{display:flex;gap:4px;padding:0 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .tab{padding:7px 12px;font-size:12.5px;color:var(--dim);cursor:pointer;border-radius:7px 7px 0 0}
-.tab.on{background:#241d42;color:var(--gold)}
+.tab.on{background:#31124d;color:var(--gold)}
 label.f{display:block;font-size:11.5px;color:var(--dim);margin:10px 0 4px;letter-spacing:.06em}
-.inp{width:100%;background:#120f22;border:1px solid var(--line);border-radius:7px;color:var(--tx);
+.inp{width:100%;background:#1a0928;border:1px solid var(--line);border-radius:7px;color:var(--tx);
   padding:8px 10px;font-size:13px;outline:none}
 .inp:focus{border-color:var(--line2)}
 textarea.inp{min-height:76px;resize:vertical}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.seg button{background:#15122a;border:0;color:var(--dim);padding:5px 11px;font-size:11.5px}
-.seg button.on{background:#2d2550;color:var(--gold)}
+.seg button{background:#1f0b31;border:0;color:var(--dim);padding:5px 11px;font-size:11.5px}
+.seg button.on{background:#3d165f;color:var(--gold)}
 
 /* 학생증 */
 .idcard{border-radius:12px;padding:16px;border:1px solid var(--gold2);position:relative;overflow:hidden;
-  background:radial-gradient(500px 220px at 20% 0%,#2e2450,#171028)}
-.idcard .av{width:70px;height:70px;border-radius:50%;border:2px solid #d8b35a;display:grid;place-items:center;
-  font-size:27px;background:#0f0c1c;flex:none}
+  background:radial-gradient(500px 220px at 20% 0%,#3c165e,#1d0b2d)}
+.idcard .av{width:70px;height:70px;border-radius:50%;border:2px solid #d149e9;display:grid;place-items:center;
+  font-size:27px;background:#150820;flex:none}
 
 /* 토스트 */
 #toasts{position:fixed;right:16px;bottom:16px;z-index:400;display:flex;flex-direction:column;gap:8px;max-width:330px}
-.toast{background:#1c1734;border:1px solid var(--line2);border-left:3px solid var(--gold);
+.toast{background:#270e3d;border:1px solid var(--line2);border-left:3px solid var(--gold);
   border-radius:8px;padding:9px 13px;font-size:12.5px;box-shadow:0 10px 30px #000a;animation:tin .25s}
 .toast.bad{border-left-color:var(--red)} .toast.good{border-left-color:var(--ok)}
 @keyframes tin{from{opacity:0;transform:translateX(16px)}}
 
 /* 로그 */
-.log{background:#0d0b18;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+.log{background:#12071c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
   font-size:12.5px;max-height:300px;overflow-y:auto;line-height:1.75;font-variant-numeric:tabular-nums}
 .log .d{color:var(--gold)} .log .h{color:var(--red)} .log .s{color:var(--jade)}
-.log .turn{color:var(--dim2);border-top:1px dashed #2a2444;margin-top:6px;padding-top:5px;font-size:11px;letter-spacing:.1em}
+.log .turn{color:var(--dim2);border-top:1px dashed #361454;margin-top:6px;padding-top:5px;font-size:11px;letter-spacing:.1em}
 
 /* 지도 */
-.mapwrap{position:relative;background:linear-gradient(160deg,#141026,#0f0c1d);
+.mapwrap{position:relative;background:linear-gradient(160deg,#1c0a2c,#150821);
   border:1px solid var(--line);border-radius:10px;height:380px}
 .node{position:absolute;transform:translate(-50%,-50%);text-align:center;cursor:pointer;width:84px}
 .node .nd{width:26px;height:26px;margin:0 auto 3px;border-radius:7px;border:1px solid var(--line2);
-  background:#1b1733;display:grid;place-items:center;font-size:13px;transition:.15s}
-.node:hover .nd{border-color:var(--gold);background:#2b2350}
-.node.here .nd{border-color:var(--gold);background:#3a2f5e;box-shadow:var(--glow)}
+  background:#270e3c;display:grid;place-items:center;font-size:13px;transition:.15s}
+.node:hover .nd{border-color:var(--gold);background:#3c165d}
+.node.here .nd{border-color:var(--gold);background:#491b72;box-shadow:var(--glow)}
 .node.lock{opacity:.35;cursor:not-allowed}
 .node span{font-size:10.5px;color:var(--dim);display:block;line-height:1.3}
 .node.here span{color:var(--gold)}
 
 /* 미니게임 */
-.booth{background:#15122a;border:1px solid var(--line);border-radius:9px;padding:13px 14px}
+.booth{background:#1f0b31;border:1px solid var(--line);border-radius:9px;padding:13px 14px}
 .booth h4{margin:0 0 4px;font-size:14.5px}
-.target{position:relative;height:150px;background:radial-gradient(circle,#2a2140,#14101f);
+.target{position:relative;height:150px;background:radial-gradient(circle,#33124f,#180926);
   border:1px solid var(--line);border-radius:9px;overflow:hidden;cursor:crosshair}
-.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #4a3f6e}
+.ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #5a218c}
 .shot{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--red);
   transform:translate(-50%,-50%);box-shadow:0 0 8px var(--red)}
 .fish{font-size:22px;position:absolute;animation:sw 4s ease-in-out infinite}
@@ -258,17 +272,174 @@ textarea.inp{min-height:76px;resize:vertical}
 
 <script>
 "use strict";
+/* ════════════════════════════════════════════════════════
+   無明長夜 · 사무전 — 아이콘 세트
+   24×24 격자 · 선 굵기 1.7 · currentColor 로 색이 따라옵니다.
+   ════════════════════════════════════════════════════════ */
+const ICONS = {
+
+/* ── 길잡이 · 장소 ───────────────────────────────── */
+gate:      '<path d="M3 6h18"/><path d="M4.5 9h15"/><path d="M7 9v12"/><path d="M17 9v12"/><path d="M7 13h10"/><path d="M12 4v2"/>',
+tower:     '<path d="M12 2.5 15 6H9z"/><path d="M7 9.5h10L15.5 6h-7z"/><path d="M5 13.5h14L17 9.5H7z"/><path d="M8 13.5v7h8v-7"/><path d="M6 20.5h12"/><path d="M11 16.5h2"/>',
+shield:    '<path d="M12 21s7-3.2 7-9V5.8L12 3 5 5.8V12c0 5.8 7 9 7 9z"/><path d="M12 7.5v8"/>',
+store:     '<path d="M3.5 9.5h17V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3 9.5 4.6 4h14.8L21 9.5"/><path d="M8 9.5V4M16 9.5V4"/><path d="M9 21v-5h6v5"/>',
+castle:    '<path d="M4 21V9l2-1.5V4l2 1.5L10 4l2 1.5L14 4l2 1.5V7.5L20 9v12z"/><path d="M4 21h16"/><path d="M10.5 21v-5h3v5"/>',
+sofa:      '<path d="M4 11V7.5a1.5 1.5 0 0 1 3 0V11"/><path d="M17 11V7.5a1.5 1.5 0 0 1 3 0V11"/><path d="M3 11.5h18v5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5z"/><path d="M6 18v2M18 18v2"/><path d="M7 11.5V9h10v2.5"/>',
+bed:       '<path d="M3 20V8"/><path d="M3 12h15a3 3 0 0 1 3 3v5"/><path d="M3 17h18"/><circle cx="7.5" cy="9.5" r="1.8"/>',
+subway:    '<rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14"/><circle cx="8.5" cy="13" r=".9"/><circle cx="15.5" cy="13" r=".9"/><path d="M8 16 6 21M16 16l2 5"/><path d="M8 6.5h8"/>',
+map:       '<path d="M9 4 3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5z"/><path d="M9 4v14M15 6.5v14"/>',
+arena:     '<ellipse cx="12" cy="12" rx="9" ry="6.5"/><ellipse cx="12" cy="12" rx="4" ry="2.8"/><path d="M3 12v3.5c0 3.6 4 6 9 6s9-2.4 9-6V12"/>',
+mailbox:   '<path d="M4 9.5a4 4 0 0 1 8 0V19H4z"/><path d="M12 9.5h6a3 3 0 0 1 0 6h-6"/><path d="M15 19v-3.5"/><path d="M6.5 8.5h3"/><path d="M4 19h14"/>',
+bandage:   '<path d="M6.8 10.3 10.3 6.8a3.9 3.9 0 0 1 5.5 0l1.4 1.4a3.9 3.9 0 0 1 0 5.5l-3.5 3.5a3.9 3.9 0 0 1-5.5 0l-1.4-1.4a3.9 3.9 0 0 1 0-5.5z"/><path d="m9.5 9.5 5 5"/><circle cx="11" cy="13" r=".75" fill="currentColor" stroke="none"/><circle cx="13" cy="11" r=".75" fill="currentColor" stroke="none"/>',
+tea:       '<path d="M4.5 8h12v5a6 6 0 0 1-12 0z"/><path d="M16.5 9.5h1.8a2.2 2.2 0 0 1 0 4.4h-1.8"/><path d="M3 21h15"/><path d="M8 3.5c-.8 1 .8 1.8 0 2.8M12.5 3.5c-.8 1 .8 1.8 0 2.8"/>',
+
+/* ── 수업 · 기록 ─────────────────────────────────── */
+book:      '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"/><path d="M12 3v13"/>',
+bookClosed:'<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v18H6.5A1.5 1.5 0 0 1 5 19.5z"/><path d="M8.5 3v18"/><path d="M12 8h4"/>',
+scroll:    '<path d="M6.5 4H17a2 2 0 0 1 2 2v12a2 2 0 0 0 2 2H8.5a2 2 0 0 1-2-2z"/><path d="M6.5 4a2 2 0 0 0-2 2v2.5h2"/><path d="M10 9h5.5M10 12.5h5.5M10 16h3"/>',
+memo:      '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3h8L19 7.5v12a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5z"/><path d="M14 3v5h5"/><path d="M8.5 12.5h7M8.5 16h4.5"/>',
+chart:     '<path d="M4 20h16"/><path d="M4 20V4"/><rect x="7" y="12" width="3" height="8"/><rect x="12" y="8" width="3" height="12"/><rect x="17" y="14.5" width="3" height="5.5"/>',
+medal:     '<circle cx="12" cy="15" r="5.5"/><path d="M12 12.5 13 15h-2z" fill="currentColor"/><path d="m8 10-2.5-7M16 10l2.5-7"/><path d="M9 3h6"/>',
+candle:    '<path d="M12 2.5c1.3 1.6 2.1 2.7 2.1 3.9a2.1 2.1 0 0 1-4.2 0c0-1.2.8-2.3 2.1-3.9z"/><path d="M9 10.5h6V21H9z"/><path d="M12 8.5v2"/><path d="M7.5 21h9"/>',
+
+/* ── 전투 · 의뢰 ─────────────────────────────────── */
+sword:     '<path d="M14.5 17.5 3.5 6.5V3h3.5l11 11"/><path d="m13 19.5 6.5-6.5"/><path d="m16.5 16 4 4"/><path d="m19 21.5 2.5-2.5"/>',
+swords:    '<path d="M14.5 17.5 3.5 6.5V3h3.5l11 11"/><path d="m13 19.5 6.5-6.5"/><path d="M9.5 17.5 20.5 6.5V3H17L6 14"/><path d="m11 19.5-6.5-6.5"/>',
+target:    '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>',
+oni:       '<path d="M6 10.5C6 7 8.7 4.5 12 4.5S18 7 18 10.5c0 4-2.2 8.5-6 8.5s-6-4.5-6-8.5z"/><path d="M6.5 7.5 4 4.5l3.8 1.2M17.5 7.5 20 4.5l-3.8 1.2"/><path d="m9 11 1.8 1M15 11l-1.8 1"/><path d="M9.5 15.5h5"/>',
+bolt:      '<path d="M13.5 2.5 5 13.5h6L10.5 21.5 19 10.5h-6z"/>',
+chains:    '<rect x="2.5" y="9.5" width="7" height="5" rx="2.5"/><rect x="14.5" y="9.5" width="7" height="5" rx="2.5"/><path d="M9.5 12h5"/>',
+eye:       '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/>',
+hand:      '<path d="M8.5 11V4.8a1.4 1.4 0 0 1 2.8 0V10"/><path d="M11.3 9.8V3.6a1.4 1.4 0 0 1 2.8 0V10"/><path d="M14.1 10.4V5.4a1.4 1.4 0 0 1 2.8 0V14"/><path d="M8.5 11V8.4a1.4 1.4 0 0 0-2.8 0v5.2c0 4 2.6 7 6.3 7 3.4 0 5-2.4 5-6.6"/>',
+blood:     '<path d="M12 3s5.5 6.3 5.5 10a5.5 5.5 0 0 1-11 0C6.5 9.3 12 3 12 3z"/><path d="M9.5 14a2.5 2.5 0 0 0 2.5 2.5"/>',
+armPros:   '<path d="M8 3.5h4.5L14 8H9z"/><path d="M9 8h4.5l1 4.5H10z"/><path d="M10 12.5v4a4 4 0 0 0 8 0v-4"/><path d="M14.5 12.5H18"/><path d="M17.5 7.5H21v4h-3.5z"/><path d="M18 11.5v1"/>',
+doll:      '<path d="M12 3c2.9 0 4.8 2.5 4.8 5.6 0 1.4-.4 2.4-.4 3.4 0 3 1.1 5 1.1 6.8 0 1.4-2.5 2.2-5.5 2.2s-5.5-.8-5.5-2.2c0-1.8 1.1-3.8 1.1-6.8 0-1-.4-2-.4-3.4C7.2 5.5 9.1 3 12 3z"/><path d="M7.6 12.2c1.2.7 2.7 1.1 4.4 1.1s3.2-.4 4.4-1.1"/><circle cx="10.2" cy="8.4" r=".75" fill="currentColor" stroke="none"/><circle cx="13.8" cy="8.4" r=".75" fill="currentColor" stroke="none"/><path d="M12 16.5v2"/>',
+
+/* ── 생활 · 공방 ─────────────────────────────────── */
+pot:       '<path d="M9 3.5h6l-1 3.5h-4z"/><path d="M10 7c-2.8 1-4.5 3.6-4.5 7 0 4 2.9 7 6.5 7s6.5-3 6.5-7c0-3.4-1.7-6-4.5-7"/><path d="M7.5 13.5h9"/>',
+flask:     '<path d="M9.5 3v6.2L4.8 18A2.2 2.2 0 0 0 6.8 21.2h10.4A2.2 2.2 0 0 0 19.2 18L14.5 9.2V3"/><path d="M8 3h8"/><path d="M7.2 14.5h9.6"/>',
+testtube:  '<path d="M15.5 2.5 7 11a4.6 4.6 0 0 0 6.5 6.5l8.5-8.5z"/><path d="m13 5-2.5 2.5"/><path d="M9.5 13.5 4 19a2.1 2.1 0 1 0 3 3l5.5-5.5"/>',
+gear:      '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/>',
+basket:    '<path d="M3 10h18l-1.6 9.2a2 2 0 0 1-2 1.8H6.6a2 2 0 0 1-2-1.8z"/><path d="M7.5 10 12 3l4.5 7"/><path d="M9 14v3.5M15 14v3.5"/>',
+bag:       '<path d="M5 8.5h14L20.5 21h-17z"/><path d="M8.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5"/><path d="M8.5 12.5h7"/>',
+luggage:   '<rect x="4.5" y="7.5" width="15" height="12" rx="2"/><path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5"/><path d="M12 11v5"/><path d="M7 19.5v1.5M17 19.5v1.5"/>',
+tag:       '<path d="M3.5 11.5V4.5a1 1 0 0 1 1-1h7l9 9-8 8z"/><circle cx="8" cy="8" r="1.6"/>',
+coin:      '<circle cx="12" cy="12" r="8.5"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
+droplet:   '<path d="M12 3.2s6 6.6 6 10.3a6 6 0 0 1-12 0C6 9.8 12 3.2 12 3.2z"/><path d="M9 14a3 3 0 0 0 3 3"/>',
+orb:       '<circle cx="12" cy="10" r="6.5"/><path d="M8.6 7.6a4.5 4.5 0 0 1 3.4-1.6"/><path d="M8 16.5h8l1.5 4.5h-11z"/><path d="M7 21h10"/>',
+beads:     '<circle cx="12" cy="4.5" r="1.6"/><circle cx="17.5" cy="7.3" r="1.6"/><circle cx="19.5" cy="13" r="1.6"/><circle cx="17.5" cy="18.7" r="1.6"/><circle cx="12" cy="21.5" r="1.6"/><circle cx="6.5" cy="18.7" r="1.6"/><circle cx="4.5" cy="13" r="1.6"/><circle cx="6.5" cy="7.3" r="1.6"/>',
+bell:      '<path d="M6 16.5c1.2-1.2 1.5-2.6 1.5-4.5 0-3.3 1.6-6 4.5-6s4.5 2.7 4.5 6c0 1.9.3 3.3 1.5 4.5z"/><path d="M4.5 16.5h15"/><path d="M10 19.5a2 2 0 0 0 4 0"/><path d="M12 3.5V6"/>',
+camera:    '<rect x="2.5" y="7" width="19" height="13" rx="2.5"/><circle cx="12" cy="13.5" r="3.8"/><path d="M8.5 7l1.3-2.5h4.4L15.5 7"/><circle cx="18" cy="10.5" r=".8" fill="currentColor"/>',
+fan:       '<path d="M12 21 4 8.5A9.5 9.5 0 0 1 20 8.5z"/><path d="M12 21V4"/><path d="m7.4 6 2.3 14M16.6 6l-2.3 14"/>',
+windchime: '<path d="M7 3h10"/><path d="M8.5 3v3.5a3.5 3.5 0 0 0 7 0V3"/><path d="M12 10v5"/><path d="M9.5 15h5l-.8 3h-3.4z"/><path d="M12 18v3"/>',
+teddy:     '<circle cx="7" cy="6" r="2.3"/><circle cx="17" cy="6" r="2.3"/><circle cx="12" cy="13.5" r="6.5"/><path d="M10 12h.01M14 12h.01"/><circle cx="12" cy="15" r="1.8"/>',
+lantern:   '<path d="M9 3h6M12 3v2.2"/><path d="M7 8c0-1.5 2.2-2.6 5-2.6S17 6.5 17 8v5c0 1.5-2.2 2.6-5 2.6S7 14.5 7 13z"/><path d="M10.2 5.7v10.2M13.8 5.7v10.2"/><path d="M12 15.6V18"/><path d="M10 18h4l-.7 3h-2.6z"/>',
+confetti:  '<path d="M4 20.5 9 8l7 7z"/><path d="M14 3.5v2M19.5 6.5l-1.4 1.4M20.5 12h-2"/><path d="m11.5 5.5.7 1.4M17 17l1.4.7"/>',
+seedling:  '<path d="M12 21v-8"/><path d="M12 13C12 9 9 6.5 5 6.5c0 4 3 6.5 7 6.5z"/><path d="M12 13c0-3.4 2.6-5.5 6-5.5 0 3.4-2.6 5.5-6 5.5z"/><path d="M8.5 21h7"/>',
+fishing:   '<path d="M4 3v10a7 7 0 0 0 7 7"/><path d="M4 3h3"/><path d="M11 20h2.5"/><path d="M14.5 20c1.4 0 2.6-1 2.6-2.3S15.9 15.4 14.5 15.4"/><path d="M17 12.5c2.5 0 4.5 1.8 4.5 4s-2 4-4.5 4"/>',
+egg:       '<path d="M12 3c3.6 0 6.5 5.2 6.5 9.6A6.5 6.5 0 0 1 5.5 12.6C5.5 8.2 8.4 3 12 3z"/><path d="M9 13.5c0 1.7 1.3 3 3 3"/>',
+
+/* ── 사람 · 관계 ─────────────────────────────────── */
+user:      '<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.1 3.4-6.5 7.5-6.5s7.5 2.4 7.5 6.5"/>',
+users:     '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20.5c0-3.7 2.9-5.8 6.5-5.8s6.5 2.1 6.5 5.8"/><path d="M16 5a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.9c2.1.6 3.5 2.3 3.5 5.6"/>',
+handshake: '<path d="m8 13 2.5 2.5a1.6 1.6 0 0 0 2.3-2.3"/><path d="m11 10.5 3.5 3.5a1.6 1.6 0 0 0 2.3-2.3L12.5 7.5"/><path d="M12.5 7.5 10 10a2 2 0 0 1-2.8-2.8l3-3 3.3 1.3h3"/><path d="M16.5 5.5H21v8l-3 1"/><path d="M7 7.2 3 8v7l3 1"/>',
+smile:     '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.4 2.1 2.1 3.5 2.1s2.6-.7 3.5-2.1"/><path d="M9 9.5h.01M15 9.5h.01"/>',
+heart:     '<path d="M12 20s-7.5-4.6-7.5-9.6A4.4 4.4 0 0 1 12 7.6 4.4 4.4 0 0 1 19.5 10.4c0 5-7.5 9.6-7.5 9.6z"/>',
+
+/* ── 자연 · 날씨 ─────────────────────────────────── */
+moon:      '<path d="M19 14.5A8.5 8.5 0 0 1 9.5 5a8.5 8.5 0 1 0 9.5 9.5z"/>',
+moonDark:  '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" opacity=".45"/>',
+redMoon:   '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4" fill="currentColor" opacity=".5"/>',
+rain:      '<path d="M7 15.5a4.5 4.5 0 0 1 .6-9A6 6 0 0 1 19 8.4a3.6 3.6 0 0 1-.6 7.1z"/><path d="M8.5 18.5 7.5 21M12 18.5 11 21M15.5 18.5 14.5 21"/>',
+fog:       '<path d="M7.5 11.5a4 4 0 0 1 .5-8 5.5 5.5 0 0 1 10.3 2.2A3.3 3.3 0 0 1 17.8 12"/><path d="M4 15.5h16M6 19h12"/>',
+wave:      '<path d="M2.5 9.5c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 3-2"/><path d="M2.5 14.5c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 3-2"/><path d="M2.5 19.5c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 3-2"/>',
+fire:      '<path d="M12 21c-3.3 0-6-2.4-6-5.6 0-3.8 3.6-5 4.4-9.9.3-1.7 2.3-1.4 3 0C14.8 8.9 18 10 18 15.4c0 3.2-2.7 5.6-6 5.6z"/><path d="M12 21c-1.6 0-2.8-1.2-2.8-2.7 0-1.8 1.7-2.4 2.1-4.7.5 2.3 3.5 2.6 3.5 4.7 0 1.5-1.2 2.7-2.8 2.7z"/>',
+sparkle:   '<path d="M12 2.5 13.8 9 20 11l-6.2 2L12 19.5 10.2 13 4 11l6.2-2z"/>',
+sparkles:  '<path d="M11 3 12.4 7.6 17 9l-4.6 1.4L11 15l-1.4-4.6L5 9l4.6-1.4z"/><path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+star:      '<path d="m12 3 2.7 5.8 6.3.8-4.6 4.4 1.2 6.2L12 17.2l-5.6 3 1.2-6.2L3 9.6l6.3-.8z"/>',
+note:      '<path d="M9 18V5.5l11-2V16"/><ellipse cx="6.5" cy="18" rx="3" ry="2.4"/><ellipse cx="17.5" cy="16" rx="2.6" ry="2.2"/><path d="M9 9.5l11-2"/>',
+lotus:     '<path d="M12 20c-4.5 0-8-3-8-6.5 1.8-.8 3.4-.6 4.6.2"/><path d="M12 20c4.5 0 8-3 8-6.5-1.8-.8-3.4-.6-4.6.2"/><path d="M12 20c-2.6-1.8-4-4.3-4-6.8 0-2.6 1.6-5 4-6.7 2.4 1.7 4 4.1 4 6.7 0 2.5-1.4 5-4 6.8z"/>',
+herb:      '<path d="M12 21V9"/><path d="M12 13c-4.5 0-7-2.6-7-7 4.5 0 7 2.6 7 7z"/><path d="M12 10c0-3.8 2.2-6.2 6-6.2 0 3.8-2.2 6.2-6 6.2z"/>',
+flower:    '<circle cx="12" cy="12" r="2.4"/><path d="M12 9.6c0-2.6-1-4.1-2.6-4.1S7 7 8.8 9.6"/><path d="M14.4 12c2.6 0 4.1-1 4.1-2.6S17 7 14.4 8.8"/><path d="M12 14.4c0 2.6 1 4.1 2.6 4.1S17 17 15.2 14.4"/><path d="M9.6 12c-2.6 0-4.1 1-4.1 2.6S7 17 9.6 15.2"/>',
+hibiscus:  '<circle cx="12" cy="12" r="2.1"/><path d="M12 9.9c0-3 1.1-4.6 2.8-4.3 1.7.3 1.9 2.6-.9 4.9"/><path d="M14.1 12c3 0 4.6 1.1 4.3 2.8-.3 1.7-2.6 1.9-4.9-.9"/><path d="M9.9 12c-3 0-4.6 1.1-4.3 2.8.3 1.7 2.6 1.9 4.9-.9"/><path d="M12 9.9c0-3-1.1-4.6-2.8-4.3-1.7.3-1.9 2.6.9 4.9"/><path d="M12 14.1V21"/>',
+mushroom:  '<path d="M4 12a8 8 0 0 1 16 0z"/><path d="M9.5 12v6.5a2.5 2.5 0 0 0 5 0V12"/><circle cx="9" cy="8.5" r=".9" fill="currentColor"/><circle cx="15" cy="9" r=".9" fill="currentColor"/>',
+pumpkin:   '<path d="M12 6c-1.5-1.5-5.5-1.2-7 2.5-1.6 4 1.3 12.5 7 12.5s8.6-8.5 7-12.5C17.5 4.8 13.5 4.5 12 6z"/><path d="M12 6v15"/><path d="M8.5 7.5c-1 4-1 9 0 12M15.5 7.5c1 4 1 9 0 12"/><path d="M12 6c0-1.5 1-2.5 2.5-2.8"/>',
+crystal:   '<path d="m12 3 6 5.5-6 12.5L6 8.5z"/><path d="M6 8.5h12"/><path d="m12 3-3 5.5 3 12.5 3-12.5z"/>',
+lens:      '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2M18.4 5.6l-2 2M7.6 16.4l-2 2M18.4 18.4l-2-2M7.6 7.6l-2-2"/>',
+inkHeart:  '<path d="M12 20.5s-7.5-4.8-7.5-10A4.5 4.5 0 0 1 12 7.8a4.5 4.5 0 0 1 7.5 2.7c0 5.2-7.5 10-7.5 10z" fill="currentColor"/>',
+bubble:    '<circle cx="9" cy="13" r="5.5"/><circle cx="16.5" cy="8" r="3.5"/><circle cx="18" cy="16" r="2.4"/><path d="M6.5 11a3 3 0 0 1 2-2"/>',
+alcFire:   '<path d="M12 4.5 20 19H4z"/>',
+alcAir:    '<path d="M12 4.5 20 19H4z"/><path d="M7 15h10"/>',
+
+/* ── 생물 ───────────────────────────────────────── */
+fox:       '<path d="M3.5 4.5 7.5 10.5"/><path d="M20.5 4.5 16.5 10.5"/><path d="M7.5 10.5C7.5 8.3 9.5 6.8 12 6.8s4.5 1.5 4.5 3.7c0 2.3-.9 4-2.2 5.3L12 20.5l-2.3-4.7c-1.3-1.3-2.2-3-2.2-5.3z"/><path d="M3.5 4.5c2.3.2 3.6 1.9 4 6M20.5 4.5c-2.3.2-3.6 1.9-4 6"/><circle cx="10.1" cy="11.6" r=".8" fill="currentColor" stroke="none"/><circle cx="13.9" cy="11.6" r=".8" fill="currentColor" stroke="none"/><path d="M12 14.5v1.2"/>',
+dragon:    '<path d="M13.5 7.5c0-2.2 1.9-4 4.2-4 1.9 0 3.3 1.3 3.3 3 0 1.5-1.1 2.5-2.4 2.5-1 0-1.7-.6-1.7-1.4 0-.6.4-1 1-1"/><path d="M17.7 3.6c.6-1.4 1.6-2 3.3-2.1"/><path d="M13.5 7.5c-1 3.4-3.2 5.8-6.5 6.8"/><path d="M7 14.3C4.8 15 3.2 16.5 2.5 19"/><path d="M13.5 7.5c.6 3.8-.4 7-2.5 9.5"/><path d="M11 17c.4 2.4 1.9 4 4.3 4.6"/><path d="M15.3 21.6c2.2-.4 3.7-1.8 4.4-4"/><circle cx="18.4" cy="6.6" r=".8" fill="currentColor" stroke="none"/>',
+tiger:     '<path d="M5.5 7 7 10.5M18.5 7 17 10.5"/><path d="M6.5 11.5C6.5 8.4 9 6.5 12 6.5s5.5 1.9 5.5 5c0 4-2.4 7.5-5.5 7.5s-5.5-3.5-5.5-7.5z"/><circle cx="5.5" cy="6" r="1.8"/><circle cx="18.5" cy="6" r="1.8"/><path d="M9.8 11.5h.01M14.2 11.5h.01"/><path d="M12 14v1.5"/><path d="M9.5 16.5c1.6 1 3.4 1 5 0"/>',
+wolf:      '<path d="M4.5 4 7 10"/><path d="M19.5 4 17 10"/><path d="M7 11.2C7 8.4 9.2 6.6 12 6.6s5 1.8 5 4.6c0 1.7-.6 3.1-1.6 4.2L12 21.3l-3.4-5.9C7.6 14.3 7 12.9 7 11.2z"/><path d="M4.5 4c1.9.6 2.6 2.4 2.5 6M19.5 4c-1.9.6-2.6 2.4-2.5 6"/><circle cx="9.9" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="14.1" cy="12" r=".8" fill="currentColor" stroke="none"/><path d="M10.6 15.4h2.8l-1.4 1.6z"/>',
+rabbit:    '<path d="M8.5 9.5C8.5 5.5 7.8 3 9.3 3s2 2.5 2 6.5"/><path d="M15.5 9.5c0-4 .7-6.5-.8-6.5s-2 2.5-2 6.5"/><path d="M7.5 15a4.5 4.5 0 0 1 9 0c0 3.2-2 5.5-4.5 5.5S7.5 18.2 7.5 15z"/><path d="M10.5 14.5h.01M13.5 14.5h.01"/><path d="M12 16.5v1"/>',
+mouse:     '<circle cx="6.5" cy="8" r="2.8"/><circle cx="16.5" cy="7" r="2.3"/><path d="M8 12.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5-2.2 5-5 5-5-2.5-5-5z"/><path d="M11 13h.01"/><path d="M18 14c2 .5 3 1.8 3 3.5s-1.4 3-3 3"/>',
+hamster:   '<circle cx="7" cy="7.5" r="2.2"/><circle cx="17" cy="7.5" r="2.2"/><path d="M6 13.5C6 10.5 8.7 8.5 12 8.5s6 2 6 5-2.7 6-6 6-6-3-6-6z"/><path d="M9.8 13h.01M14.2 13h.01"/><path d="M12 15v1.2"/><path d="M6.5 14.5c-1.2.5-1.8 1.4-1.8 2.3M17.5 14.5c1.2.5 1.8 1.4 1.8 2.3"/>',
+chick:     '<circle cx="12" cy="10" r="5.5"/><path d="M17.5 10 21 11.5 17.5 13"/><circle cx="14" cy="8.5" r=".9" fill="currentColor"/><path d="M9 15.5v3.5M15 15.5v3.5"/><path d="M7.5 19h3M13.5 19h3"/>',
+crow:      '<path d="M4 15c0-4.5 3.4-8 8-8 3.2 0 5.5 1.5 6.5 3.5"/><path d="m18.5 10.5 3 1-3 1.3"/><path d="M4 15c1.5 2.5 4.4 4 8 4 2.4 0 4.4-.7 5.8-1.8"/><path d="M12 19v2.5M15 18.5l1 3"/><circle cx="15" cy="10" r=".8" fill="currentColor"/><path d="M8 12.5c1.5-1.5 4-1.5 5.5 0"/>',
+bat:       '<path d="M12 8.5c1.6 0 3 1.3 3 3L12 19l-3-7.5c0-1.7 1.4-3 3-3z"/><path d="M9 11.5C7 9 4.5 8 2.5 8.5c.5 2 .5 4 2 6"/><path d="M15 11.5c2-2.5 4.5-3.5 6.5-3-.5 2-.5 4-2 6"/><path d="M10 7.5 9 5M14 7.5 15 5"/>',
+lizard:    '<path d="M2.5 18.5c2.2 0 3.2-1.8 5.5-1.8 1.8 0 2.7 1.3 4.5 1.3 2.3 0 3.8-1.8 3.8-4 0-2-1.5-3.2-3.2-3.2"/><path d="M13.1 10.8c0-1.8 1.5-3.3 3.4-3.3 2 0 3.5 1.4 3.5 3.3 0 1.6-1.1 2.7-2.6 2.7"/><path d="M11.5 18c-1.4.6-2.3 1.7-2.6 3.2M8 17.2c-1.3.5-2.2 1.5-2.6 2.9"/><path d="M14.5 13.6c-1.3.5-2.1 1.5-2.4 2.8"/><circle cx="17.3" cy="10.2" r=".8" fill="currentColor" stroke="none"/>',
+turtle:    '<path d="M4.5 15.5a7.5 7.5 0 0 1 15 0z"/><path d="M12 8v7.5M8 9.5l1.5 6M16 9.5l-1.5 6"/><path d="M4.5 15.5c-1.5 0-2.5.8-2.5 2M19.5 15.5c1.5 0 2.5.8 2.5 2"/><path d="M6.5 15.5V18M17.5 15.5V18"/>',
+frog:      '<circle cx="8" cy="8.5" r="2.4"/><circle cx="16" cy="8.5" r="2.4"/><path d="M5.5 14c0-3 2.9-5 6.5-5s6.5 2 6.5 5-2.9 5.5-6.5 5.5S5.5 17 5.5 14z"/><path d="M9.5 15.5c1.6 1.2 3.4 1.2 5 0"/><path d="M5.5 15.5C4 16 3 17 3 18.5M18.5 15.5c1.5.5 2.5 1.5 2.5 3"/>',
+snake:     '<path d="M3.5 20.5c2.6 0 3.9-1.3 3.9-2.9S6.1 15 3.9 15c-1.6 0-2.4.9-2.4 1.9"/><path d="M7.4 17.6c0-2.4 2-3.6 4.6-3.6s4.6-1.2 4.6-3.6"/><path d="M16.6 10.4c0-2.4-1.9-4.4-4.3-4.4-1.9 0-3.2 1.2-3.2 2.7"/><path d="M16.6 10.4c2.2 0 3.9-1.7 3.9-3.9 0-1.4-.7-2.4-1.8-2.9"/><path d="m9.1 8.7-2-.9"/><circle cx="12.6" cy="7.4" r=".8" fill="currentColor" stroke="none"/>',
+fish:      '<path d="M3 12c2.5-3.5 6-5.5 9.5-5.5S19 8.5 21 12c-2 3.5-5 5.5-8.5 5.5S5.5 15.5 3 12z"/><path d="m3 12-.5 4.5L6 14.5"/><circle cx="16" cy="11" r=".9" fill="currentColor"/><path d="M11 8.5c1 2.5 1 4.5 0 7"/>',
+goldfish:  '<path d="M4 12c2.2-3.2 5.4-5 8.5-5s6.3 1.8 8.5 5c-2.2 3.2-5.4 5-8.5 5S6.2 15.2 4 12z"/><path d="M4 12c-1.5 1-2 2.8-2 5 2-.6 3.3-1.8 4-3.4"/><path d="M4 12c-1.5-1-2-2.8-2-5 2 .6 3.3 1.8 4 3.4"/><circle cx="16.5" cy="11" r="1" fill="currentColor"/>',
+jellyfish: '<path d="M4.5 12a7.5 7.5 0 0 1 15 0z"/><path d="M7 12c0 3-1 5-1 8M11 12c0 3.5-.5 6-.5 9M13 12c0 3.5.5 6 .5 9M17 12c0 3 1 5 1 8"/>',
+shrimp:    '<path d="M20 8c-5 0-9 1-9 5.5 0 3 2 5.5 5 5.5"/><path d="M11 13.5c-3 0-5.5-2-5.5-4.5"/><path d="M20 8c-1.5-2-3.5-2.5-5.5-2"/><path d="m5.5 9-3 1.5L5 13"/><path d="M16 19c2 0 3.5-1.2 4-3"/><circle cx="17.5" cy="8.8" r=".8" fill="currentColor"/>',
+spider:    '<circle cx="12" cy="13" r="3.5"/><circle cx="12" cy="8.5" r="2"/><path d="M9 11 5 8 3 9.5M9 14l-4 1-1.5 2.5M15 11l4-3 2 1.5M15 14l4 1 1.5 2.5"/>',
+
+/* ── 먹거리 ─────────────────────────────────────── */
+stew:      '<path d="M3.5 11h17c0 5-3.8 8.5-8.5 8.5S3.5 16 3.5 11z"/><path d="M2 11h20"/><path d="M8 7.5c-.8-1 .8-2 0-3M12 7.5c-.8-1 .8-2 0-3M16 7.5c-.8-1 .8-2 0-3"/>',
+noodle:    '<path d="M4 10h16c0 5.5-3.6 9.5-8 9.5S4 15.5 4 10z"/><path d="M8 10V5.5M11.5 10V4M15 10V5.5"/><path d="M14 13.5l6-5"/>',
+dango:     '<circle cx="12" cy="5.5" r="2.8"/><circle cx="12" cy="11.5" r="2.8"/><circle cx="12" cy="17.5" r="2.8"/><path d="M12 20.3V22.5"/>',
+dumpling:  '<path d="M4 15.5c0-4 3.6-7 8-7s8 3 8 7z"/><path d="M4 15.5h16c0 1.4-1 2.5-2.2 2.5H6.2C5 18 4 16.9 4 15.5z"/><path d="M7.5 15.5c0-2.5 1-4 2.3-4M12 15.5c0-3 .3-4.5 1.5-4.5M16.5 15.5c-.3-2-1.2-3.2-2.3-3.6"/>',
+mooncake:  '<rect x="4" y="7" width="16" height="10" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M4 12h3M17 12h3M12 7v2M12 15v2"/>',
+pudding:   '<path d="M6 9h12l-1.5 9.5a1.5 1.5 0 0 1-1.5 1.3H9a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M5 9c0-1.9 3.1-3.5 7-3.5S19 7.1 19 9"/><path d="M9.5 5.8c.5-1.5 1.3-2.3 2.5-2.3s2 .8 2.5 2.3"/>',
+candy:     '<ellipse cx="12" cy="12" rx="4.5" ry="3.8"/><path d="m7.5 12-4-2.5V15z"/><path d="m16.5 12 4-2.5V15z"/><path d="M10.5 10.5c1 1 1 2 0 3"/>',
+cookie:    '<circle cx="12" cy="12" r="8.5"/><circle cx="9.5" cy="9.5" r="1.1" fill="currentColor"/><circle cx="15" cy="11" r="1.1" fill="currentColor"/><circle cx="11" cy="15" r="1.1" fill="currentColor"/><circle cx="15.5" cy="15.5" r=".9" fill="currentColor"/>',
+ice:       '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l16 9M20 7.5l-16 9"/>',
+bean:      '<path d="M15.5 4.5c3 1.8 3.8 6 1.8 9.5s-6 5-9 3.2-3.8-6-1.8-9.5 6-5 9-3.2z"/><path d="M9.6 9.4c1.7-1.6 3.8-1.7 5.2.3"/><path d="M8.4 12.9c1.7-1.6 3.8-1.7 5.2.3"/>',
+apple:     '<path d="M12 8c-1-1.2-2.4-1.8-4-1.8-2.8 0-4.5 2.2-4.5 5.3 0 4.3 3 9 5.5 9 1.3 0 2-.6 3-.6s1.7.6 3 .6c2.5 0 5.5-4.7 5.5-9 0-3.1-1.7-5.3-4.5-5.3-1.6 0-3 .6-4 1.8z"/><path d="M12 8V4.5"/><path d="M12 5.5c2-.5 3-1.5 3.3-3-2 0-3 1-3.3 3z"/>',
+pie:       '<path d="M3 13h18c0 4-4 7-9 7s-9-3-9-7z"/><path d="M2 13c0-3.3 4.5-6 10-6s10 2.7 10 6"/><path d="M7 11c1-1.5 2.5-2.3 5-2.3s4 .8 5 2.3"/>',
+bento:     '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M12 6v12M3 12h9"/><circle cx="7.5" cy="9" r="1.2"/><path d="M15 9.5h4M15 12h4M15 14.5h4"/>',
+
+/* ── 표식 ───────────────────────────────────────── */
+check:     '<path d="m4.5 12.5 5 5 10-11"/>',
+hourglass: '<path d="M7 3h10M7 21h10"/><path d="M8 3v3.6c0 2 1.4 3.6 4 5.4 2.6-1.8 4-3.4 4-5.4V3"/><path d="M8 21v-3.6c0-2 1.4-3.6 4-5.4 2.6 1.8 4 3.4 4 5.4V21"/>',
+chevR:     '<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>',
+chevL:     '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
+chevD:     '<path d="m5.5 9.5 6.5 6.5 6.5-6.5"/>',
+robe:      '<path d="M9 3h6l3.5 2.5-2 3.5-1.5-1v13H8V8l-1.5 1-2-3.5z"/><path d="M9 3l3 3 3-3"/>',
+cap:       '<path d="M3 15.5c0-1 3-2 5.5-2.3M21 15.5c0-1-3-2-5.5-2.3"/><path d="M7.5 13.5C7.5 8.5 9.5 5 12 5s4.5 3.5 4.5 8.5"/><ellipse cx="12" cy="16" rx="9" ry="3"/>',
+};
+
+/* 아이콘 하나를 그립니다. ic("tower") · ic("tower", 18) */
+const ICLEGACY = {"\u{1F3EE}":"lantern","\u{1F56F}":"candle","\u{1F5E1}":"sword","\u{1F4FF}":"beads",
+  "\u{1F311}":"moonDark","\u{1F409}":"dragon","\u{1F98A}":"fox","\u{1FAB7}":"lotus","\u2694":"swords","\u{1F702}":"alcFire"};
+function ic(name, size, style){
+  const p = ICONS[name] || ICONS[ICLEGACY[name]];
+  if(!p) return "";
+  const s = size || 16;
+  return `<svg class="ic" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor"`
+       + ` stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`
+       + `${style?` style="${style}"`:""}>${p}</svg>`;
+}
+
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전   —  데이터
    ═══════════════════════════════════════════════════ */
 
 const NPC = {
-  염라:{n:"염라",h:"閻羅",role:"이사장",c:"#caa548",line:["홍홍홍 ♬","업은 재단하는 것이 아니라 관조하는 것이다.","차 한 잔 하고 가겠느냐."]},
-  강시:{n:"강시",h:"僵屍",role:"경비",c:"#6f8fd0",line:["그거뭐야?","통금은 오전 2시다. 늦지 마라.","분실물은 경비실에 있다."]},
-  여와:{n:"여와",h:"女媧",role:"매점 관리인",c:"#4fb3a3",line:["앗, 죄송해요! 방금 건 못 본 걸로…","이번 탕약은 배합을 조금 바꿔 봤어요.","파장 반응이 예상보다 격렬해서…"]},
-  양귀비:{n:"양귀비",h:"楊貴妃",role:"담임 교사",c:"#d2563f",line:["오늘은 무얼 할 거니.","파장이 조금 흔들리는구나.","거짓말은 금세 티가 난단다."]},
-  항아:{n:"항아",h:"姮娥",role:"전투 교관",c:"#9d7fd0",line:["허접~♡","의뢰서 몇 줄로 판단하지 마라.","한 바퀴 더. 아직 숨 붙어 있잖아?"]},
-  삼장:{n:"삼장",h:"三藏",role:"보건 교사",c:"#5fae7a",line:["상처부터 보자꾸나.","급할수록 호흡을 고르거라.","만두를 빚는 것도 훌륭한 수행이다."]},
+  염라:{n:"염라",h:"閻羅",role:"이사장",c:"#c92de5",line:["홍홍홍 ♬","업은 재단하는 것이 아니라 관조하는 것이다.","차 한 잔 하고 가겠느냐."]},
+  강시:{n:"강시",h:"僵屍",role:"경비",c:"#5f97e0",line:["그거뭐야?","통금은 오전 2시다. 늦지 마라.","분실물은 경비실에 있다."]},
+  여와:{n:"여와",h:"女媧",role:"매점 관리인",c:"#26d9dc",line:["앗, 죄송해요! 방금 건 못 본 걸로…","이번 탕약은 배합을 조금 바꿔 봤어요.","파장 반응이 예상보다 격렬해서…"]},
+  양귀비:{n:"양귀비",h:"楊貴妃",role:"담임 교사",c:"#e72a82",line:["오늘은 무얼 할 거니.","파장이 조금 흔들리는구나.","거짓말은 금세 티가 난단다."]},
+  항아:{n:"항아",h:"姮娥",role:"전투 교관",c:"#ab71de",line:["허접~♡","의뢰서 몇 줄로 판단하지 마라.","한 바퀴 더. 아직 숨 붙어 있잖아?"]},
+  삼장:{n:"삼장",h:"三藏",role:"보건 교사",c:"#3ecf9a",line:["상처부터 보자꾸나.","급할수록 호흡을 고르거라.","만두를 빚는 것도 훌륭한 수행이다."]},
 };
 
 /* 5스탯 */
@@ -353,36 +524,36 @@ const BOOKS = [
 
 /* 7구역 */
 const WARDS = [
- {id:1, n:"제1구역", t:"향 냄새 나는 죄", c:"#caa548", req:1,
+ {id:1, n:"제1구역", t:"향 냄새 나는 죄", c:"#c92de5", req:1,
   d:"사무전과 가장 가까운 생활권. 넓은 대로와 고급 주거지, 데슐랭 식당가와 사치품 상점이 몰려 있다.",
   ev:["데슐랭에 오른 식당 앞 대기열","파장에 따라 색이 변하는 장신구 가게","전자 천도 서비스를 광고하는 장례식장","값비싼 보석상 뒷문으로 드나드는 사람"]},
- {id:2, n:"제2구역", t:"벽이 많은 동네", c:"#9d7fd0", req:1,
+ {id:2, n:"제2구역", t:"벽이 많은 동네", c:"#ab71de", req:1,
   d:"그래피티와 홀로그램 벽. 화가와 음악가, 불법 방송 제작자들의 작업실이 밤새 불을 밝힌다.",
   ev:["감응 안료로 그린 벽화","옥상에서 피어오르는 거대한 연꽃 홀로그램","새벽까지 이어지는 골목 공연","안료 캡슐을 들고 뛰어가는 사내"]},
- {id:3, n:"제3구역", t:"몸을 바꾸는 거리", c:"#4fb3a3", req:2,
+ {id:3, n:"제3구역", t:"몸을 바꾸는 거리", c:"#26d9dc", req:2,
   d:"의체 제작자와 해커, 데이터 브로커의 구역. 석불 무릎 위에 공유기가 놓여 있다.",
   ev:["전자 목탁 소리가 울리는 방화벽 시연","무허가 의체 수리소의 호객","의안을 통해 시야를 훔치는 해커","천수관음 시스템 광고판"]},
- {id:4, n:"제4구역", t:"가짜 낮", c:"#d8a44a", req:2,
+ {id:4, n:"제4구역", t:"가짜 낮", c:"#cd3be7", req:2,
   d:"일륜日輪이 떠 있는 발전 구역. 명계에서 유일하게 빛이 있는 곳.",
   ev:["일륜광 집광판을 닦는 노동자","법륜을 본뜬 거대 터빈","지도에 없는 폐쇄 터널 입구","정전 경보가 울리는 변전 시설"]},
- {id:5, n:"제5구역", t:"게시판의 거리", c:"#d2563f", req:3,
+ {id:5, n:"제5구역", t:"게시판의 거리", c:"#e72a82", req:3,
   d:"용병들의 거리. 술집 벽에 현상수배서와 전적이 쉴 새 없이 바뀐다.",
   ev:["향을 꽂고 나가는 용병","현상금 중개소의 흥정","벽에 걸린 누군가의 무기","전적을 자랑하는 취객"]},
- {id:6, n:"제6구역", t:"바닥의 아래", c:"#8e8ba0", req:4,
+ {id:6, n:"제6구역", t:"바닥의 아래", c:"#8c72b9", req:4,
   d:"빈민촌이자 범죄 구역. 무료 급식소와 조직의 표식이 같은 골목에 있다.",
   ev:["무허가 진료소 앞의 줄","골목 입구에 새겨진 조직 표식","아이들에게 밥을 사 주는 조직원","십 년째 마지막 글자만 깜빡이는 간판"]},
- {id:7, n:"제7구역", t:"검은 바다", c:"#6f8fd0", req:5,
+ {id:7, n:"제7구역", t:"검은 바다", c:"#5f97e0", req:5,
   d:"도시가 끝나고 바다가 시작되는 곳. 명계에 아침은 없지만 여기엔 새벽 시장이 있다.",
   ev:["전자 범종이 울리는 새벽 부두","파장에 반응하는 갑각류 좌판","바다에 띄우는 전자 연등","출항을 포기하고 돌아서는 늙은 어부"]},
 ];
 
 /* 의뢰 등급 */
 const RANKS = [
- {r:"Ⅰ", n:"경미",  c:"#5fae7a", hp:[0,3],   sn:[0,2],  mul:1.0},
- {r:"Ⅱ", n:"주의",  c:"#4fb3a3", hp:[2,8],   sn:[1,5],  mul:1.35},
- {r:"Ⅲ", n:"위험",  c:"#d8a44a", hp:[6,18],  sn:[4,12], mul:1.85},
- {r:"Ⅳ", n:"고위험",c:"#d2563f", hp:[14,32], sn:[9,22], mul:2.6},
- {r:"Ⅴ", n:"재해",  c:"#9d7fd0", hp:[24,48], sn:[18,38],mul:3.8},
+ {r:"Ⅰ", n:"경미",  c:"#3ecf9a", hp:[0,3],   sn:[0,2],  mul:1.0},
+ {r:"Ⅱ", n:"주의",  c:"#26d9dc", hp:[2,8],   sn:[1,5],  mul:1.35},
+ {r:"Ⅲ", n:"위험",  c:"#cd3be7", hp:[6,18],  sn:[4,12], mul:1.85},
+ {r:"Ⅳ", n:"고위험",c:"#e72a82", hp:[14,32], sn:[9,22], mul:2.6},
+ {r:"Ⅴ", n:"재해",  c:"#ab71de", hp:[24,48], sn:[18,38],mul:3.8},
 ];
 
 /* 의뢰 제목 재료 */
@@ -407,10 +578,10 @@ const TITLES = ["첫 번째 밤","무명의 관조자","골목의 저승차사",
 
 /* 숙사 */
 const HALLS = [
- {id:"h1", n:"무명당", h:"無明堂", c:"#9d7fd0", b:"공격력 +12% · 생명력 +5%",            d:"창이 없는 동. 등불 하나로 밤을 난다."},
- {id:"h2", n:"법륜당", h:"法輪堂", c:"#caa548", b:"지식 획득 +15% · 수업 효율 +5%",       d:"수행실이 붙어 있어 밤에도 독경 소리가 샌다."},
- {id:"h3", n:"연화당", h:"蓮華堂", c:"#d2563f", b:"사역귀 파견 보상 +25% · 파장 재생 +10%", d:"안뜰에 연못이 있다. 사역귀를 풀어 두기 좋다."},
- {id:"h4", n:"수월당", h:"水月堂", c:"#4fb3a3", b:"륜 획득 +15% · 전리품 +10% · 수수료 낮음", d:"수면에 비친 달만 보이는 동. 가장 조용해 셈하기 좋다."},
+ {id:"h1", n:"무명당", h:"無明堂", c:"#ab71de", b:"공격력 +12% · 생명력 +5%",            d:"창이 없는 동. 등불 하나로 밤을 난다."},
+ {id:"h2", n:"법륜당", h:"法輪堂", c:"#c92de5", b:"지식 획득 +15% · 수업 효율 +5%",       d:"수행실이 붙어 있어 밤에도 독경 소리가 샌다."},
+ {id:"h3", n:"연화당", h:"蓮華堂", c:"#e72a82", b:"사역귀 파견 보상 +25% · 파장 재생 +10%", d:"안뜰에 연못이 있다. 사역귀를 풀어 두기 좋다."},
+ {id:"h4", n:"수월당", h:"水月堂", c:"#26d9dc", b:"륜 획득 +15% · 전리품 +10% · 수수료 낮음", d:"수면에 비친 달만 보이는 동. 가장 조용해 셈하기 좋다."},
 ];
 
 /* 관계 종류 */
@@ -419,12 +590,12 @@ const RELKIND = ["페어","단짝","친구","라이벌","앙숙","선배·후배
 /* 명계력 */
 const MONTHS=["무명달","향월달","연화달","수월달","업화달","법륜달","홍등달","귀향달","재월달","명월달","심연달","종월달"];
 const WEATHERS=[
- {n:"비",       i:"🌧", d:"지식 획득 +10%",    k:"know", v:.10},
- {n:"짙은 안개", i:"🌫", d:"의뢰 전리품 -10%",  k:"loot", v:-.10},
- {n:"홍월",     i:"🔴", d:"공명 위력 +12%",    k:"resP", v:.12},
- {n:"잿비",     i:"🌑", d:"이성 회복 -20%",    k:"rest", v:-.20},
- {n:"네온 역류", i:"⚡", d:"파장 재생 +15%",   k:"mana", v:.15},
- {n:"무풍",     i:"🌙", d:"수업 효율 +6%",     k:"study",v:.06},
+ {n:"비",       i:ic("rain"), d:"지식 획득 +10%",    k:"know", v:.10},
+ {n:"짙은 안개", i:ic("fog"), d:"의뢰 전리품 -10%",  k:"loot", v:-.10},
+ {n:"홍월",     i:ic("redMoon"), d:"공명 위력 +12%",    k:"resP", v:.12},
+ {n:"잿비",     i:ic("moonDark"), d:"이성 회복 -20%",    k:"rest", v:-.20},
+ {n:"네온 역류", i:ic("bolt"), d:"파장 재생 +15%",   k:"mana", v:.15},
+ {n:"무풍",     i:ic("moon"), d:"수업 효율 +6%",     k:"study",v:.06},
 ];
 
 /* 소식 */
@@ -443,13 +614,13 @@ const NEWSPOOL=[
 const FAKENAMES=["서하","윤경","이비","케렌","도윤","설아","하진","묘운","백로","연오","청하","시월","해랑","무영","소윤","라온","단우","제이","현서","유란"];
 
 /* 염라제 기념품 */
-const SOUVENIRS=[{id:"sv1",n:"염라 인형",e:"🧸"},{id:"sv2",n:"금붕어 자수 복주머니",e:"🪭"},{id:"sv3",n:"작은 유리 풍경",e:"🎐"}];
+const SOUVENIRS=[{id:"sv1",n:"염라 인형",e:ic("teddy")},{id:"sv2",n:"금붕어 자수 복주머니",e:ic("fan")},{id:"sv3",n:"작은 유리 풍경",e:ic("windchime")}];
 const BOOTHS=[
- {id:"shoot", n:"염라 님을 맞혀라", kw:"사격",   e:"🎯", d:"염라의 얼굴을 본뜬 과녁을 장난감 총으로 쏜다. 세 턴에 걸쳐 세 발씩."},
- {id:"fish",  n:"달빛 금붕어 건지기", kw:"금붕어", e:"🐠", d:"뜰채가 찢어지기 전에 멈출지, 한 번 더 건질지 판단한다."},
- {id:"food",  n:"사무전 야시장",     kw:"먹거리", e:"🏮", d:"음식과 함께 짧은 상황을 받는다."},
- {id:"photo", n:"오늘의 기념사진",   kw:"사진관", e:"📷", d:"소품과 촬영 상황을 뽑는다."},
- {id:"walk",  n:"축제 한 바퀴",     kw:"축제돌발",e:"🎊", d:"우연한 상황을 마주친다."},
+ {id:"shoot", n:"염라 님을 맞혀라", kw:"사격",   e:ic("target"), d:"염라의 얼굴을 본뜬 과녁을 장난감 총으로 쏜다. 세 턴에 걸쳐 세 발씩."},
+ {id:"fish",  n:"달빛 금붕어 건지기", kw:"금붕어", e:ic("goldfish"), d:"뜰채가 찢어지기 전에 멈출지, 한 번 더 건질지 판단한다."},
+ {id:"food",  n:"사무전 야시장",     kw:"먹거리", e:ic("lantern"), d:"음식과 함께 짧은 상황을 받는다."},
+ {id:"photo", n:"오늘의 기념사진",   kw:"사진관", e:ic("camera"), d:"소품과 촬영 상황을 뽑는다."},
+ {id:"walk",  n:"축제 한 바퀴",     kw:"축제돌발",e:ic("confetti"), d:"우연한 상황을 마주친다."},
 ];
 const FOODS=["달빛 탕후루","연등 모양 호떡","검은깨 경단","홍등 꼬치구이","연꽃 만두","잿물 식혜(이름만 그렇다)","월병","금붕어 모양 빵"];
 const FOODSIT=["한 입 베어 물자 생각보다 뜨거워 눈가가 붉어진다.","가게 주인이 덤을 하나 더 얹어 준다.","손에 들고 걷다 보니 어느새 절반이 사라졌다.","옆 사람이 한 입 달라는 눈빛을 보낸다.","너무 달아서 혀끝이 잠시 멍해진다.","생각보다 맛있어서 하나 더 살지 고민한다."];
@@ -471,7 +642,7 @@ function newState(){
   return {
     made:false, v:1,
     name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"",
-    hall:"h1", title:"첫 번째 별", intro:"", bio:"", color:"#caa548", av:"🏮", avImg:null, avSrc:"",
+    hall:"h1", title:"첫 번째 별", intro:"", bio:"", color:"#c92de5", av:"lantern", avImg:null, avSrc:"",
     base:{atk:3,def:3,agi:3,men:2,res:2},
     bonus:{atk:0,def:0,agi:0,men:0,res:0},
     course:1, exp:0, lvl:1,
@@ -503,6 +674,8 @@ function save(){ try{ S.lastReal=Date.now(); localStorage.setItem(SAVEKEY, JSON.
 function load(){
   try{ const r=localStorage.getItem(SAVEKEY); if(!r) return null;
        const o=JSON.parse(r); const base=newState();
+       if(o.av && ICLEGACY[o.av]) o.av=ICLEGACY[o.av];
+       if(o.av && !ICONS[o.av]) o.av="lantern";
        return Object.assign(base,o, {sub:Object.assign(base.sub,o.sub||{}), res:Object.assign(base.res,o.res||{})});
   }catch(e){ return null; }
 }
@@ -695,8 +868,8 @@ function offline(){
    ═══════════════════════════════════════════════════ */
 function renderTop(){
   const c=cal(), w=WEATHERS[S.weather];
-  const buffs=S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"#9d7fd0"}"></span>${esc(b.n)} <span style="color:#7d7592">${hhmm(b.left)}</span></span>`).join("");
-  const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:#7d7592">${hhmm(S.book.left)}</span></span>`:"";
+  const buffs=S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"#ab71de"}"></span>${esc(b.n)} <span style="color:#785aad">${hhmm(b.left)}</span></span>`).join("");
+  const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:#785aad">${hhmm(S.book.left)}</span></span>`:"";
   $("#topbar").innerHTML=`
   <div class="tb1">
     <div class="seal">輪</div>
@@ -706,21 +879,21 @@ function renderTop(){
       <div class="me-sub">${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
     </div>
     <div class="res-wrap">
-      <div class="res" title="파장 — 수행에 쓰입니다. 한도까지만 모입니다"><span class="ri">💧</span><b style="color:#6f8fd0">파장</b> ${nf(S.mana)}<span style="color:#6f6885">/${nf(maxMana())}</span></div>
-      <div class="res" title="륜 — 명계의 화폐"><span class="ri">🪙</span><b style="color:#caa548">륜</b> ${nf(S.rin)}</div>
-      <div class="res" title="지식 — 수업으로 모읍니다"><span class="ri">📖</span><b style="color:#4fb3a3">지식</b> ${nf(S.know)}</div>
-      <div class="res" title="사리 — 정화된 영혼의 결정"><span class="ri">🔮</span><b style="color:#9d7fd0">사리</b> ${nf(S.sari)}</div>
-      <div class="res" title="연등 — 축제와 업적"><span class="ri">🏮</span><b style="color:#d2563f">연등</b> ${nf(S.lotus)}</div>
-      <button class="btn sm ghost" onclick="openMe()" title="내 정보">👤</button>
-      <button class="btn sm ghost" onclick="openSettings()" title="설정">⚙</button>
+      <div class="res" title="파장 — 수행에 쓰입니다. 한도까지만 모입니다">${ic("droplet",13)}<b style="color:#5f97e0">파장</b> ${nf(S.mana)}<span style="color:#6c4e9f">/${nf(maxMana())}</span></div>
+      <div class="res" title="륜 — 명계의 화폐">${ic("coin",13)}<b style="color:#c92de5">륜</b> ${nf(S.rin)}</div>
+      <div class="res" title="지식 — 수업으로 모읍니다">${ic("book",13)}<b style="color:#26d9dc">지식</b> ${nf(S.know)}</div>
+      <div class="res" title="사리 — 정화된 영혼의 결정">${ic("orb",13)}<b style="color:#ab71de">사리</b> ${nf(S.sari)}</div>
+      <div class="res" title="연등 — 축제와 업적">${ic("lantern",13)}<b style="color:#e72a82">연등</b> ${nf(S.lotus)}</div>
+      <button class="btn sm ghost" onclick="openMe()" title="내 정보">${ic("user",15)}</button>
+      <button class="btn sm ghost" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
     </div>
   </div>
   <div class="tb2">
     <span>${c.date}</span>
-    <span>${w.i} ${w.n} <span style="color:#5f586f">· ${w.d}</span></span>
-    <span style="color:#5fae7a">● 접속 ${240+ (c.day%17)*3}명</span>
+    <span>${w.i} ${w.n} <span style="color:#5a4285">· ${w.d}</span></span>
+    <span style="color:#3ecf9a">● 접속 ${240+ (c.day%17)*3}명</span>
     ${bookChip}${buffs}
-    <span style="margin-left:auto;color:#5f586f">${c.str}</span>
+    <span style="margin-left:auto;color:#5a4285">${c.str}</span>
     <span class="seg">
       ${[1,4,16].map(v=>`<button class="${S.speed===v?"on":""}" onclick="setSpeed(${v})">×${v}</button>`).join("")}
     </span>
@@ -729,21 +902,21 @@ function renderTop(){
 function setSpeed(v){ S.speed=v; startTick(); renderTop(); }
 
 const NAVDEF=[
- {id:"plaza", ic:"⛩", n:"사무전 광장"},
- {id:"study", ic:"📖", n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
- {id:"war",   ic:"⚔", n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"duel",n:"대련"},{id:"tower",n:"석탑"}]},
- {id:"life",  ic:"🏮", n:"생활",      sub:[{id:"shop",n:"매점"},{id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
- {id:"soc",   ic:"🕯", n:"교류",      sub:[{id:"map",n:"지도"},{id:"rel",n:"인연·관계"}]},
- {id:"rec",   ic:"📜", n:"기록",      sub:[{id:"record",n:"기록·성적"}]},
+ {id:"plaza", ic:ic("gate"), n:"사무전 광장"},
+ {id:"study", ic:ic("book"), n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
+ {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"duel",n:"대련"},{id:"tower",n:"석탑"}]},
+ {id:"life",  ic:ic("lantern"), n:"생활",      sub:[{id:"shop",n:"매점"},{id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
+ {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"rel",n:"인연·관계"}]},
+ {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"record",n:"기록·성적"}]},
 ];
 function renderNav(){
   const hpP=S.hp, snP=S.sn;
   const navHTML=NAVDEF.map(g=>{
-    if(!g.sub) return `<div class="nav-g"><div class="nav-h ${VIEW===g.id?"on":""}" onclick="go('${g.id}')"><span class="ic">${g.ic}</span>${g.n}</div></div>`;
+    if(!g.sub) return `<div class="nav-g"><div class="nav-h ${VIEW===g.id?"on":""}" onclick="go('${g.id}')"><span class="navic">${g.ic}</span>${g.n}</div></div>`;
     const open=navOpen(g);
     return `<div class="nav-g">
       <div class="nav-h ${g.sub.some(s=>s.id===VIEW)?"on":""}" onclick="toggleNav('${g.id}')">
-        <span class="ic">${g.ic}</span>${g.n}<span class="ar">${open?"▾":"▸"}</span></div>
+        <span class="navic">${g.ic}</span>${g.n}<span class="ar">${ic(open?"chevD":"chevR",12)}</span></div>
       <div class="nav-sub ${open?"open":""}">
         ${g.sub.map(s=>`<div class="nav-i ${VIEW===s.id?"on":""}" onclick="go('${s.id}')">${s.n}${s.bd?`<span class="bd">${s.bd}</span>`:""}</div>`).join("")}
       </div></div>`;
@@ -770,9 +943,9 @@ function renderNav(){
     </div>
     <div class="tiny muted">수행 ${nf(S.exp)} / ${nf(expNeed())}</div>
     <div class="bar" style="margin:3px 0 8px"><i style="width:${(S.exp/expNeed()*100).toFixed(1)}%"></i></div>
-    <div class="tiny muted">체력 ${Math.floor(hpP)} / 100 ${hpP<=20?"<span style='color:#d2563f'>· 중상</span>":hpP<=50?"<span style='color:#d8a44a'>· 부상</span>":""}</div>
+    <div class="tiny muted">체력 ${Math.floor(hpP)} / 100 ${hpP<=20?"<span style='color:#e72a82'>· 중상</span>":hpP<=50?"<span style='color:#cd3be7'>· 부상</span>":""}</div>
     <div class="bar hp" style="margin:3px 0 6px"><i style="width:${hpP}%"></i></div>
-    <div class="tiny muted">이성 ${Math.floor(snP)} / 100 ${snP<=20?"<span style='color:#d2563f'>· 광기</span>":snP<=50?"<span style='color:#d8a44a'>· 동요</span>":""}</div>
+    <div class="tiny muted">이성 ${Math.floor(snP)} / 100 ${snP<=20?"<span style='color:#e72a82'>· 광기</span>":snP<=50?"<span style='color:#cd3be7'>· 동요</span>":""}</div>
     <div class="bar sn" style="margin:3px 0 10px"><i style="width:${snP}%"></i></div>
     <hr class="hr">
     <div class="mini-stat"><span>전투력</span><b style="color:var(--gold)">${nf(power())}</b></div>
@@ -810,7 +983,7 @@ function renderChat(){
       ${list.map(m=>`<div class="cmsg">
         <span class="ctime">${m.time}</span>
         ${m.title?`<span class="ctitle">${esc(m.title)}</span>`:""}
-        <span class="cname" style="color:${m.c||"#b9b1c6"}">${esc(m.who)}</span>
+        <span class="cname" style="color:${m.c||"#be92e5"}">${esc(m.who)}</span>
         <span class="cbody">${m.body}</span></div>`).join("")||`<div class="tiny muted" style="padding:14px 2px">아직 오간 말이 없습니다.</div>`}
     </div>
     <div class="chat-in">
@@ -848,7 +1021,7 @@ function npcChat(tab){
     const k=pick(Object.keys(NPC)), n=NPC[k];
     addMsg(tab, n.n, fmtChat(freshLine(n.line)), n.c, n.role);
   }else{
-    addMsg(tab, pick(FAKENAMES), fmtChat(freshLine(CHATPOOL[S.chatMode])), pick(["#b9b1c6","#9db8c9","#c9b1a8","#aec0a8","#c0a8c9"]), rnd(1,7)+"과정");
+    addMsg(tab, pick(FAKENAMES), fmtChat(freshLine(CHATPOOL[S.chatMode])), pick(["#be92e5","#7face7","#f180b5","#87e1c0","#bb8de4"]), rnd(1,7)+"과정");
   }
 }
 
@@ -876,19 +1049,19 @@ VIEWS.plaza=()=>{
   const cs=COURSES[S.course-1];
   const lessonBox=S.lesson?(()=>{
     const sb=SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx]);
-    return `<div class="spread" style="background:#15122a;border:1px solid var(--line);border-radius:8px;padding:10px 12px">
+    return `<div class="spread" style="background:#1f0b31;border:1px solid var(--line);border-radius:8px;padding:10px 12px">
       <div><span class="tag j">수업</span> <b>${sb.n}</b>
         <div class="tiny muted">${S.lesson.idx+1}교시 / ${S.lesson.plan.length} · ${hhmm(S.lesson.left)} 남음</div></div>
       <button class="btn sm" onclick="stopLesson()">중단</button></div>`;
   })():`<div class="tiny muted" style="padding:8px 2px">듣고 있는 수업이 없습니다. <a style="color:var(--gold);cursor:pointer" onclick="go('class')">강의실로 →</a></div>`;
 
   const festDays=Math.max(0, 6 - (c.day%10));
-  return head("명계력 "+c.y+"년 "+c.m+" "+c.dd+"일","⛩ 사무전 광장",
+  return head("명계력 "+c.y+"년 "+c.m+" "+c.dd+"일",ic("gate")+" 사무전 광장",
     `${HALLS.find(h=>h.id===S.hall).n} · ${S.course}과정`)+`
 
   <div class="story-card" style="margin-bottom:12px">
     <div class="spread">
-      <div class="tiny" style="color:#b9aed0">${S.course}과정 이야기 · ${cs.n}</div>
+      <div class="tiny" style="color:#c297e7">${S.course}과정 이야기 · ${cs.n}</div>
       <div class="pips">${[0,1,2,3,4,5].map(i=>`<i class="${i<S.course?"on":""}"></i>`).join("")}</div>
     </div>
     <h3 style="margin:6px 0 4px;font-size:18px">두 번째 음절</h3>
@@ -914,10 +1087,10 @@ VIEWS.plaza=()=>{
     <div class="ov">
       <div class="spread">
         <span class="sbadge">${c.str} · ${w.i} ${w.n}</span>
-        <span class="sbadge" style="color:var(--gold)">✦ ${w.d}</span>
+        <span class="sbadge" style="color:var(--gold)">${ic("sparkle",12)} ${w.d}</span>
       </div>
       <div class="spread">
-        <span class="sbadge">통행패 ${S.pass}/3 <span style="color:#6f6885">· 다음 ${hhmm(S.passNext)}</span></span>
+        <span class="sbadge">통행패 ${S.pass}/3 <span style="color:#6c4e9f">· 다음 ${hhmm(S.passNext)}</span></span>
         <span class="sbadge" style="cursor:pointer" onclick="go('map')">지도 열기 ›</span>
       </div>
     </div>
@@ -960,47 +1133,47 @@ function sceneSVG(){
   return `<svg viewBox="0 0 900 236" preserveAspectRatio="xMidYMax slice">
     <defs>
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#140f24"/><stop offset=".6" stop-color="#241733"/><stop offset="1" stop-color="#2d1830"/>
+        <stop offset="0" stop-color="#1b0a29"/><stop offset=".6" stop-color="#270e3c"/><stop offset="1" stop-color="#250e3a"/>
       </linearGradient>
-      <radialGradient id="moon"><stop offset="0" stop-color="#e05a47"/><stop offset="1" stop-color="#8e2f27" stop-opacity="0"/></radialGradient>
+      <radialGradient id="moon"><stop offset="0" stop-color="#ea3d8e"/><stop offset="1" stop-color="#a31256" stop-opacity="0"/></radialGradient>
     </defs>
     <rect width="900" height="236" fill="url(#sky)"/>
     <circle cx="730" cy="52" r="58" fill="url(#moon)" opacity=".75"/>
-    <circle cx="730" cy="52" r="20" fill="#e8705c" opacity=".9"/>
+    <circle cx="730" cy="52" r="20" fill="#ec589d" opacity=".9"/>
     <!-- 원경 빌딩 -->
-    <g fill="#190f28" opacity=".85">
+    <g fill="#1d0a2d" opacity=".85">
       ${Array.from({length:22},(_,i)=>{const x=i*42-10,h=28+((i*37)%70);return `<rect x="${x}" y="${150-h}" width="34" height="${h+90}"/>`}).join("")}
     </g>
     <!-- 석탑 -->
     <g transform="translate(450,0)">
-      ${[0,1,2,3,4].map(i=>{const y=60+i*22,wd=28+i*13;return `<rect x="${-wd/2}" y="${y}" width="${wd}" height="14" fill="#241a36" stroke="#3a2b50"/>
-        <rect x="${-wd/2-7}" y="${y-4}" width="${wd+14}" height="5" fill="#2e2143"/>`}).join("")}
-      <rect x="-5" y="34" width="10" height="28" fill="#241a36"/>
-      <circle cx="0" cy="30" r="6" fill="#caa548" opacity=".9"/>
-      <circle cx="0" cy="30" r="12" fill="#caa548" opacity=".16"/>
+      ${[0,1,2,3,4].map(i=>{const y=60+i*22,wd=28+i*13;return `<rect x="${-wd/2}" y="${y}" width="${wd}" height="14" fill="#2a0f41" stroke="#401764"/>
+        <rect x="${-wd/2-7}" y="${y-4}" width="${wd+14}" height="5" fill="#341351"/>`}).join("")}
+      <rect x="-5" y="34" width="10" height="28" fill="#2a0f41"/>
+      <circle cx="0" cy="30" r="6" fill="#c92de5" opacity=".9"/>
+      <circle cx="0" cy="30" r="12" fill="#c92de5" opacity=".16"/>
     </g>
     <!-- 본전 지붕 -->
     <g>
-      <path d="M150 196 L300 196 L320 178 L130 178 Z" fill="#2a1a2e"/>
-      <path d="M120 178 Q225 150 330 178 Z" fill="#3a2030" stroke="#55303f"/>
-      <path d="M560 196 L790 196 L812 176 L538 176 Z" fill="#2a1a2e"/>
-      <path d="M528 176 Q675 144 822 176 Z" fill="#3a2030" stroke="#55303f"/>
-      <rect x="330" y="186" width="210" height="50" fill="#241a2c"/>
-      <path d="M318 186 Q435 152 552 186 Z" fill="#43243a" stroke="#64384c"/>
+      <path d="M150 196 L300 196 L320 178 L130 178 Z" fill="#250e3a"/>
+      <path d="M120 178 Q225 150 330 178 Z" fill="#4d0d3a" stroke="#721356"/>
+      <path d="M560 196 L790 196 L812 176 L538 176 Z" fill="#250e3a"/>
+      <path d="M528 176 Q675 144 822 176 Z" fill="#4d0d3a" stroke="#721356"/>
+      <rect x="330" y="186" width="210" height="50" fill="#240d39"/>
+      <path d="M318 186 Q435 152 552 186 Z" fill="#590e42" stroke="#861664"/>
     </g>
     <!-- 홍등 -->
     ${[180,230,280,600,650,700,750].map((x,i)=>`
-      <g opacity=".95"><line x1="${x}" y1="178" x2="${x}" y2="190" stroke="#4a3550"/>
-      <ellipse cx="${x}" cy="196" rx="7" ry="9" fill="#d2563f" opacity=".92"/>
-      <ellipse cx="${x}" cy="196" rx="16" ry="18" fill="#d2563f" opacity=".12"/></g>`).join("")}
+      <g opacity=".95"><line x1="${x}" y1="178" x2="${x}" y2="190" stroke="#45196c"/>
+      <ellipse cx="${x}" cy="196" rx="7" ry="9" fill="#e72a82" opacity=".92"/>
+      <ellipse cx="${x}" cy="196" rx="16" ry="18" fill="#e72a82" opacity=".12"/></g>`).join("")}
     <!-- 기둥/창문 네온 -->
     ${Array.from({length:30},(_,i)=>{const x=20+i*30,y=205+((i*13)%22);
-      const col=["#4fb3a3","#caa548","#9d7fd0","#d2563f"][i%4];
+      const col=["#26d9dc","#c92de5","#ab71de","#e72a82"][i%4];
       return `<rect x="${x}" y="${y}" width="3" height="3" fill="${col}" opacity=".8"/>`}).join("")}
-    <rect y="214" width="900" height="22" fill="#120b1a"/>
+    <rect y="214" width="900" height="22" fill="#13071e"/>
     ${rain?Array.from({length:70},(_,i)=>{const x=(i*53)%900,y=(i*37)%200;
-      return `<line x1="${x}" y1="${y}" x2="${x-5}" y2="${y+16}" stroke="#8e86a6" stroke-width="1" opacity=".22"/>`}).join(""):""}
-    ${w.n==="짙은 안개"?`<rect width="900" height="236" fill="#9b93ac" opacity=".10"/>`:""}
+      return `<line x1="${x}" y1="${y}" x2="${x-5}" y2="${y+16}" stroke="#9a55d7" stroke-width="1" opacity=".22"/>`}).join(""):""}
+    ${w.n==="짙은 안개"?`<rect width="900" height="236" fill="#9a8ab5" opacity=".10"/>`:""}
   </svg>`;
 }
 
@@ -1032,10 +1205,10 @@ VIEWS.class=()=>{
     const capped=stat(s.st)>=statCap(s.st);
     const isExam=COURSES[S.course-1].subs.includes(s.id);
     return `<div class="sub ${cur&&cur.id===s.id?"active":""}">
-      <button class="starbtn ${d.fav?"on":""}" onclick="favSub('${s.id}')">★</button>
+      <button class="starbtn ${d.fav?"on":""}" title="${d.fav?"즐겨찾기 해제":"즐겨찾기"}" onclick="favSub('${s.id}')">${ic("star",15)}</button>
       <h4>${s.n} <span class="lv">${d.lv}</span> ${isExam?'<span class="tag g">시험</span>':""}</h4>
       <div class="tiny muted">${NPC[s.pf].n} 교사 · ${st.n} 계열</div>
-      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${d.p}% ${capped?`<span style="color:#d8a44a">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
+      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${d.p}% ${capped?`<span style="color:#cd3be7">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
       <div class="bar"><i style="width:${d.p}%"></i></div>
       <div class="tiny muted" style="margin:7px 0 4px">${s.d}</div>
       <div class="quote">${s.q}</div>
@@ -1060,7 +1233,7 @@ VIEWS.class=()=>{
       <div class="tiny" style="color:var(--jade);margin-top:4px">지금 이 강의실 ${rnd(40,90)}명 · 함께 시작한 학생 ${rnd(40,90)}명, 경험치 +5%</div>
     </div>`:"";
 
-  return head("일곱 과목, 일곱 해","📖 강의실", `전공 수업 효율 <b style="color:var(--gold)">×${eff.toFixed(2)}</b><br><span class="tiny">경험치 · 지식 획득량</span>`)+`
+  return head("일곱 과목, 일곱 해",ic("book")+" 강의실", `전공 수업 효율 <b style="color:var(--gold)">×${eff.toFixed(2)}</b><br><span class="tiny">경험치 · 지식 획득량</span>`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:12px">
     <div class="spread"><div class="sect-t" style="margin:0">시간표</div>
@@ -1145,7 +1318,7 @@ function editPlan(i){
 function buffStrip(){
   const items=[];
   S.buffs.filter(b=>!b.hide).forEach(b=>items.push(`<span class="buffchip">${b.e||"◉"} ${esc(b.n)} <span class="muted">${hhmm(b.left)}</span></span>`));
-  if(S.book) items.push(`<span class="buffchip">📜 ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${hhmm(S.book.left)}</span></span>`);
+  if(S.book) items.push(`<span class="buffchip">${ic("scroll",13)} ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${hhmm(S.book.left)}</span></span>`);
   if(!items.length) return "";
   return `<div class="card pad" style="margin-bottom:12px;padding:9px 14px"><div class="row">${items.join("")}</div></div>`;
 }
@@ -1174,7 +1347,7 @@ VIEWS.research=()=>{
       <span class="tiny muted" style="margin-left:auto">${hhmm(S.book.left)}</span></div>`:""}
     <div class="grid g2">
       ${BOOKS.map(b=>{const on=S.book&&S.book.id===b.id;
-        return `<div class="spread" style="background:#15122a;border:1px solid ${on?"var(--gold2)":"var(--line)"};border-radius:7px;padding:7px 11px">
+        return `<div class="spread" style="background:#1f0b31;border:1px solid ${on?"var(--gold2)":"var(--line)"};border-radius:7px;padding:7px 11px">
         <div><b style="font-size:13px">${b.n}</b> <span class="tiny muted">${b.e}</span></div>
         <button class="btn sm ${on?"pri":""}" onclick="readBook('${b.id}')">${on?"이어 읽기":"바꿔 펼치기"}</button></div>`}).join("")}
     </div></div>`;
@@ -1192,11 +1365,11 @@ VIEWS.research=()=>{
         :done?`<div class="tag g" style="margin-top:8px">연구 완료</div>`
         :`<div style="margin-top:8px">
           <button class="btn sm ${busy?"":"pri"}" ${busy?"disabled":""} onclick="startStudy('${r.id}')">${lv+1}단계 수행 · ${hhmm(tm)}</button>
-          <div class="tiny muted" style="margin-top:5px">비용 · 파장 ${nf(cm)} · 지식 ${nf(ck)} <span style="color:#6f6885">(시작할 때 냄)</span></div></div>`}
+          <div class="tiny muted" style="margin-top:5px">비용 · 파장 ${nf(cm)} · 지식 ${nf(ck)} <span style="color:#6c4e9f">(시작할 때 냄)</span></div></div>`}
     </div>`;
   }).join("");
 
-  return head("이름 없는 사서의 서가","🕯 수행", `수행 자리 <b>${S.study?1:0} / 1</b>`)+`
+  return head("이름 없는 사서의 서가",ic("candle")+" 수행", `수행 자리 <b>${S.study?1:0} / 1</b>`)+`
   ${curBox}${bookBox}
   <div class="grid g4">${cards}</div>`;
 };
@@ -1264,7 +1437,7 @@ function addMark(n){
    공격 판정: 공격 스탯 D5 + 5  /  방어 판정: 방어 스탯 D5 + 5
    회피: 양측 민첩 D5 비교 (대련은 공격자 민첩+1)
    ═══════════════════════════════════════════════════ */
-function mkFighter(n,st,hp,c){ return {n, atk:st.atk, def:st.def, agi:st.agi, men:st.men, res:st.res, hp, max:hp, c:c||"#b9b1c6"}; }
+function mkFighter(n,st,hp,c){ return {n, atk:st.atk, def:st.def, agi:st.agi, men:st.men, res:st.res, hp, max:hp, c:c||"#be92e5"}; }
 function meFighter(tempHP){
   return mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},
     tempHP||Math.round(S.hp*(1+mod("hpP"))*1.6+60), S.color);
@@ -1275,7 +1448,7 @@ function enemyFor(stage,boss){
             agi:Math.max(1,Math.round(1.4+k*.26)), men:3, res:2};
   const names=["업귀 잔해","폭주한 마무기","영혼 밀매상","개조 의체 괴한","죄업에 잠식된 악인","마녀의 사역물","업귀"];
   const hp=Math.round(70+k*26)*(boss?2.4:1);
-  const f=mkFighter(boss?`【${pick(["무명","잿빛","검은 손","홍월"])}】 ${pick(names)}`:pick(names), st, Math.round(hp), "#d2563f");
+  const f=mkFighter(boss?`【${pick(["무명","잿빛","검은 손","홍월"])}】 ${pick(names)}`:pick(names), st, Math.round(hp), "#e72a82");
   f.boss=!!boss; return f;
 }
 function resolveAttack(A,D,log,opts={}){
@@ -1351,9 +1524,9 @@ VIEWS.quest=()=>{
       <div class="row" style="margin:8px 0">
         ${[0,1,2,3].map(i=>{
           const m=i===0?{n:S.name,pos:room.pos,me:true}:room.party[i-1];
-          return m?`<span class="buffchip" style="border-color:${m.me?"var(--gold2)":"#2b2545"}">
+          return m?`<span class="buffchip" style="border-color:${m.me?"var(--gold2)":"#371456"}">
             <span class="tag ${m.me?"g":""}">${m.pos||"후열"}</span> ${esc(m.n)}</span>`
-          :`<span class="buffchip" style="color:#5a5370">빈자리</span>`}).join("")}
+          :`<span class="buffchip" style="color:#66259e">빈자리</span>`}).join("")}
       </div>
       <div class="row">
         <span class="tiny muted">내 포지션</span>
@@ -1369,14 +1542,14 @@ VIEWS.quest=()=>{
       </div></div>`;
   })():"";
 
-  return head("명계 각 구역","⚔ 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">완료 ${S.quests.cleared}건</span>`)+`
+  return head("명계 각 구역",ic("swords")+" 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">완료 ${S.quests.cleared}건</span>`)+`
   ${buffStrip()}
   ${roomBox}
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
     <div class="row"><span class="tiny muted">사무전에 접수된 의뢰</span>
       <div style="margin-left:auto" class="row">
-        <button class="btn sm" onclick="QFILTER=Math.max(QFILTER-1,-24);renderMain()">◀ 이전</button>
-        <button class="btn sm" onclick="QFILTER=Math.min(QFILTER+1,24);renderMain()">다음 ▶</button>
+        <button class="btn sm" onclick="QFILTER=Math.max(QFILTER-1,-24);renderMain()">${ic("chevL",12)} 이전</button>
+        <button class="btn sm" onclick="QFILTER=Math.min(QFILTER+1,24);renderMain()">다음 ${ic("chevR",12)}</button>
         <button class="btn sm ghost" onclick="QFILTER=0;renderMain()">현재</button>
       </div></div>
   </div>
@@ -1429,7 +1602,7 @@ function runQuest(stage,party){
   const allies=(room?room.party:[]).map(p=>mkFighter(p.n,
     {atk:Math.max(1,Math.round((p.teacher?7:2)+p.lv*.6)), def:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)),
      agi:Math.max(1,Math.round((p.teacher?6:2)+p.lv*.5)), men:3,res:3},
-    Math.round(120+p.lv*40), p.teacher?"#caa548":"#9db8c9"));
+    Math.round(120+p.lv*40), p.teacher?"#c92de5":"#7face7"));
   const foes=Array.from({length:q.foes},(_,i)=>enemyFor(stage, i===0&&q.rank.r==="Ⅴ"));
   const res=simBattle(me,allies,foes,10);
 
@@ -1476,7 +1649,7 @@ function runQuest(stage,party){
 let DUEL=null;
 VIEWS.duel=()=>{
   const opp=duelOpponents();
-  return head("연무장","🗡 대련", `임시 체력 100 · 실제 체력에 반영되지 않습니다`)+`
+  return head("연무장",ic("sword")+" 대련", `임시 체력 100 · 실제 체력에 반영되지 않습니다`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="sect-t">판정 규칙</div>
     <div class="tiny muted">선공·후공은 민첩 판정(민첩 D5)으로 정합니다. 공격 판정은 <b>공격 D5 + 5</b>,
@@ -1506,7 +1679,7 @@ function duelOpponents(){
 function startDuel(i){
   const o=duelOpponents()[i];
   DUEL={me:mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},100,S.color),
-        foe:mkFighter(o.n,o.st,100,"#d2563f"), log:[], turn:0, first:null, phase:"start", npcName:o.n};
+        foe:mkFighter(o.n,o.st,100,"#e72a82"), log:[], turn:0, first:null, phase:"start", npcName:o.n};
   const a=d5(DUEL.me.agi), b=d5(DUEL.foe.agi);
   DUEL.first = a>=b ? "me":"foe";
   DUEL.log.push(`<span class="turn">민첩 판정 · ${esc(S.name)} ${a} vs ${esc(o.n)} ${b} → 선공 ${DUEL.first==="me"?esc(S.name):esc(o.n)}</span>`);
@@ -1592,7 +1765,7 @@ function endDuel(win){
 /* ═══════════════ 석탑 ═══════════════ */
 VIEWS.tower=()=>{
   const fl=(S.tower||0)+1;
-  return head("명계 전역을 굽어보는","🗼 석탑", `도달 층 <b>${S.tower||0}층</b>`)+`
+  return head("명계 전역을 굽어보는",ic("tower")+" 석탑", `도달 층 <b>${S.tower||0}층</b>`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted">석탑 내부에는 명계 전역의 파장을 모으는 감응 장치와 결계의 핵이 있다.
     층마다 봉인된 것이 하나씩 깨어나며, 올라갈수록 종소리가 가까워진다.</div>
@@ -1638,7 +1811,7 @@ VIEWS.exam=()=>{
   const ready=examReady();
   const est=sc.theory+ (ready?31.9:0);
   const grade=est>=100?"S":est>=90?"A":est>=80?"B":est>=64?"C":"-";
-  return head("과정 평가","📝 시험장", `합격선 <b>${c.line}점</b>`)+`
+  return head("과정 평가",ic("memo")+" 시험장", `합격선 <b>${c.line}점</b>`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="sect-t">대련 준비</div>
     <div class="row" style="margin-bottom:8px">
@@ -1745,7 +1918,7 @@ function takeExam(){
 
 /* ═══════════════ 구역 나들이 ═══════════════ */
 VIEWS.outing=()=>{
-  return head("사무전 정문 · 통행 관리","🚇 구역 나들이", `통행패 <b>${S.pass} / 3</b>`)+`
+  return head("사무전 정문 · 통행 관리",ic("subway")+" 구역 나들이", `통행패 <b>${S.pass} / 3</b>`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted">통행패는 12시간마다 한 장씩 발급되며 최대 3장까지 모입니다(넘는 발급분은 사라집니다).
     나들이를 나가면 구역 지도가 열리고, 한 번에 이야기를 3개까지 겪을 수 있습니다. 선택에 따라 결과가 달라집니다.</div>
@@ -1826,7 +1999,7 @@ function outChoose(i){
   modal("결과", txt+`<div class="row" style="margin-top:14px"><button class="btn pri" onclick="drawOuting()">계속 걷는다</button></div>`);
 }
 function souvenirsFor(w){
-  const base=[{e:"🏮",n:`${w.n} 연등`},{e:"🪙",n:"닳은 륜 한 닢"},{e:"🎐",n:"작은 유리 풍경"},{e:"📿",n:"구역 표식 염주"}];
+  const base=[{e:ic("lantern"),n:`${w.n} 연등`},{e:ic("coin"),n:"닳은 륜 한 닢"},{e:ic("windchime"),n:"작은 유리 풍경"},{e:ic("beads"),n:"구역 표식 염주"}];
   return base.slice(0,3);
 }
 function takeSouv(wid,i){
@@ -1837,7 +2010,7 @@ function takeSouv(wid,i){
 /* ═══════════════ 염라제 ═══════════════ */
 VIEWS.fest=()=>{
   const c=cal(), goals=[{n:"1단계",v:26600,r:"연등 10"},{n:"2단계",v:80000,r:"연등 15 · 사리 30"},{n:"3단계",v:160000,r:"연등 20 · 사역귀의 알 1"},{n:"4단계",v:400000,r:"연등 40 · 전설 부적"}];
-  return head(`축제 · ${c.m} 1일 ~ 10일`,"🏮 염라제", `끝나기까지 ${Math.max(0,10-(c.day%10))}일`)+`
+  return head(`축제 · ${c.m} 1일 ~ 10일`,ic("lantern")+" 염라제", `끝나기까지 ${Math.max(0,10-(c.day%10))}일`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted" style="line-height:1.85">
     한 해 가운데 사무전이 가장 느슨해지는 때. 심연에 내려가 돌아오지 못한 졸업생들의 그림자가 잊어버린 종소리를 찾아
@@ -1898,7 +2071,7 @@ VIEWS.fest=()=>{
       <h4>${b.e} ${b.n} <span class="tag">${b.kw}</span></h4>
       <div class="tiny muted" style="margin:5px 0 9px;min-height:40px">${b.d}</div>
       <button class="btn pri sm" onclick="booth('${b.id}')">체험하기</button>
-      ${S.fest.stamps.includes(b.id)?'<span class="tag g" style="margin-left:6px">도장 ✓</span>':""}
+      ${S.fest.stamps.includes(b.id)?'<span class="tag g" style="margin-left:6px">도장 ${ic("check",11)}</span>':""}
     </div>`).join("")}
   </div>`;
 };
@@ -1947,9 +2120,9 @@ function booth(id){
 }
 function drawCard(id){
   let t,b;
-  if(id==="food"){ t="🏮 사무전 야시장"; const f=pick(FOODS); b=`<b>${f}</b>을(를) 샀다.<br>${pick(FOODSIT)}`; addMark(3); }
-  if(id==="photo"){ t="📷 오늘의 기념사진"; b=`소품은 <b>${pick(PHOTOPROP)}</b>.<br>${pick(PHOTOSIT)}`; addMark(3); }
-  if(id==="walk"){ t="🎊 축제 한 바퀴"; b=pick(WALKSIT); addMark(3); }
+  if(id==="food"){ t=ic("lantern")+" 사무전 야시장"; const f=pick(FOODS); b=`<b>${f}</b>을(를) 샀다.<br>${pick(FOODSIT)}`; addMark(3); }
+  if(id==="photo"){ t=ic("camera")+" 오늘의 기념사진"; b=`소품은 <b>${pick(PHOTOPROP)}</b>.<br>${pick(PHOTOSIT)}`; addMark(3); }
+  if(id==="walk"){ t=ic("confetti")+" 축제 한 바퀴"; b=pick(WALKSIT); addMark(3); }
   modal(t,`<div style="font-size:16px;line-height:2;padding:6px 0">${b}</div>
     <div class="tiny muted">받은 상황을 바탕으로 자유롭게 놀아 주세요. 횟수 제한은 없습니다.</div>
     <div class="row" style="margin-top:14px"><button class="btn" onclick="booth('${id}')">한 번 더</button>
@@ -1957,15 +2130,15 @@ function drawCard(id){
 }
 function drawShoot(){
   const g=BG;
-  const rings=[72,56,40,18].map((r,i)=>`<div class="ring" style="width:${r*2}px;height:${r*2}px;border-color:${i===2?"#caa548":i===3?"#d2563f":"#4a3f6e"};${i===2?"background:rgba(202,165,72,.06)":""}"></div>`).join("");
+  const rings=[72,56,40,18].map((r,i)=>`<div class="ring" style="width:${r*2}px;height:${r*2}px;border-color:${i===2?"#c92de5":i===3?"#e72a82":"#5a218c"};${i===2?"background:rgba(201,45,229,.06)":""}"></div>`).join("");
   const shots=g.shots.map(s=>`<div class="shot" style="left:${s.x}%;top:${s.y}%"></div>`).join("");
-  modal("🎯 염라 님을 맞혀라",`
+  modal(ic("target")+" 염라 님을 맞혀라",`
     <div class="spread" style="margin-bottom:8px">
       <span class="tiny muted">${g.turn} / 3턴 · 이번 턴 남은 탄 ${g.left}발</span>
       <span class="tiny">나 <b style="color:var(--gold)">${g.me}</b> · 과녁지기 <b style="color:var(--red)">${g.foe}</b></span></div>
     <div class="target" id="tgt" onclick="shootAt(event)">
       ${rings}
-      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.5">😄</div>
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;opacity:.5">${ic("smile",22)}</div>
       ${shots}
     </div>
     <div class="tiny muted" style="margin-top:8px">과녁을 눌러 쏩니다. 금빛 원 안에 맞으면 1점. 한 턴에 0~3점, 세 턴 누적이 높은 쪽이 승리합니다. 최고 9점이며 동점은 공동 승리입니다.</div>
@@ -1995,12 +2168,12 @@ function fishAI(){ let s=0; for(let i=0;i<3;i++){ if(i>0&&Math.random()<.45) bre
   if(Math.random()<[0.17,0.33,0.5][i]) return 0; s+=rnd(1,3);} return s; }
 function drawFish(){
   const g=BG, next=[17,33,50][g.tries]||50;
-  modal("🐠 달빛 금붕어 건지기",`
+  modal(ic("goldfish")+" 달빛 금붕어 건지기",`
     <div class="spread" style="margin-bottom:8px">
       <span class="tiny muted">선공(과녁지기)의 확정 점수 <b style="color:var(--red)">${g.foe}점</b></span>
       <span class="tiny">내 누적 <b style="color:var(--gold)">${g.mine}점</b> · ${g.tries}/3회</span></div>
-    <div style="position:relative;height:120px;background:radial-gradient(circle,#1b2a3a,#101723);border:1px solid var(--line);border-radius:9px;overflow:hidden">
-      ${[0,1,2,3,4].map(i=>`<span class="fish" style="left:${8+i*18}%;top:${18+((i*27)%60)}%;animation-delay:${i*.6}s">🐠</span>`).join("")}
+    <div style="position:relative;height:120px;background:radial-gradient(circle,#0e2747,#08172b);border:1px solid var(--line);border-radius:9px;overflow:hidden">
+      ${[0,1,2,3,4].map(i=>`<span class="fish" style="left:${8+i*18}%;top:${18+((i*27)%60)}%;animation-delay:${i*.6}s">${ic("goldfish",22)}</span>`).join("")}
     </div>
     ${g.done?`<div class="card pad" style="margin-top:10px">
         <b>${g.mine>g.foe?"승리":g.mine<g.foe?"패배":"공동 승리"}</b>
@@ -2022,22 +2195,22 @@ function fishStop(){ BG.done=true; addMark(8); drawFish(); }
 
 /* ═══════════════ 지도 ═══════════════ */
 const PLACES=[
- {id:"plaza",  n:"사무전 광장", e:"⛩", x:50, y:48, view:"plaza"},
- {id:"class",  n:"강의동",     e:"📖", x:22, y:30, view:"class"},
- {id:"seogo",  n:"기록 서고",   e:"🕯", x:12, y:52, view:"research"},
- {id:"tower",  n:"석탑",       e:"🗼", x:50, y:16, view:"tower"},
- {id:"train",  n:"연무장",     e:"🗡", x:78, y:30, view:"duel"},
- {id:"desk",   n:"의뢰 접수대", e:"⚔", x:74, y:56, view:"quest"},
- {id:"shop",   n:"여와의 매점", e:"🏪", x:30, y:68, view:"shop"},
- {id:"heal",   n:"보건실",     e:"🩹", x:52, y:78, view:null, act:"rest"},
- {id:"dorm",   n:"기숙사",     e:"🛏", x:86, y:76, view:"rel"},
- {id:"gate",   n:"정문 · 통행소",e:"🚇", x:16, y:86, view:"outing"},
- {id:"exam",   n:"시험장",     e:"📝", x:70, y:88, view:"exam"},
- {id:"fest",   n:"축제 거리",   e:"🏮", x:44, y:62, view:"fest"},
- {id:"yama",   n:"이사장실",   e:"🍵", x:88, y:14, view:null, act:"yama", req:3},
+ {id:"plaza",  n:"사무전 광장", e:ic("gate"), x:50, y:48, view:"plaza"},
+ {id:"class",  n:"강의동",     e:ic("book"), x:22, y:30, view:"class"},
+ {id:"seogo",  n:"기록 서고",   e:ic("candle"), x:12, y:52, view:"research"},
+ {id:"tower",  n:"석탑",       e:ic("tower"), x:50, y:16, view:"tower"},
+ {id:"train",  n:"연무장",     e:ic("sword"), x:78, y:30, view:"duel"},
+ {id:"desk",   n:"의뢰 접수대", e:ic("swords"), x:74, y:56, view:"quest"},
+ {id:"shop",   n:"여와의 매점", e:ic("store"), x:30, y:68, view:"shop"},
+ {id:"heal",   n:"보건실",     e:ic("bandage"), x:52, y:78, view:null, act:"rest"},
+ {id:"dorm",   n:"기숙사",     e:ic("bed"), x:86, y:76, view:"rel"},
+ {id:"gate",   n:"정문 · 통행소",e:ic("subway"), x:16, y:86, view:"outing"},
+ {id:"exam",   n:"시험장",     e:ic("memo"), x:70, y:88, view:"exam"},
+ {id:"fest",   n:"축제 거리",   e:ic("lantern"), x:44, y:62, view:"fest"},
+ {id:"yama",   n:"이사장실",   e:ic("tea"), x:88, y:14, view:null, act:"yama", req:3},
 ];
 VIEWS.map=()=>{
-  return head("지금 있는 곳","🗺 사무전", `${PLACES.find(p=>p.id===S.place).n}`)+`
+  return head("지금 있는 곳",ic("map")+" 사무전", `${PLACES.find(p=>p.id===S.place).n}`)+`
   <div class="card pad" style="margin-bottom:14px;padding:10px 14px">
     <div class="tiny muted">밝게 표시된 장소를 눌러 이동합니다. 이동에는 명계 시간이 조금 걸립니다. 회색 장소는 과정 제한 구역입니다.</div>
   </div>
@@ -2047,7 +2220,7 @@ VIEWS.map=()=>{
          ["class","seogo"],["fest","shop"],["fest","heal"],["desk","dorm"],["shop","gate"],
          ["heal","exam"],["train","yama"],["dorm","exam"]].map(([a,b])=>{
         const A=PLACES.find(p=>p.id===a),B=PLACES.find(p=>p.id===b);
-        return `<line x1="${A.x}%" y1="${A.y}%" x2="${B.x}%" y2="${B.y}%" stroke="#2a2444" stroke-width="2" stroke-dasharray="3 4"/>`}).join("")}
+        return `<line x1="${A.x}%" y1="${A.y}%" x2="${B.x}%" y2="${B.y}%" stroke="#361454" stroke-width="2" stroke-dasharray="3 4"/>`}).join("")}
     </svg>
     ${PLACES.map(p=>{
       const lock=p.req&&S.course<p.req;
@@ -2057,7 +2230,7 @@ VIEWS.map=()=>{
   <div class="card pad" style="margin-top:14px">
     <div class="sect-t">사무전에 함께 있는 학생 ${rnd(26,38)}명</div>
     <div class="grid g4">
-      ${FAKENAMES.slice(0,8).map(n=>`<div class="spread" style="background:#15122a;border:1px solid var(--line);border-radius:7px;padding:6px 10px">
+      ${FAKENAMES.slice(0,8).map(n=>`<div class="spread" style="background:#1f0b31;border:1px solid var(--line);border-radius:7px;padding:6px 10px">
         <div><b style="font-size:12.5px">${n}</b><div class="tiny muted">${pick(PLACES).n}</div></div>
         <button class="btn sm ghost" onclick="addFriend('${n}')">동행 신청</button></div>`).join("")}
     </div>
@@ -2088,7 +2261,7 @@ function takeTea(){
 
 /* ═══════════════ 매점 ═══════════════ */
 VIEWS.shop=()=>{
-  return head("사무전 1층","🏪 여와의 매점", `보유 륜 <b style="color:var(--gold)">${nf(S.rin)}</b>`)+`
+  return head("사무전 1층",ic("store")+" 여와의 매점", `보유 륜 <b style="color:var(--gold)">${nf(S.rin)}</b>`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="quote">"앗, 죄송해요! 방금 건 못 본 걸로… 아, 치료용품은 삼장 선생님이 직접 만드신 거예요. 그건 확실해요."</div>
   </div>
@@ -2121,7 +2294,7 @@ function useItem(id){
   if(p.type==="buff"){
     const ex=S.buffs.find(b=>b.n===p.n);
     if(ex) ex.left=Math.min(p.dur*3, ex.left+p.dur);
-    else S.buffs.push({n:p.n,key:p.key,v:p.v,left:p.dur,e:p.tag==="식사"?"🍱":"🧪",c:p.tag==="식사"?"#d8a44a":"#4fb3a3"});
+    else S.buffs.push({n:p.n,key:p.key,v:p.v,left:p.dur,e:p.tag==="식사"?ic("bento"):ic("testtube"),c:p.tag==="식사"?"#cd3be7":"#26d9dc"});
     toast(`${p.n} · ${p.d}`,"good");
   }
   renderTop(); renderNav(); renderMain(); save();
@@ -2129,7 +2302,7 @@ function useItem(id){
 
 /* ═══════════════ 인연 · 관계 ═══════════════ */
 VIEWS.rel=()=>{
-  return head("사무전 교류","🕯 인연 · 관계", `맺은 관계 ${S.rel.length} / 50`)+`
+  return head("사무전 교류",ic("candle")+" 인연 · 관계", `맺은 관계 ${S.rel.length} / 50`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted">학생 정보창의 「관계 신청」으로 신청하고, 상대가 수락하면 두 학생의 정보창 「관계」 탭에 표시됩니다.
     페어는 전생의 하나의 죄업으로 묶인 상대이므로, 한 사람에게 하나만 맺을 수 있습니다.</div>
@@ -2138,7 +2311,7 @@ VIEWS.rel=()=>{
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">인연 (친구)</div>
         <button class="btn sm" onclick="addFriend()">학생 찾기</button></div>
-      ${S.friends.length?S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+      ${S.friends.length?S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #2c1045">
         <div><b>${esc(f.n)}</b> <span class="tiny muted">· ${f.c}과정 · Lv ${f.lv} · ${f.line}</span>
           <div class="tiny muted">${esc(f.memo||"마지막 접속 "+f.last)}</div></div>
         <div class="row">
@@ -2148,7 +2321,7 @@ VIEWS.rel=()=>{
     </div>
     <div class="card pad">
       <div class="sect-t">맺은 관계</div>
-      ${S.rel.length?S.rel.map((r,i)=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+      ${S.rel.length?S.rel.map((r,i)=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #2c1045">
         <div><b>${esc(r.n)}</b>
           <div class="tiny muted">나는 ${esc(r.nick||r.n)}의 <b style="color:var(--gold)">${r.a}</b> · ${esc(r.n)} 님은 나의 <b style="color:var(--gold)">${r.b}</b></div></div>
         <div class="row">
@@ -2188,13 +2361,13 @@ function relSave(n, idx){
   closeModal(); renderMain(); toast(`${n} 님이 관계를 수락했습니다.`,"good"); save();
 }
 function relCut(i){ if(confirm("관계를 끊을까요?")){ S.rel.splice(i,1); renderMain(); save(); } }
-function dmTo(n){ S.chatTab="1:1"; addMsg("1:1",n,fmtChat(pick(CHATPOOL.RP)),"#b9b1c6"); renderChat(); toast(`${n}과(와)의 1:1 창을 열었습니다.`); }
+function dmTo(n){ S.chatTab="1:1"; addMsg("1:1",n,fmtChat(pick(CHATPOOL.RP)),"#be92e5"); renderChat(); toast(`${n}과(와)의 1:1 창을 열었습니다.`); }
 
 /* ═══════════════ 기록 ═══════════════ */
 VIEWS.record=()=>{
   const subLv=SUBJECTS.reduce((a,s)=>a+S.sub[s.id].lv,0);
   const resLv=RESEARCH.reduce((a,r)=>a+S.res[r.id],0);
-  return head("저승차사 기록부","📜 기록", `입학 ${new Date(S.playFrom).toLocaleDateString("ko-KR")}`)+`
+  return head("저승차사 기록부",ic("scroll")+" 기록", `입학 ${new Date(S.playFrom).toLocaleDateString("ko-KR")}`)+`
   <div class="grid g4" style="margin-bottom:14px">
     ${[["전투력",nf(power())],["완료한 의뢰",S.quests.cleared+"단계"],["석탑",(S.tower||0)+"층"],["과목 레벨 합",subLv],
        ["수행 단계 합",resLv],["모은 축제 표식",S.fest.marks],["맺은 관계",S.rel.length],["기념품",S.outing.souv.length+(S.fest.souv?1:0)]]
@@ -2251,8 +2424,8 @@ function drawMe(){
         <div style="flex:1">
           <div class="tiny" style="color:var(--gold)">${esc(S.title)}</div>
           <div style="font-size:21px;font-weight:600;color:${S.color}">${esc(S.name)}</div>
-          <div class="tiny muted">🏮 ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div>
-          <div class="tiny muted">📿 ${S.rel.find(r=>r.a==="페어")?`페어 ${esc(S.rel.find(r=>r.a==="페어").n)}`:"페어 미정"}</div>
+          <div class="tiny muted">${ic("lantern",12)} ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div>
+          <div class="tiny muted">${ic("beads",12)} ${S.rel.find(r=>r.a==="페어")?`페어 ${esc(S.rel.find(r=>r.a==="페어").n)}`:"페어 미정"}</div>
           <div class="tiny muted">${esc(S.intro||"한 줄 소개가 없습니다")}</div>
         </div>
         <div style="text-align:right">
@@ -2276,7 +2449,7 @@ function drawMe(){
       <div class="grid g2">
         <div class="card pad"><div class="sect-t">적용 중</div>
           ${S.buffs.length?S.buffs.filter(x=>!x.hide).map(x=>`<div class="spread tiny" style="padding:3px 0"><span>${x.e} ${esc(x.n)}</span><span class="muted">${hhmm(x.left)}</span></div>`).join(""):'<div class="tiny muted">없음</div>'}
-          ${S.book?`<div class="spread tiny" style="padding:3px 0"><span>📜 ${BOOKS.find(x=>x.id===S.book.id).n}</span><span class="muted">${hhmm(S.book.left)}</span></div>`:""}
+          ${S.book?`<div class="spread tiny" style="padding:3px 0"><span>${ic("scroll",12)} ${BOOKS.find(x=>x.id===S.book.id).n}</span><span class="muted">${hhmm(S.book.left)}</span></div>`:""}
         </div>
         <div class="card pad"><div class="sect-t">소지품</div>
           ${Object.keys(S.inv).filter(k=>S.inv[k]>0).length?Object.keys(S.inv).filter(k=>S.inv[k]>0).map(k=>{
@@ -2307,11 +2480,11 @@ function drawMe(){
         <label class="f">두상 출처 (선택 · 60자)</label>
         <input class="inp" id="e_avsrc" maxlength="60" value="${esc(S.avSrc||"")}" placeholder="지원·커미션 결과물이면 반드시 적어 주세요">
         <label class="f">두상 기호 <span class="muted">— 이미지를 쓰지 않을 때 보입니다</span></label>
-        <div class="row">${["🏮","🕯","🗡","📿","🌑","🐉","🦊","🪷","⚔","🜂"].map(e=>`<button class="btn sm ${S.av===e&&!S.avImg?"pri":""}" onclick="setAv('${e}')">${e}</button>`).join("")}</div>
+        <div class="row">${["lantern","candle","sword","beads","moonDark","dragon","fox","lotus","swords","alcFire"].map(e=>`<button class="btn sm ${S.av===e&&!S.avImg?"pri":""}" onclick="setAv('${e}')">${ic(e,18)}</button>`).join("")}</div>
         <label class="f">학생 이름</label>
         <input class="inp" id="e_name" maxlength="10" value="${esc(S.name)}">
         <label class="f">테마 컬러 — 영혼과 파장을 대표하는 색</label>
-        <div class="row">${["#caa548","#d2563f","#4fb3a3","#9d7fd0","#6f8fd0","#5fae7a","#c98fb0","#e8e3d6"].map(c=>
+        <div class="row">${["#c92de5","#e72a82","#26d9dc","#ab71de","#5f97e0","#3ecf9a","#e870c4","#edcbf3"].map(c=>
           `<button class="btn sm" style="background:${c};border-color:${c};width:30px;height:26px;padding:0" onclick="setColor('${c}')"></button>`).join("")}</div>
       </div></div>
       <label class="f">계통</label>
@@ -2338,7 +2511,7 @@ function drawMe(){
       <div class="sect-t">방 꾸미기</div>
       <div class="tiny muted">염라제 기간에는 창가에 등롱을 두면 찾아오는 학생이 과자를 4개 더 받습니다.</div>
       <div class="row" style="margin-top:8px">
-        <button class="btn sm ${S.lamp?"pri":""}" onclick="S.lamp=!S.lamp;drawMe();save()">${S.lamp?"등롱 놓음 ✓":"창가에 등롱 두기"}</button>
+        <button class="btn sm ${S.lamp?"pri":""}" onclick="S.lamp=!S.lamp;drawMe();save()">${S.lamp?`등롱 놓음 ${ic("check",11)}`:"창가에 등롱 두기"}</button>
         <span class="tiny muted">${S.lamp?"잿불이 조용히 타고 있습니다.":"창가가 비어 있습니다."}</span>
       </div>`;
   }
@@ -2347,7 +2520,7 @@ function drawMe(){
     b=`<div class="row" style="margin-bottom:10px"><input class="inp" id="fsearch" placeholder="학생 이름 검색" style="flex:1">
       <button class="btn" onclick="addFriend(($('#fsearch').value||'').trim()||undefined);drawMe()">검색·신청</button></div>
       <div class="tiny muted" style="margin-bottom:8px">인연 ${S.friends.length}명</div>
-      ${S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #221d38">
+      ${S.friends.map(f=>`<div class="spread" style="padding:7px 0;border-bottom:1px solid #2c1045">
         <div><b>${esc(f.n)}</b> <span class="tiny muted">${f.c}과정 · Lv ${f.lv} · 전투력 ${nf(f.lv*430)} · ${f.line}</span></div>
         <div class="row"><button class="btn sm ghost" onclick="dmTo('${esc(f.n)}')">1:1</button>
           <button class="btn sm ghost" onclick="relPropose('${esc(f.n)}')">관계</button></div></div>`).join("")
@@ -2356,7 +2529,7 @@ function drawMe(){
 
   if(METAB==="관계"){
     b=`<div class="tiny muted" style="margin-bottom:10px">맺은 관계 ${S.rel.length} / 50</div>
-      ${S.rel.map((r,i)=>`<div class="spread" style="padding:8px 0;border-bottom:1px solid #221d38">
+      ${S.rel.map((r,i)=>`<div class="spread" style="padding:8px 0;border-bottom:1px solid #2c1045">
         <div><b>${esc(r.n)}</b><div class="tiny muted">나는 ${esc(r.nick||r.n)}의 ${r.a} · ${esc(r.n)} 님은 ${esc(S.name)}의 ${r.b}</div></div>
         <div class="row"><button class="btn sm" onclick="relPropose('${esc(r.n)}',${i})">수정 제안</button>
           <button class="btn sm red" onclick="relCut(${i});drawMe()">끊기</button></div></div>`).join("")
@@ -2417,7 +2590,7 @@ function showSaveText(txt){
 /* ═══════════════ 입학 (캐릭터 생성) ═══════════════ */
 let MK=null;
 function openCreate(){
-  MK={name:"", line:"장인", weapon:"장검", hall:"h1", color:"#caa548", av:"🏮", avImg:null, intro:"",
+  MK={name:"", line:"장인", weapon:"장검", hall:"h1", color:"#c92de5", av:"lantern", avImg:null, intro:"",
       st:{atk:3,def:3,agi:3,men:2,res:2}};
   drawCreate();
 }
@@ -2452,10 +2625,10 @@ function drawCreate(){
             <button class="btn sm" onclick="openAvatar(true)">이미지 선택</button>
             ${MK.avImg?`<button class="btn sm" onclick="MK.avImg=null;drawCreate()">제거</button>`:""}
           </div>
-          <div class="row" style="margin-bottom:6px">${["🏮","🕯","🗡","📿","🌑","🐉","🦊","🪷"].map(e=>
-            `<button class="btn sm ${MK.av===e&&!MK.avImg?"pri":""}" onclick="MK.av='${e}';drawCreate()">${e}</button>`).join("")}</div>
+          <div class="row" style="margin-bottom:6px">${["lantern","candle","sword","beads","moonDark","dragon","fox","lotus"].map(e=>
+            `<button class="btn sm ${MK.av===e&&!MK.avImg?"pri":""}" onclick="MK.av='${e}';drawCreate()">${ic(e,18)}</button>`).join("")}</div>
           <label class="f">테마 컬러</label>
-          <div class="row">${["#caa548","#d2563f","#4fb3a3","#9d7fd0","#6f8fd0","#5fae7a","#c98fb0"].map(c=>
+          <div class="row">${["#c92de5","#e72a82","#26d9dc","#ab71de","#5f97e0","#3ecf9a","#e870c4"].map(c=>
             `<button class="btn sm" style="background:${c};border-color:${MK.color===c?"#fff":c};width:30px;height:26px;padding:0" onclick="MK.color='${c}';drawCreate()"></button>`).join("")}</div>
           <label class="f">한 줄 소개 (40자)</label>
           <input class="inp" id="c_intro" value="${esc(MK.intro)}" maxlength="40" oninput="MK.intro=this.value"
@@ -2540,10 +2713,10 @@ function init(){
 function avatarHTML(size, borderCol){
   const b=borderCol||S.color, img=S.avImg;
   if(img) return `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;
-    border:2px solid ${b};flex:none;background:#0f0c1c" title="${esc(S.avSrc||"")}">
+    border:2px solid ${b};flex:none;background:#150820" title="${esc(S.avSrc||"")}">
     <img src="${img}" alt="두상" style="width:100%;height:100%;object-fit:cover;display:block"></div>`;
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${b};
-    display:grid;place-items:center;font-size:${Math.round(size*0.42)}px;background:#0f0c1c;flex:none">${S.av}</div>`;
+    display:grid;place-items:center;background:#150820;flex:none">${ic(S.av,Math.round(size*0.5))}</div>`;
 }
 function clearAvatar(){
   if(!confirm("두상 이미지를 지울까요? 기호 두상으로 돌아갑니다.")) return;
@@ -2557,7 +2730,7 @@ function openAvatar(forCreate){
   drawAvatarUI();
 }
 function drawAvatarUI(){
-  const a=AV, col=a.forCreate?(window.MK?MK.color:"#caa548"):S.color;
+  const a=AV, col=a.forCreate?(window.MK?MK.color:"#c92de5"):S.color;
   modal("두상 설정", `
     <div class="tiny muted" style="line-height:1.85;margin-bottom:12px">
       그림을 선택하면 확대·이동해 두상으로 사용할 영역을 정할 수 있습니다. 배경이 투명한 PNG는 투명한 상태로 사용됩니다.
@@ -2569,7 +2742,7 @@ function drawAvatarUI(){
     <div class="row" style="align-items:flex-start;gap:18px">
       <div style="flex:none">
         <div id="avbox" style="width:${a.F}px;height:${a.F}px;border-radius:50%;overflow:hidden;
-          border:2px solid ${col};background:#0f0c1c;position:relative;touch-action:none;
+          border:2px solid ${col};background:#150820;position:relative;touch-action:none;
           cursor:${a.img?"grab":"default"}">
           ${a.img?`<img id="avimg" src="${a.img.src}" draggable="false"
              style="position:absolute;user-select:none;pointer-events:none">`

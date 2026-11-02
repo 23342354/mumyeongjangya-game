@@ -7,18 +7,18 @@
 
 /* ─── 등급 · 부위 ─── */
 const GRADES=[
- {n:"일반", c:"#9b93ac", m:1.00, opt:0},
- {n:"고급", c:"#5fae7a", m:1.35, opt:1},
- {n:"희귀", c:"#6f8fd0", m:1.85, opt:2},
- {n:"영웅", c:"#9d7fd0", m:2.50, opt:3},
- {n:"전설", c:"#caa548", m:3.40, opt:4},
+ {n:"일반", c:"#9a8ab5", m:1.00, opt:0},
+ {n:"고급", c:"#3ecf9a", m:1.35, opt:1},
+ {n:"희귀", c:"#5f97e0", m:1.85, opt:2},
+ {n:"영웅", c:"#ab71de", m:2.50, opt:3},
+ {n:"전설", c:"#c92de5", m:3.40, opt:4},
 ];
 const SLOTS=[
- {k:"weapon", n:"무기",  st:"atk", e:"🗡"},
- {k:"robe",   n:"법의",  st:"def", e:"🧥"},
- {k:"cap",    n:"관",    st:"men", e:"👒"},
- {k:"charm",  n:"부적",  st:"agi", e:"📿"},
- {k:"sutra",  n:"경문",  st:"res", e:"📜"},
+ {k:"weapon", n:"무기",  st:"atk", e:ic("sword")},
+ {k:"robe",   n:"법의",  st:"def", e:ic("robe")},
+ {k:"cap",    n:"관",    st:"men", e:ic("cap")},
+ {k:"charm",  n:"부적",  st:"agi", e:ic("beads")},
+ {k:"sutra",  n:"경문",  st:"res", e:ic("scroll")},
 ];
 const GEARWORD={
  weapon:["장검","낫","권총","석장","쌍검","철편","단도","활"],
@@ -42,18 +42,18 @@ const OPTS=[
 
 /* ─── 사역귀 ─── */
 const PETDEF=[
- {n:"먹그림자 박쥐", e:"🦇", g:0, k:"gold",  v:[14,24], d:"골목 천장에 거꾸로 붙어 잔다."},
- {n:"초롱 도마뱀",   e:"🦎", g:0, k:"atkP",  v:[10,20], d:"꼬리 끝에 작은 불이 붙어 있다."},
- {n:"이끼 거북",     e:"🐢", g:0, k:"hpP",   v:[12,22], d:"등딱지에 누가 부적을 붙여 놓았다."},
- {n:"도토리 쥐",     e:"🐁", g:0, k:"defP",  v:[10,20], d:"볼주머니에 뭔가를 늘 숨기고 있다."},
- {n:"연잎 개구리",   e:"🐸", g:1, k:"hatch", v:[20,34], d:"울음소리가 목탁과 비슷하다."},
- {n:"등롱 병아리",   e:"🐤", g:1, k:"exp",   v:[14,24], d:"어둠 속에서 저 혼자 희미하게 빛난다."},
- {n:"사리 햄스터",   e:"🐹", g:1, k:"mana",  v:[12,22], d:"볼에 작은 사리를 물고 다닌다."},
- {n:"달 토끼",       e:"🐇", g:2, k:"study", v:[10,18], d:"홍월이 뜬 밤에만 모습을 보인다."},
- {n:"잿빛 까마귀",   e:"🐦", g:2, k:"loot",  v:[6,14],  d:"반짝이는 것을 물어 온다. 대개 쓸모없다."},
- {n:"수월 잉어",     e:"🐟", g:3, k:"critD", v:[18,34], d:"수면에 비친 달만 따라다닌다."},
- {n:"업연의 구렁이", e:"🐍", g:3, k:"atkP",  v:[20,34], d:"허물에 지난 생의 무늬가 남는다."},
- {n:"무명 호랑이",   e:"🐯", g:4, k:"atkP",  v:[30,48], d:"이름을 부르면 돌아보지 않는다."},
+ {n:"먹그림자 박쥐", e:ic("bat"), g:0, k:"gold",  v:[14,24], d:"골목 천장에 거꾸로 붙어 잔다."},
+ {n:"초롱 도마뱀",   e:ic("lizard"), g:0, k:"atkP",  v:[10,20], d:"꼬리 끝에 작은 불이 붙어 있다."},
+ {n:"이끼 거북",     e:ic("turtle"), g:0, k:"hpP",   v:[12,22], d:"등딱지에 누가 부적을 붙여 놓았다."},
+ {n:"도토리 쥐",     e:ic("mouse"), g:0, k:"defP",  v:[10,20], d:"볼주머니에 뭔가를 늘 숨기고 있다."},
+ {n:"연잎 개구리",   e:ic("frog"), g:1, k:"hatch", v:[20,34], d:"울음소리가 목탁과 비슷하다."},
+ {n:"등롱 병아리",   e:ic("chick"), g:1, k:"exp",   v:[14,24], d:"어둠 속에서 저 혼자 희미하게 빛난다."},
+ {n:"사리 햄스터",   e:ic("hamster"), g:1, k:"mana",  v:[12,22], d:"볼에 작은 사리를 물고 다닌다."},
+ {n:"달 토끼",       e:ic("rabbit"), g:2, k:"study", v:[10,18], d:"홍월이 뜬 밤에만 모습을 보인다."},
+ {n:"잿빛 까마귀",   e:ic("crow"), g:2, k:"loot",  v:[6,14],  d:"반짝이는 것을 물어 온다. 대개 쓸모없다."},
+ {n:"수월 잉어",     e:ic("fish"), g:3, k:"critD", v:[18,34], d:"수면에 비친 달만 따라다닌다."},
+ {n:"업연의 구렁이", e:ic("snake"), g:3, k:"atkP",  v:[20,34], d:"허물에 지난 생의 무늬가 남는다."},
+ {n:"무명 호랑이",   e:ic("tiger"), g:4, k:"atkP",  v:[30,48], d:"이름을 부르면 돌아보지 않는다."},
 ];
 const DISPATCH=[
  {h:2,  n:"2시간"}, {h:4, n:"4시간"}, {h:8, n:"8시간"}, {h:12, n:"12시간"},
@@ -63,36 +63,36 @@ const BONDS=["낯섦","익숙함","친근함","신뢰","공명"];
 
 /* ─── 약초밭 ─── */
 const CROPS=[
- {id:"c1", n:"잿불 호박",   e:"🎃", t:100, y:"열매", s:2, d:"잿불을 먹고 자란다. 속이 붉다."},
- {id:"c2", n:"맨드레이크",  e:"🌿", t:190, y:"뿌리", s:2, d:"뽑을 때 비명이 들린다는 소문."},
- {id:"c3", n:"푸른 별꽃",   e:"🌸", t:140, y:"꽃",   s:3, d:"해가 없는 곳에서만 핀다."},
- {id:"c4", n:"연화초",      e:"🪷", t:240, y:"약초", s:3, d:"물 없이도 연못처럼 축축하다."},
- {id:"c5", n:"월하 버섯",   e:"🍄", t:80,  y:"약초", s:2, d:"밤에만 자란다. 명계엔 늘 밤이다."},
+ {id:"c1", n:"잿불 호박",   e:ic("pumpkin"), t:100, y:"열매", s:2, d:"잿불을 먹고 자란다. 속이 붉다."},
+ {id:"c2", n:"맨드레이크",  e:ic("herb"), t:190, y:"뿌리", s:2, d:"뽑을 때 비명이 들린다는 소문."},
+ {id:"c3", n:"푸른 별꽃",   e:ic("flower"), t:140, y:"꽃",   s:3, d:"해가 없는 곳에서만 핀다."},
+ {id:"c4", n:"연화초",      e:ic("lotus"), t:240, y:"약초", s:3, d:"물 없이도 연못처럼 축축하다."},
+ {id:"c5", n:"월하 버섯",   e:ic("mushroom"), t:80,  y:"약초", s:2, d:"밤에만 자란다. 명계엔 늘 밤이다."},
 ];
 /* ─── 낚시 ─── */
 const FISHES=[
- {n:"검은 숭어",     e:"🐟", w:40, y:"어물", s:2, p:60},
- {n:"등불 해파리",   e:"🪼", w:22, y:"어물", s:3, p:140},
- {n:"파장 갑각류",   e:"🦐", w:18, y:"어물", s:3, p:190},
- {n:"심해 가자미",   e:"🐠", w:12, y:"어물", s:4, p:320},
- {n:"빛나는 해조",   e:"🌿", w:6,  y:"약초", s:3, p:260},
- {n:"이름 없는 것",  e:"🫧", w:2,  y:"혼백", s:1, p:1400},
+ {n:"검은 숭어",     e:ic("fish"), w:40, y:"어물", s:2, p:60},
+ {n:"등불 해파리",   e:ic("jellyfish"), w:22, y:"어물", s:3, p:140},
+ {n:"파장 갑각류",   e:ic("shrimp"), w:18, y:"어물", s:3, p:190},
+ {n:"심해 가자미",   e:ic("goldfish"), w:12, y:"어물", s:4, p:320},
+ {n:"빛나는 해조",   e:ic("herb"), w:6,  y:"약초", s:3, p:260},
+ {n:"이름 없는 것",  e:ic("bubble"), w:2,  y:"혼백", s:1, p:1400},
 ];
 /* ─── 요리 ─── */
 const DISHES=[
- {id:"d1", n:"순무 수프",       e:"🍲", t:"식사",   mat:{뿌리:3},        buf:[["hpP",.06],["defP",.06]], dur:240, d:"식당 수프의 기본입니다. 의뢰 전에 한 그릇 비우면 든든합니다."},
- {id:"d2", n:"잿불 호박 그라탱", e:"🎃", t:"식사",   mat:{열매:4},        buf:[["gold",.12],["loot",.06]], dur:360, d:"속을 파내고 치즈를 얹어 구웠습니다. 축제 때 가장 많이 팔립니다."},
- {id:"d3", n:"약초 경단",       e:"🍡", t:"식사",   mat:{약초:4},        buf:[["mana",.10],["rest",.25]], dur:240, d:"삼장이 정서 안정용으로 권하는 음식."},
- {id:"d4", n:"어탕",            e:"🍜", t:"식사",   mat:{어물:4},        buf:[["atkP",.08]],              dur:240, d:"제7구역 새벽 시장에서 배운 조리법."},
- {id:"d5", n:"별빛 커스터드",   e:"🍮", t:"디저트", mat:{꽃:3,열매:2},   buf:[["study",.05],["know",.02]], dur:200, d:"푸른 별꽃의 즙을 넣어 굳힌 디저트."},
- {id:"d6", n:"연화 만두",       e:"🥟", t:"디저트", mat:{약초:2,뿌리:2}, buf:[["exp",.06]],               dur:240, d:"만두 빚기도 훌륭한 수행이라고 누군가 말했다."},
- {id:"d7", n:"월병",            e:"🥮", t:"디저트", mat:{열매:2,꽃:2},   buf:[["crit",.03],["critD",.10]], dur:240, d:"강시가 제일 좋아하는 것."},
+ {id:"d1", n:"순무 수프",       e:ic("stew"), t:"식사",   mat:{뿌리:3},        buf:[["hpP",.06],["defP",.06]], dur:240, d:"식당 수프의 기본입니다. 의뢰 전에 한 그릇 비우면 든든합니다."},
+ {id:"d2", n:"잿불 호박 그라탱", e:ic("pumpkin"), t:"식사",   mat:{열매:4},        buf:[["gold",.12],["loot",.06]], dur:360, d:"속을 파내고 치즈를 얹어 구웠습니다. 축제 때 가장 많이 팔립니다."},
+ {id:"d3", n:"약초 경단",       e:ic("dango"), t:"식사",   mat:{약초:4},        buf:[["mana",.10],["rest",.25]], dur:240, d:"삼장이 정서 안정용으로 권하는 음식."},
+ {id:"d4", n:"어탕",            e:ic("noodle"), t:"식사",   mat:{어물:4},        buf:[["atkP",.08]],              dur:240, d:"제7구역 새벽 시장에서 배운 조리법."},
+ {id:"d5", n:"별빛 커스터드",   e:ic("pudding"), t:"디저트", mat:{꽃:3,열매:2},   buf:[["study",.05],["know",.02]], dur:200, d:"푸른 별꽃의 즙을 넣어 굳힌 디저트."},
+ {id:"d6", n:"연화 만두",       e:ic("dumpling"), t:"디저트", mat:{약초:2,뿌리:2}, buf:[["exp",.06]],               dur:240, d:"만두 빚기도 훌륭한 수행이라고 누군가 말했다."},
+ {id:"d7", n:"월병",            e:ic("mooncake"), t:"디저트", mat:{열매:2,꽃:2},   buf:[["crit",.03],["critD",.10]], dur:240, d:"강시가 제일 좋아하는 것."},
 ];
 /* ─── 모임(동아리) ─── */
 const CLUBS=[
- {id:"cl1", n:"등롱회",     e:"🏮", d:"창가에 등롱을 두는 모임. 축제철에 가장 바쁘다.", b:"지식·전리품 +5%"},
- {id:"cl2", n:"야행 순찰대", e:"🕯", d:"야간 순찰에 자원하는 학생들의 모임.",          b:"의뢰 륜 +8%"},
- {id:"cl3", n:"필사회",     e:"📜", d:"서고의 낡은 기록을 베껴 쓰는 모임.",           b:"수업 효율 +6%"},
+ {id:"cl1", n:"등롱회",     e:ic("lantern"), d:"창가에 등롱을 두는 모임. 축제철에 가장 바쁘다.", b:"지식·전리품 +5%"},
+ {id:"cl2", n:"야행 순찰대", e:ic("candle"), d:"야간 순찰에 자원하는 학생들의 모임.",          b:"의뢰 륜 +8%"},
+ {id:"cl3", n:"필사회",     e:ic("scroll"), d:"서고의 낡은 기록을 베껴 쓰는 모임.",           b:"수업 효율 +6%"},
 ];
 /* ─── 연무제 대진 ─── */
 const ARENAFOES=[
@@ -106,9 +106,9 @@ const ARENALINE=[
  "\"거짓말은 금세 티가 난단다.\"","\"허접~♡ 자, 한 바퀴 돌자.\""];
 /* ─── 업귀 토벌(월드 보스) ─── */
 const WBOSS=[
- {n:"찢긴 장의 주인", e:"📕", d:"금서고의 모든 금서가 한 권으로 엮였다. 읽는 자의 이름을 지운다."},
- {n:"종을 삼킨 것",   e:"🔔", d:"석탑의 종소리가 되돌아오지 않는다. 그 안에 무언가 들어앉았다."},
- {n:"일륜의 그늘",    e:"🌑", d:"제4구역의 가짜 낮이 만들어 낸 그림자. 빛이 짙을수록 커진다."},
+ {n:"찢긴 장의 주인", e:ic("bookClosed"), d:"금서고의 모든 금서가 한 권으로 엮였다. 읽는 자의 이름을 지운다."},
+ {n:"종을 삼킨 것",   e:ic("bell"), d:"석탑의 종소리가 되돌아오지 않는다. 그 안에 무언가 들어앉았다."},
+ {n:"일륜의 그늘",    e:ic("moonDark"), d:"제4구역의 가짜 낮이 만들어 낸 그림자. 빛이 짙을수록 커진다."},
 ];
 
 /* ═══════════ 상태 보강 ═══════════ */
@@ -424,10 +424,10 @@ function openFish(){
 }
 function drawFish2(){
   const F=FISHGAME;
-  modal("🎣 제7구역 검은 바다",`
+  modal(ic("fishing")+" 제7구역 검은 바다",`
     <div class="tiny muted" style="margin-bottom:10px">전자 범종이 울리는 부두. 찌가 흔들리는 순간 「챈다」를 누릅니다. 금빛 구간에 멈출수록 좋은 것이 올라옵니다.</div>
-    <div style="position:relative;height:28px;background:#101723;border:1px solid var(--line);border-radius:7px;overflow:hidden">
-      <div style="position:absolute;left:${F.target}%;width:16%;top:0;bottom:0;background:rgba(202,165,72,.28);border-left:1px solid var(--gold);border-right:1px solid var(--gold)"></div>
+    <div style="position:relative;height:28px;background:#08172b;border:1px solid var(--line);border-radius:7px;overflow:hidden">
+      <div style="position:absolute;left:${F.target}%;width:16%;top:0;bottom:0;background:rgba(201,45,229,.28);border-left:1px solid var(--gold);border-right:1px solid var(--gold)"></div>
       <div id="fbar" style="position:absolute;left:${F.bar}%;top:0;bottom:0;width:3px;background:var(--red);box-shadow:0 0 8px var(--red)"></div>
     </div>
     <div class="row" style="margin-top:12px">
@@ -522,7 +522,7 @@ function clubExp(n){
 function clubBless(){
   if(S.club.blessed>0){ toast("이미 축복을 받았습니다."); return; }
   S.club.blessed=240;
-  S.buffs.push({n:"모임의 결속", key:"know", v:.05, left:240, e:"🏮", c:"#caa548"});
+  S.buffs.push({n:"모임의 결속", key:"know", v:.05, left:240, e:ic("lantern"), c:"#c92de5"});
   toast("모임의 결속 · 지식·전리품 +5% (4시간)","good"); renderTop(); renderMain(); save();
 }
 
@@ -591,15 +591,15 @@ addMark=function(n){ _addMark(n); hatchPush(n*3); };
 /* ═══════════ 내비 재구성 ═══════════ */
 NAVDEF.length=0;
 NAVDEF.push(
- {id:"plaza", ic:"⛩", n:"사무전 광장"},
- {id:"study", ic:"📖", n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
- {id:"war",   ic:"⚔", n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
+ {id:"plaza", ic:ic("gate"), n:"사무전 광장"},
+ {id:"study", ic:ic("book"), n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
+ {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
- {id:"gearn", ic:"🗡", n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
- {id:"craft", ic:"🏺", n:"공방·생활", sub:[{id:"pets",n:"사역귀 사육장"},{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
- {id:"soc",   ic:"🕯", n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"}]},
- {id:"shopn", ic:"🏪", n:"상점",      sub:[{id:"market",n:"중개소"},{id:"shop",n:"매점"},{id:"merchant",n:"떠돌이 상인"}]},
- {id:"rec",   ic:"📜", n:"기록",      sub:[{id:"fest",n:"염라제",bd:"축제"},{id:"outing",n:"구역 나들이"},{id:"record",n:"기록·성적"}]},
+ {id:"gearn", ic:ic("sword"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
+ {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"pets",n:"사역귀 사육장"},{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
+ {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"}]},
+ {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"shop",n:"매점"},{id:"merchant",n:"떠돌이 상인"}]},
+ {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"fest",n:"염라제",bd:"축제"},{id:"outing",n:"구역 나들이"},{id:"record",n:"기록·성적"}]},
 );
 
 /* ═══════════════════════════════════════════════════
@@ -638,7 +638,7 @@ VIEWS.gear=()=>{
     if(!cands.length) return null;
     return cands.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
   };
-  return head("무기 · 법의 · 관 · 부적 · 경문","🗡 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+  return head("무기 · 법의 · 관 · 부적 · 경문",ic("sword")+" 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
   <div class="grid g3" style="margin-bottom:14px">
     ${SLOTS.map(sl=>{
       const it=S.gear[sl.k]; const b=best(sl.k);
@@ -658,7 +658,7 @@ VIEWS.gear=()=>{
           <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
           ${up?`<button class="btn sm" style="margin-left:auto;color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
         </div>
-        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:#6f6885">· 보호는 사리 3 추가</span></div>
+        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:#6c4e9f">· 보호는 사리 3 추가</span></div>
       </div>`;
     }).join("")}
   </div>
@@ -699,15 +699,15 @@ VIEWS.bag=()=>{
   const matRows=Object.keys(S.mat).map(k=>`<div class="spread tiny" style="padding:3px 0"><span>${k}</span><b>${nf(S.mat[k])}</b></div>`).join("");
   const dishRows=Object.keys(S.kit.have).filter(k=>S.kit.have[k]>0).map(k=>{
     const d=DISHES.find(x=>x.id===k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #221d38">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
       <div><b>${d.e} ${d.n}</b> ×${S.kit.have[k]}<div class="tiny muted">${d.t} · ${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")} · ${hhmm(d.dur)}</div></div>
       <button class="btn sm pri" onclick="eat('${k}')">먹기</button></div>`}).join("");
   const itemRows=Object.keys(S.inv).filter(k=>S.inv[k]>0).map(k=>{
     const p=SHOP.find(x=>x.id===k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #221d38">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
       <div><b>${p.n}</b> ×${S.inv[k]}<div class="tiny muted">${p.d}</div></div>
       <button class="btn sm pri" onclick="useItem('${k}');renderMain()">사용</button></div>`}).join("");
-  return head("소지품 · 보관품","🎒 바랑", `${S.bag.length} / ${40+S.res.r11*5}칸`)+`
+  return head("소지품 · 보관품",ic("bag")+" 바랑", `${S.bag.length} / ${40+S.res.r11*5}칸`)+`
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="sect-t">재료</div>${matRows}
@@ -734,7 +734,7 @@ VIEWS.stats=()=>{
   const c=C();
   const row=(s)=>{
     const base=stat(s.k), hall=hallBonus(s.k), al=S.alloc[s.k], ge=gearStat(s.k);
-    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #221d38">
+    return `<div class="spread" style="padding:6px 0;border-bottom:1px solid #2c1045">
       <div><b>${s.n}</b> <span class="tiny muted">${s.d}</span>
         <div class="tiny muted">기본 ${base} · 분배 <span style="color:var(--jade)">+${al}</span> · 숙사 +${hall} · 법구 <span style="color:var(--gold)">+${ge}</span></div></div>
       <div class="row">
@@ -743,7 +743,7 @@ VIEWS.stats=()=>{
         <button class="btn sm" ${S.pts<10?"disabled":""} onclick="alloc('${s.k}',10)">+10</button>
       </div></div>`;
   };
-  return head("능력치 · 성향 · 전투 능력","📊 능력치", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+  return head("능력치 · 성향 · 전투 능력",ic("chart")+" 능력치", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
   <div class="grid g2">
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">능력치</div>
@@ -836,7 +836,7 @@ VIEWS.tower=()=>{
   const canKill=sec<=60;
   const survive=c.hp/Math.max(1,f.dps*Math.max(0,1-c.def/(c.def+9000)));
   const win=canKill&&survive>=Math.min(60,sec);
-  return head("끝없이 이어지는, 혼자 오르는 탑","🗼 석탑", `최고 ${S.tower||0}층`)+`
+  return head("끝없이 이어지는, 혼자 오르는 탑",ic("tower")+" 석탑", `최고 ${S.tower||0}층`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div><b>석탑</b> <span class="tag g">최고 ${S.tower||0}층</span></div>
@@ -908,14 +908,14 @@ VIEWS.guard=()=>{
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
   const sustain=c.hp*c.heal/Math.max(1,f.dps*mit);
   const win=sustain>=30;
-  return head("쓰러뜨리지 않고 버티는 탑","🛡 결계의 탑", `최고 ${S.tower2||0}층`)+`
+  return head("쓰러뜨리지 않고 버티는 탑",ic("shield")+" 결계의 탑", `최고 ${S.tower2||0}층`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div><b>결계의 탑</b> <span class="tag g">최고 ${S.tower2||0}층</span></div>
       <span class="tiny muted">도전 횟수 제한 없음</span></div>
     <div class="tiny muted" style="margin:6px 0 10px">끝없이 몰려오는 업귀 떼에서 30초 동안 결계를 지키면 한 층을 오른다.
     적을 쓰러뜨릴 수 없으므로 화력보다 생명력·방어력·치유·보호막이 중요하다. 성향과 관계없이 기록은 하나이며, 오른 층은 줄어들지 않는다.</div>
-    <div class="card pad" style="background:#17132a;margin-bottom:10px">
+    <div class="card pad" style="background:#200c31;margin-bottom:10px">
       <b>수호자의 가호 ${S.tendency==="수호"?'<span class="tag g">적용</span>':'<span class="tag">미적용</span>'}</b>
       <div class="tiny muted">수호 성향은 받는 공격 20% 감소 · 치유·보호막 위력 ×1.4. 법구와 주문을 바꾸지 않고 그대로 도전할 수 있습니다.</div>
     </div>
@@ -967,7 +967,7 @@ VIEWS.wboss=()=>{
   const mine=Math.round(c.dps*30*(1+mod("boss")||0));
   const board=[["이매",9400000000],["야차샤",3300000000],["실라스 바레타",2960000000],["스카렛 에버니",2930000000],
                ["케렌",1980000000],["이비키",1740000000]];
-  return head("종소리가 멎기 전에","👹 업귀 토벌", `이번 주 · ${6-(cal().day%7)}일 남음`)+`
+  return head("종소리가 멎기 전에",ic("oni")+" 업귀 토벌", `이번 주 · ${6-(cal().day%7)}일 남음`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
     <div class="row" style="align-items:flex-start">
@@ -995,7 +995,7 @@ VIEWS.wboss=()=>{
     <table class="t">
       ${board.map((r,i)=>`<tr><td style="width:30px">${i+1}</td><td>${r[0]}</td>
         <td style="text-align:right">${nf(r[1])}</td></tr>`).join("")}
-      ${S.wb.dmg>0?`<tr style="background:#1b1733"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
+      ${S.wb.dmg>0?`<tr style="background:#270e3c"><td>—</td><td><b style="color:var(--gold)">${esc(S.name)}</b></td>
         <td style="text-align:right"><b>${nf(S.wb.dmg)}</b></td></tr>`:""}
     </table>
   </div>`;
@@ -1030,7 +1030,7 @@ VIEWS.arena=()=>{
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
   const sust=c.hp*c.heal/Math.max(1,fdps*mit*1.5);
   const killOK=sec<=45, holdOK=sust>=45;
-  return head("라이벌과 차례로 겨루는","🏟 연무제", `제 ${sn}회 · 최고 기록 ${S.arena.best} / 15`)+`
+  return head("라이벌과 차례로 겨루는",ic("arena")+" 연무제", `제 ${sn}회 · 최고 기록 ${S.arena.best} / 15`)+`
   ${buffStrip()}
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
@@ -1116,7 +1116,7 @@ VIEWS.pets=()=>{
   const h=S.pets.hatch;
   const out=S.pets.list.filter(p=>p.out).length;
   const ready=S.pets.list.filter(p=>p.out&&S.t>=p.out.end).length;
-  return head("사무전 지하 사육장","🥚 사역귀 사육장", `보유 ${S.pets.list.length}마리 · 알 ${S.pets.eggs}개`)+`
+  return head("사무전 지하 사육장",ic("egg")+" 사역귀 사육장", `보유 ${S.pets.list.length}마리 · 알 ${S.pets.eggs}개`)+`
   ${buffStrip()}
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
@@ -1154,7 +1154,7 @@ VIEWS.pets=()=>{
     ${S.pets.list.map((p,i)=>{
       const G=GRADES[p.g];
       const done=p.out&&S.t>=p.out.end;
-      return `<div class="sub" style="border-color:${p.out?"#2f2949":G.c}">
+      return `<div class="sub" style="border-color:${p.out?"#3b165c":G.c}">
         <div class="spread"><div><b>${p.e} ${esc(p.nick||p.n)}</b> <span class="tiny" style="color:var(--gold)">Lv ${p.lv}</span></div>
           ${gradeTag(p.g)}</div>
         <div class="tiny muted">${p.d}</div>
@@ -1189,7 +1189,7 @@ function namePet(i){
 }
 
 VIEWS.fishv=()=>{
-  return head("제7구역 · 검은 바다","🎣 낚시", `숙련도 Lv ${S.fish.skill}`)+`
+  return head("제7구역 · 검은 바다",ic("fishing")+" 낚시", `숙련도 Lv ${S.fish.skill}`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted">명계에는 아침이 없지만 제7구역에는 새벽 시장이 있다. 정해진 시간이 되면 항구의 전자 범종이 울리고,
     먼바다에서 돌아온 어선들이 하나둘 부두에 닿는다. 검은 바닷물 위로 네온사인과 홍등이 길게 찢어져 흔들린다.</div>
@@ -1213,7 +1213,7 @@ VIEWS.farm=()=>{
   const o=S.farm.order, oc=o?CROPS.find(c=>c.id===o.id):null;
   const w=WEATHERS[S.weather];
   const ready=S.farm.plots.filter(p=>p&&p.left<=0).length;
-  return head("약초 온실 뒤뜰","🌿 약초밭", `원예 숙련도 Lv ${S.farm.skill}`)+`
+  return head("약초 온실 뒤뜰",ic("herb")+" 약초밭", `원예 숙련도 Lv ${S.farm.skill}`)+`
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">텃밭</div>
@@ -1229,7 +1229,7 @@ VIEWS.farm=()=>{
           const c=CROPS.find(x=>x.id===p.id);
           const done=p.left<=0;
           return `<div class="sub" style="padding:8px;border-color:${done?"var(--gold2)":"var(--line)"}">
-            <div style="font-size:18px;text-align:center">${done?c.e:"🌱"}</div>
+            <div style="font-size:18px;text-align:center">${done?c.e:ic("seedling")}</div>
             <div class="tiny" style="text-align:center"><b>${c.n}</b></div>
             <div class="tiny muted" style="text-align:center">${done?"다 자랐습니다":hhmm(p.left)}</div>
             <div class="bar" style="margin:4px 0"><i style="width:${(100-p.left/p.total*100).toFixed(0)}%"></i></div>
@@ -1241,7 +1241,7 @@ VIEWS.farm=()=>{
       </div>
       <div class="row" style="margin-top:9px">
         <span class="tiny muted">한 종류로 모두 심기</span>
-        ${CROPS.map(c=>`<button class="btn sm ghost" onclick="plantAll('${c.id}')">${c.e}</button>`).join("")}
+        ${CROPS.map(c=>`<button class="btn sm ghost" title="${c.n}" onclick="plantAll('${c.id}')">${c.e} ${c.n}</button>`).join("")}
       </div>
       <div class="tiny muted" style="margin-top:8px">물을 주면 남은 시간 −15%, 비료는 −30%에 수확량 +1. 다 자라는 순간의 날씨에 따라 드물게 변이해 수확량이 늘어납니다.</div>
     </div>
@@ -1262,7 +1262,7 @@ VIEWS.farm=()=>{
       </div>
       <div class="card pad">
         <div class="sect-t">심을 수 있는 것</div>
-        ${CROPS.map(c=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid #221d38">
+        ${CROPS.map(c=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid #2c1045">
           <div><b>${c.e} ${c.n}</b> <span class="tiny muted">${hhmm(c.t)} · ${c.y} ${c.s}개</span>
             <div class="tiny muted">${c.d}</div></div></div>`).join("")}
       </div>
@@ -1284,7 +1284,7 @@ VIEWS.kitchen=()=>{
       <div class="tiny muted">${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")}</div></div>
       <span class="tiny muted">${hhmm(m.left)}</span></div>`;
   };
-  return head("학생 식당 주방","🍲 식당", `재료 · 약초 ${S.mat.약초} · 어물 ${S.mat.어물} · 열매 ${S.mat.열매} · 뿌리 ${S.mat.뿌리} · 꽃 ${S.mat.꽃}`)+`
+  return head("학생 식당 주방",ic("stew")+" 식당", `재료 · 약초 ${S.mat.약초} · 어물 ${S.mat.어물} · 열매 ${S.mat.열매} · 뿌리 ${S.mat.뿌리} · 꽃 ${S.mat.꽃}`)+`
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="sect-t">지금 먹은 요리</div>
@@ -1322,7 +1322,7 @@ VIEWS.kitchen=()=>{
    화면 — 모임 · 중개소 · 떠돌이 상인
    ═══════════════════════════════════════════════════ */
 VIEWS.club=()=>{
-  if(!S.club) return head("학생들이 꾸리는 모임","🏮 모임","가입한 모임이 없습니다")+`
+  if(!S.club) return head("학생들이 꾸리는 모임",ic("lantern")+" 모임","가입한 모임이 없습니다")+`
     <div class="grid g3">${CLUBS.map(c=>`<div class="sub">
       <h4>${c.e} ${c.n}</h4>
       <div class="tiny muted" style="margin:5px 0 8px;min-height:40px">${c.d}</div>
@@ -1330,7 +1330,7 @@ VIEWS.club=()=>{
       <button class="btn pri sm" style="margin-top:9px" onclick="joinClub('${c.id}')">가입하기</button></div>`).join("")}</div>`;
   const c=CLUBS.find(x=>x.id===S.club.id), K=S.club;
   const need=K.lv*2400;
-  return head("학생들이 꾸리는 모임","🏮 모임", `${c.n} · Lv ${K.lv}`)+`
+  return head("학생들이 꾸리는 모임",ic("lantern")+" 모임", `${c.n} · Lv ${K.lv}`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="row" style="align-items:flex-start">
       <div style="font-size:34px">${c.e}</div>
@@ -1340,7 +1340,7 @@ VIEWS.club=()=>{
         <div class="bar" style="margin:6px 0 4px"><i style="width:${clamp(K.exp/need*100,0,100)}%"></i></div>
         <div class="tiny muted">${nf(K.exp)} / ${nf(need)} → Lv ${K.lv+1} · 부원 모두 ${c.b}</div>
       </div></div>
-    <div class="card pad" style="background:#17132a;margin-top:10px">
+    <div class="card pad" style="background:#200c31;margin-top:10px">
       <div class="tiny muted"><b>공지</b> · 부원 여러분의 모든 활동은 자유롭습니다. 부담 갖지 말고 하고 싶은 것만 하며, 자신의 속도로 나아가도록 합시다 :&gt;</div>
     </div>
   </div>
@@ -1379,7 +1379,7 @@ let MKFILTER="전체";
 VIEWS.market=()=>{
   let list=S.market.list.map((m,i)=>({...m,i}));
   if(MKFILTER!=="전체") list=list.filter(m=>SLOTS.find(s=>s.k===m.it.slot).n===MKFILTER);
-  return head("제5구역 중개소","🏷 중개소", `수수료 5~15% · ${hhmm(S.market.next)} 뒤 매물 갱신`)+`
+  return head("제5구역 중개소",ic("tag")+" 중개소", `수수료 5~15% · ${hhmm(S.market.next)} 뒤 매물 갱신`)+`
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
     <div class="tiny muted">판매 수수료: 5%(10만까지) · 7%(100만까지) · 10%(그 이상). 벽면에는 현상수배범의 얼굴과 용병들의 전적이 빼곡하게 떠 있고,
     테이블 하나에서는 술값을 흥정하면서 바로 옆 테이블에서는 법구값을 흥정한다.</div>
@@ -1431,7 +1431,7 @@ VIEWS.merchant=()=>{
     return {it, price:Math.round(gearScore(it)*1.05+300)};
   });
   if(!S._merch||S._merchDay!==day){ S._merch=stock; S._merchDay=day; }
-  return head("골목 끝에 선 수레","🧳 떠돌이 상인", `오늘의 물건 · 자정에 바뀜`)+`
+  return head("골목 끝에 선 수레",ic("luggage")+" 떠돌이 상인", `오늘의 물건 · 자정에 바뀜`)+`
   <div class="card pad" style="margin-bottom:14px">
     <div class="quote">"오늘은 이것뿐이야. 내일은 다른 골목에 있을 거고, 그 골목이 내일도 거기 있을지는 나도 몰라."</div>
   </div>
@@ -1488,10 +1488,10 @@ runQuest=function(stage,party){
 
 /* ═══════════ 지도에 새 장소 ═══════════ */
 PLACES.push(
- {id:"farmp", n:"약초 온실", e:"🌿", x:6,  y:36, view:"farm"},
- {id:"pier",  n:"부두",      e:"🎣", x:34, y:92, view:"fishv"},
- {id:"pen",   n:"사육장",    e:"🥚", x:92, y:48, view:"pets"},
- {id:"hall",  n:"학생 식당", e:"🍲", x:62, y:70, view:"kitchen"},
+ {id:"farmp", n:"약초 온실", e:ic("herb"), x:6,  y:36, view:"farm"},
+ {id:"pier",  n:"부두",      e:ic("fishing"), x:34, y:92, view:"fishv"},
+ {id:"pen",   n:"사육장",    e:ic("egg"), x:92, y:48, view:"pets"},
+ {id:"hall",  n:"학생 식당", e:ic("stew"), x:62, y:70, view:"kitchen"},
 );
 
 /* 광장 바로가기 보강 */
