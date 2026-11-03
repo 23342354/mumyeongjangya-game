@@ -102,16 +102,51 @@ const FISHES=[
  {n:"삼계어",e:ic("fish"),w:1,y:"혼백",s:2,p:1300,tier:"legend"},
  {n:"옥빛 심연어",e:ic("goldfish"),w:1,y:"혼백",s:2,p:1600,tier:"legend"},
 ];
-/* ─── 요리 ─── */
+/* ─── 사무전 만두 식당 : 속재료별 한시 효과 ─── */
+/* 텃밭·낚시에서 획득하는 다섯 재료 계통을 그대로 사용합니다.
+   동일 레시피 ID(d1~d7)를 유지해 기존 소지품 수량과 섭취 시간이 보존됩니다. */
 const DISHES=[
- {id:"d1", n:"순무 수프",       e:ic("stew"), t:"식사",   mat:{뿌리:3},        buf:[["hpP",.06],["defP",.06]], dur:240, d:"식당 수프의 기본입니다. 의뢰 전에 한 그릇 비우면 든든합니다."},
- {id:"d2", n:"잿불 호박 그라탱", e:ic("pumpkin"), t:"식사",   mat:{열매:4},        buf:[["gold",.12],["loot",.06]], dur:360, d:"속을 파내고 치즈를 얹어 구웠습니다. 축제 때 가장 많이 팔립니다."},
- {id:"d3", n:"약초 경단",       e:ic("dango"), t:"식사",   mat:{약초:4},        buf:[["mana",.10],["rest",.25]], dur:240, d:"삼장이 정서 안정용으로 권하는 음식."},
- {id:"d4", n:"어탕",            e:ic("noodle"), t:"식사",   mat:{어물:4},        buf:[["atkP",.08]],              dur:240, d:"제7구역 새벽 시장에서 배운 조리법."},
- {id:"d5", n:"별빛 커스터드",   e:ic("pudding"), t:"디저트", mat:{꽃:3,열매:2},   buf:[["study",.05],["know",.02]], dur:200, d:"푸른 별꽃의 즙을 넣어 굳힌 디저트."},
- {id:"d6", n:"연화 만두",       e:ic("dumpling"), t:"디저트", mat:{약초:2,뿌리:2}, buf:[["exp",.06]],               dur:240, d:"만두 빚기도 훌륭한 수행이라고 누군가 말했다."},
- {id:"d7", n:"월병",            e:ic("mooncake"), t:"디저트", mat:{열매:2,꽃:2},   buf:[["crit",.03],["critD",.10]], dur:240, d:"강시가 제일 좋아하는 것."},
+ {id:"d1", n:"백옥무 만두",     e:ic("dumpling"), t:"식사", fill:["뿌리"], mat:{뿌리:3}, buf:[["hpP",.06],["defP",.04]], dur:240, d:"아삭한 무와 뿌리채소를 넣은 든든한 만두. 몸을 단단하게 지탱합니다."},
+ {id:"d2", n:"흑설탕호박 만두", e:ic("dumpling"), t:"디저트", fill:["열매"], mat:{열매:4}, buf:[["gold",.10],["loot",.04]], dur:300, d:"달게 익힌 호박 소. 들고 나서면 생각지 못한 작은 복이 따라옵니다."},
+ {id:"d3", n:"청룡부추 만두",   e:ic("dumpling"), t:"식사", fill:["약초"], mat:{약초:4}, buf:[["rest",.18],["snGuard",.05]], dur:240, d:"푸릇한 부추와 산채로 속을 채웠습니다. 긴 수행 뒤의 피로를 달래 줍니다."},
+ {id:"d4", n:"검은 숭어 만두",  e:ic("dumpling"), t:"식사", fill:["어물"], mat:{어물:4}, buf:[["atkP",.08]], dur:240, d:"망천 바다에서 얻은 어물을 다져 넣었습니다. 대련 전 든든한 한입."},
+ {id:"d5", n:"매화과실 만두",   e:ic("dumpling"), t:"디저트", fill:["꽃","열매"], mat:{꽃:3,열매:2}, buf:[["study",.05],["know",.02]], dur:240, d:"과실 소에 매화향을 얹었습니다. 책을 펼치기 전 먹기 좋습니다."},
+ {id:"d6", n:"연근산채 만두",   e:ic("dumpling"), t:"식사", fill:["약초","뿌리"], mat:{약초:2,뿌리:2}, buf:[["exp",.06]], dur:240, d:"아삭한 연근과 산채가 어우러집니다. 삼장은 손으로 빚는 시간도 수행이라 합니다."},
+ {id:"d7", n:"금강밤대추 만두", e:ic("dumpling"), t:"디저트", fill:["열매","꽃"], mat:{열매:3,꽃:1}, buf:[["crit",.03],["critD",.08]], dur:240, d:"밤과 대추를 으깨 넣은 달콤한 소. 짧은 순간의 집중을 돕습니다."},
+ {id:"d8", n:"야광버섯 만두",   e:ic("dumpling"), t:"식사", fill:["약초","뿌리"], mat:{약초:3,뿌리:1}, buf:[["heal",.08],["defP",.03]], dur:270, d:"향긋한 버섯과 뿌리 소. 회복과 방어에 도움이 됩니다."},
+ {id:"d9", n:"흑수새우부추 만두",e:ic("dumpling"), t:"식사", fill:["어물","약초"], mat:{어물:3,약초:2}, buf:[["spd",.04],["crit",.02]], dur:240, d:"새우의 탄력과 부추의 향이 살아 있습니다. 움직임이 한결 경쾌해집니다."},
+ {id:"d10",n:"죽순나물 만두",   e:ic("dumpling"), t:"식사", fill:["뿌리","약초"], mat:{뿌리:3,약초:1}, buf:[["defP",.05],["snGuard",.04]], dur:300, d:"잘게 썬 죽순을 넣은 담백한 속. 마음과 자세를 가다듬습니다."},
+ {id:"d11",n:"연꽃향 만두",     e:ic("dumpling"), t:"디저트", fill:["꽃","열매"], mat:{꽃:4,열매:1}, buf:[["know",.05],["exp",.03]], dur:240, d:"한입 베어 물면 연꽃 향이 은은히 퍼집니다. 배운 것을 오래 기억하게 합니다."},
+ {id:"d12",n:"어물연근 만두",   e:ic("dumpling"), t:"식사", fill:["어물","뿌리"], mat:{어물:3,뿌리:2}, buf:[["boss",.06],["atkP",.03]], dur:270, d:"어물과 연근의 씹는 맛. 강한 업귀와 맞설 때 기운을 북돋습니다."},
+ {id:"d13",n:"홍매실 만두",     e:ic("dumpling"), t:"디저트", fill:["열매","꽃"], mat:{열매:3,꽃:2}, buf:[["mana",.08],["snGuard",.05]], dur:240, d:"새콤한 매실 소와 꽃잎 향. 흩어지는 파장을 다독입니다."},
+ {id:"d14",n:"오색 모둠만두",   e:ic("dumpling"), t:"식사", fill:["약초","뿌리","꽃","열매","어물"], mat:{약초:1,뿌리:1,꽃:1,열매:1,어물:1}, buf:[["gold",.06],["loot",.03]], dur:360, d:"텃밭과 바다에서 얻은 다섯 속재료를 한데 빚었습니다. 복을 부르는 만두."},
+ {id:"d15",n:"달빛대추 만두",   e:ic("dumpling"), t:"디저트", fill:["열매","꽃"], mat:{열매:4,꽃:2}, buf:[["exp",.05],["critD",.08]], dur:300, d:"달빛 아래 익힌 대추와 꽃꿀 소. 끝맛이 오래 남습니다."},
 ];
+const OLD_DISH_NAMES={
+ "순무 수프":"d1", "잿불 호박 그라탱":"d2", "약초 경단":"d3", "어탕":"d4",
+ "별빛 커스터드":"d5", "연화 만두":"d6", "월병":"d7"
+};
+/* 처음 한 번만 이전 요리 도감을 새 만두로 변경. 만든 수량과 효과 잔여시간은 유지. */
+function migrateDumplingKitchen(){
+ if(!S||!S.kit) return;
+ if(S.kit.dumplingVersion===1)return;
+ if(!S.kit.have||typeof S.kit.have!=="object")S.kit.have={};
+ const valid=new Set(DISHES.map(d=>d.id));
+ const migrated={};
+ for(const [id,qty] of Object.entries(S.kit.have)) if(valid.has(id)&&Number(qty)>0)
+   migrated[id]=Math.max(0,Math.floor(Number(qty)));
+ S.kit.have=migrated;
+ ["eat","dess"].forEach(slot=>{ if(S.kit[slot]&&!valid.has(S.kit[slot].id))S.kit[slot]=null; });
+ if(S.dex&&Array.isArray(S.dex.dish)){
+   const names=new Set(DISHES.map(d=>d.n));
+   S.dex.dish=[...new Set(S.dex.dish.map(name=>{
+     const id=OLD_DISH_NAMES[name];
+     return id?DISHES.find(d=>d.id===id).n:name;
+   }).filter(name=>names.has(name)))];
+ }
+ S.kit.dumplingVersion=1;
+}
+let DUMPLING_FILL="전체";
 /* ─── 모임(동아리) ─── */
 const CLUBS=[
  {id:"cl1", n:"등롱회",     e:ic("lantern"), d:"창가에 등롱을 두는 모임. 축제철에 가장 바쁘다.", b:"지식·전리품 +5%"},
@@ -185,6 +220,7 @@ function ensureV2(){
   d("club",null);
   d("market",{list:[],next:0});
   d("meal",null);
+  migrateDumplingKitchen();
   if(!S.alloc) S.alloc={atk:0,def:0,agi:0,men:0,res:0};
   if(!S.farm.order) rollFarmOrder();
   if(!S.market.list.length) rollMarket();
@@ -489,6 +525,7 @@ function fishHook(){
 /* ═══════════ 식당 ═══════════ */
 function cook(id){
   const d=DISHES.find(x=>x.id===id);
+  if(!d){toast("이전 요리 레시피는 더 이상 사용하지 않습니다.","bad");return;}
   for(const k in d.mat){ if(S.mat[k]<d.mat[k]){ toast(`${k}이(가) 부족합니다.`,"bad"); return; } }
   for(const k in d.mat) S.mat[k]-=d.mat[k];
   S.kit.have[id]=(S.kit.have[id]||0)+1;
@@ -496,6 +533,7 @@ function cook(id){
 }
 function eat(id){
   const d=DISHES.find(x=>x.id===id);
+  if(!d){toast("이전 요리 레시피는 더 이상 사용할 수 없습니다.","bad");return;}
   if(!(S.kit.have[id]>0)){ toast("보유한 요리가 없습니다.","bad"); return; }
   S.kit.have[id]--;
   const slot=d.t==="식사"?"eat":"dess";
@@ -571,7 +609,7 @@ step=function(m){
   let grew=false;
   S.farm.plots.forEach(p=>{ if(p&&p.left>0){ p.left-=m; if(p.left<=0){ p.left=0; grew=true; } } });
   if(grew) toast("텃밭에 다 자란 작물이 있습니다.");
-  // 요리 버프
+  // 만두 효과
   ["eat","dess"].forEach(s=>{ const k=S.kit[s]; if(k){ k.left-=m; if(k.left<=0) S.kit[s]=null; } });
   // 월드 보스 도전권
   S.wb.next-=m;
@@ -601,7 +639,7 @@ NAVDEF.push(
  {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
  {id:"gearn", ic:ic("beads"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
- {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
+ {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"만두 식당"}]},
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"shop",n:"매점"},{id:"merchant",n:"떠돌이 상인"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"fest",n:"염라제",bd:"축제"},{id:"outing",n:"구역 나들이"},{id:"record",n:"기록·성적"}]},
@@ -704,7 +742,7 @@ function unequipAll(){ SLOTS.forEach(sl=>unequip(sl.k)); }
 
 VIEWS.bag=()=>{
   const matRows=Object.keys(S.mat).map(k=>`<div class="spread tiny" style="padding:3px 0"><span>${k}</span><b>${nf(S.mat[k])}</b></div>`).join("");
-  const dishRows=Object.keys(S.kit.have).filter(k=>S.kit.have[k]>0).map(k=>{
+  const dishRows=Object.keys(S.kit.have).filter(k=>S.kit.have[k]>0 && DISHES.some(d=>d.id===k)).map(k=>{
     const d=DISHES.find(x=>x.id===k);
     return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${d.e} ${d.n}</b> ×${S.kit.have[k]}<div class="tiny muted">${d.t} · ${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")} · ${hhmm(d.dur)}</div></div>
@@ -722,7 +760,7 @@ VIEWS.bag=()=>{
       <div class="spread tiny"><span>비료</span><b>${S.farm.fert}</b></div>
     </div>
     <div class="card pad">
-      <div class="sect-t">요리</div>
+      <div class="sect-t">만두</div>
       ${dishRows||'<div class="tiny muted">만들어 둔 요리가 없습니다.</div>'}
       <hr class="hr">
       <div class="sect-t">소모품</div>
@@ -1206,43 +1244,54 @@ function pickCrop(i){
 }
 
 VIEWS.kitchen=()=>{
+  migrateDumplingKitchen();
   const slot=(s,label)=>{
-    const m=S.kit[s]; if(!m) return `<div class="tiny muted">${label} 칸이 비어 있습니다.</div>`;
+    const m=S.kit[s];if(!m)return `<div class="tiny muted">${label} 칸이 비어 있습니다.</div>`;
     const d=DISHES.find(x=>x.id===m.id);
-    return `<div class="spread" style="padding:4px 0"><div><span class="tag g">${label}</span> <b>${d.e} ${d.n}</b>
+    if(!d)return `<div class="tiny muted">${label} 칸이 비어 있습니다.</div>`;
+    return `<div class="spread" style="padding:6px 0;gap:10px"><div><span class="tag g">${label}</span> <b>${d.e} ${d.n}</b>
       <div class="tiny muted">${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")}</div></div>
       <span class="tiny muted">${hhmm(m.left)}</span></div>`;
   };
-  return head("학생 식당 주방",ic("stew")+" 식당", `재료 · 약초 ${S.mat.약초} · 어물 ${S.mat.어물} · 열매 ${S.mat.열매} · 뿌리 ${S.mat.뿌리} · 꽃 ${S.mat.꽃}`)+`
+  const fills=["전체","뿌리","약초","어물","꽃","열매"];
+  const visible=DISHES.filter(d=>DUMPLING_FILL==="전체"||d.fill.includes(DUMPLING_FILL));
+  const made=Number(S.ct?.cook)||0;
+  return head("삼장 선생님의 만두 주방",ic("dumpling")+" 만두 식당", `재료 · 약초 ${S.mat.약초} · 어물 ${S.mat.어물} · 열매 ${S.mat.열매} · 뿌리 ${S.mat.뿌리} · 꽃 ${S.mat.꽃}`)+`
+  <div class="card pad" style="margin-bottom:12px">
+    <div class="spread" style="gap:10px"><div><div class="sect-t">오늘은 어떤 속을 빚을까요?</div>
+      <div class="tiny muted">속재료에 따라 만두의 효과가 달라집니다. 수확한 작물과 낚아 올린 어물로 다양한 만두를 만들어 보세요.</div></div>
+      <span class="tag g">만두 도감 ${S.dex?.dish?.length||0} / ${DISHES.length}</span></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:12px">${fills.map(f=>`<button class="btn sm ${DUMPLING_FILL===f?"pri":""}" onclick="DUMPLING_FILL='${f}';renderMain()">${f==='전체'?'모든 속':f+' 속'}</button>`).join("")}</div>
+  </div>
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
-      <div class="sect-t">지금 먹은 요리</div>
-      ${slot("eat","식사")}${slot("dess","디저트")}
-      <div class="tiny muted" style="margin-top:8px">같은 요리를 다시 먹으면 효과 시간이 이어지고(최대 2배), 같은 칸의 다른 요리를 먹으면 효과가 바뀝니다.
-      식사와 디저트는 한 칸씩 따로 적용되며 물약과도 겹칩니다.</div>
+      <div class="sect-t">지금 먹은 만두</div>
+      ${slot("eat","든든한 만두")}${slot("dess","달콤한 만두")}
+      <div class="tiny muted" style="margin-top:8px">만두의 효과는 일정 시간 지속됩니다. 같은 만두를 다시 먹으면 시간이 연장되고(최대 2배), 같은 칸의 다른 만두를 먹으면 효과가 교체됩니다. 든든한 만두와 달콤한 만두는 한 종류씩 함께 적용할 수 있습니다.</div>
     </div>
     <div class="card pad">
-      <div class="sect-t">세라핀 루 교수의 텃밭 과제</div>
-      <div class="quote">"이번 주에는 텃밭에서 기른 재료로 요리를 세 번 만들어 오세요. 직접 기른 재료로 만든 것이 가장 잘 듣는답니다."</div>
-      <div class="tiny muted" style="margin-top:8px">만든 요리 ${Object.values(S.kit.have).reduce((a,b)=>a+b,0)}개 · 보상은 주간 정산에 포함됩니다.</div>
+      <div class="sect-t">삼장 선생님의 만두 수업</div>
+      <div class="quote">“만두를 빚는 일도 마음을 가다듬는 수행입니다. 서두르지 마시고, 속이 새지 않도록 차근차근 빚어 보십시오.”</div>
+      <div class="tiny muted" style="margin-top:8px">제작한 만두 ${made}개 · 바랑에 남은 만두 ${Object.values(S.kit.have).reduce((a,b)=>a+(Number(b)||0),0)}개</div>
     </div>
   </div>
   <div class="card pad">
-    <div class="sect-t">주방 레시피 ${DISHES.length}종</div>
+    <div class="spread" style="gap:10px"><div class="sect-t">만두 빚기 · ${visible.length}종</div><span class="tiny muted">총 ${DISHES.length}종 · 효과는 속마다 다릅니다</span></div>
     <div class="grid g2">
-      ${DISHES.map(d=>{
-        const can=Object.keys(d.mat).every(k=>S.mat[k]>=d.mat[k]);
+      ${visible.map(d=>{
+        const can=Object.keys(d.mat).every(k=>(S.mat[k]||0)>=d.mat[k]);
         return `<div class="sub">
-          <div class="spread"><b>${d.e} ${d.n}</b> <span class="tag ${d.t==="식사"?"j":"v"}">${d.t}</span></div>
+          <div class="spread"><b>${d.e} ${d.n}</b> <span class="tag ${d.t==="식사"?"j":"v"}">${d.t==="식사"?"든든한 만두":"달콤한 만두"}</span></div>
+          <div class="tiny muted" style="margin:4px 0">속재료 · ${d.fill.join(" · ")}</div>
           <div class="tiny" style="color:var(--jade);margin:4px 0">${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")} · ${hhmm(d.dur)}</div>
           <div class="tiny muted">${d.d}</div>
           <div class="row" style="margin:7px 0 0">
-            ${Object.keys(d.mat).map(k=>`<span class="buffchip" style="${S.mat[k]>=d.mat[k]?"":"color:var(--red)"}">${k} ${S.mat[k]}/${d.mat[k]}</span>`).join("")}
+            ${Object.keys(d.mat).map(k=>`<span class="buffchip" style="${(S.mat[k]||0)>=d.mat[k]?"":"color:var(--red)"}">${k} ${S.mat[k]||0}/${d.mat[k]}</span>`).join("")}
           </div>
           <div class="row" style="margin-top:8px">
-            <button class="btn sm ${can?"pri":""}" ${can?"":"disabled"} onclick="cook('${d.id}')">1개 만들기</button>
-            <button class="btn sm" ${S.kit.have[d.id]>0?"":"disabled"} onclick="eat('${d.id}')">먹기 (${S.kit.have[d.id]||0})</button>
-          </div></div>`}).join("")}
+            <button class="btn sm ${can?"pri":""}" ${can?"":"disabled"} onclick="cook('${d.id}')">만두 1개 빚기</button>
+            <button class="btn sm" ${(S.kit.have[d.id]||0)>0?"":"disabled"} onclick="eat('${d.id}')">먹기 (${S.kit.have[d.id]||0})</button>
+          </div></div>`;}).join("")}
     </div>
   </div>`;
 };
@@ -1297,7 +1346,7 @@ VIEWS.club=()=>{
   <div class="card pad">
     <div class="spread"><div class="sect-t" style="margin:0">주간 모임 과제</div><span class="tiny muted">${6-(cal().day%7)}일 남음</span></div>
     <div class="tiny muted" style="margin-bottom:8px">부원들이 이번 주에 한 일을 합쳐 셉니다. 목표를 채우면 그 과제 목표의 1/5 이상 보탠 부원이 각자 연등 6개를 받습니다.</div>
-    ${[["의뢰 완료",S.quests.cleared,15],["탑 돌파",(S.tower||0)+(S.tower2||0),20],["요리 만들기",Object.values(S.kit.have).reduce((a,b)=>a+b,0),10]]
+    ${[["의뢰 완료",S.quests.cleared,15],["탑 돌파",(S.tower||0)+(S.tower2||0),20],["만두 빚기",S.ct?.cook||0,10]]
       .map(([n,v,g])=>`<div style="margin-bottom:8px"><div class="spread tiny"><span>${n}</span><span class="muted">${Math.min(v,g)} / ${g}회</span></div>
         <div class="bar jd" style="margin-top:3px"><i style="width:${clamp(v/g*100,0,100)}%"></i></div></div>`).join("")}
     <button class="btn sm red" style="margin-top:6px" onclick="if(confirm('모임을 탈퇴할까요?')){S.club=null;renderMain();save()}">탈퇴</button>
@@ -1415,7 +1464,7 @@ runQuest=function(stage,party){
 PLACES.push(
  {id:"farmp", n:"약초 온실", e:ic("herb"), x:6,  y:36, view:"farm"},
  {id:"pier",  n:"부두",      e:ic("fishing"), x:34, y:92, view:"fishv"},
- {id:"hall",  n:"학생 식당", e:ic("stew"), x:62, y:70, view:"kitchen"},
+ {id:"hall",  n:"학생 식당", e:ic("dumpling"), x:62, y:70, view:"kitchen"},
 );
 
 /* 광장 바로가기 보강 */

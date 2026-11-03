@@ -370,7 +370,7 @@ VIEWS.rank=()=>{
   };
   return head("사무전의 기록",ic("medal")+" 랭킹", `${sbStateChip()} · 학생 ${R.length}명`)+`
   <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
-    <div class="tiny muted">같은 커뮤니티 러너들의 실제 기록입니다. 물약·요리 같은 시간제 효과는 전투력에 포함되지 않습니다.</div>
+    <div class="tiny muted">같은 커뮤니티 러너들의 실제 기록입니다. 물약·만두 같은 시간제 효과는 전투력에 포함되지 않습니다.</div>
     <button class="btn sm" style="margin-top:8px" onclick="syncUp(true);syncRoster(true)">내 기록 올리기</button>
   </div>
   <div class="grid g2" style="margin-bottom:12px">

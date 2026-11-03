@@ -54,8 +54,8 @@ const ACH=[
  {id:"a27", n:"온실의 주인",   d:"약초밭 100회 수확",          c:"harvest",g:100,p:20},
  {id:"a28", n:"첫 낚시",       d:"낚시 1회 성공",               c:"fish",   g:1,  p:3},
  {id:"a29", n:"검은 바다의 손",d:"낚시 100회 성공",             c:"fish",   g:100,p:20},
- {id:"a30", n:"주방 보조",     d:"요리 10번 만들기",           c:"cook",   g:10, p:10},
- {id:"a31", n:"삼장의 제자",   d:"요리 100번 만들기",          c:"cook",   g:100,p:30},
+ {id:"a30", n:"만두 빚는 손",   d:"만두 10번 빚기",           c:"cook",   g:10, p:10},
+ {id:"a31", n:"삼장의 제자",   d:"만두 100번 빚기",          c:"cook",   g:100,p:30},
  {id:"a35", n:"연무제 입상",   d:"연무제 5회전 돌파",          c:"arenaBest",g:5, p:20},
  {id:"a36", n:"연무제 우승",   d:"연무제 15회전 완주",         c:"arenaBest",g:15,p:60},
  {id:"a37", n:"토벌 참여",     d:"업귀 토벌 10회 공격",        c:"wb",     g:10, p:15},
@@ -409,7 +409,7 @@ onNewDay=function(){
    ═══════════════════════════════════════════════════ */
 let RECTAB="업적", ACHFILTER="전체";
 VIEWS.record=()=>{
-  const tabs=["업적","칭호 도감","악인 도감","식물 도감","낚시 도감","요리 도감","도감 점수","통계"];
+  const tabs=["업적","칭호 도감","악인 도감","식물 도감","낚시 도감","만두 도감","도감 점수","통계"];
   let body="";
 
   if(RECTAB==="업적"){
@@ -451,7 +451,7 @@ VIEWS.record=()=>{
         <div class="tiny muted" style="margin-top:5px">기본 출현 확률 ${it.w}%</div>
         <div class="tiny" style="color:var(--jade);margin-top:4px">${got?`내가 낚은 횟수 ${c}회`:"아직 낚은 적 없음"}</div>
       </div>`; }).join("")}</div>`;
-  if(RECTAB==="요리 도감") body=`<div class="tiny muted" style="margin-bottom:10px">직접 만들어 본 요리가 기록됩니다. ${S.dex.dish.length} / ${DISHES.length}</div>`+dexGrid("요리",DISHES,"dish");
+  if(RECTAB==="만두 도감") body=`<div class="tiny muted" style="margin-bottom:10px">직접 빚어 본 만두의 속재료와 효과가 기록됩니다. ${S.dex.dish.length} / ${DISHES.length}</div>`+dexGrid("만두",DISHES,"dish");
   if(RECTAB==="칭호 도감"){
     body=`<div class="tiny muted" style="margin-bottom:10px">${S.dex.title.length} / ${TITLES.length} · 누르면 학생증의 칭호가 바뀝니다</div>
     <div class="grid g4">${TITLES.map((t,i)=>{
@@ -463,7 +463,7 @@ VIEWS.record=()=>{
   }
   if(RECTAB==="도감 점수"){
     const rows=[["악인 도감",S.dex.mon.length,MONS.length,6],["식물 도감",S.dex.plant.length,CROPS.length,5],
-                ["낚시 도감",S.dex.fish.length,FISHES.length,8],["요리 도감",S.dex.dish.length,DISHES.length,5],
+                ["낚시 도감",S.dex.fish.length,FISHES.length,8],["만두 도감",S.dex.dish.length,DISHES.length,5],
                 ["칭호 도감",S.dex.title.length,TITLES.length,4]];
     body=`<div class="card pad" style="margin-bottom:12px">
       <div class="spread"><div class="sect-t" style="margin:0">도감 점수</div>
@@ -479,7 +479,7 @@ VIEWS.record=()=>{
     const rows=[["명계에서 보낸 날",cal().day+1+"일"],["수업 교시",nf(C.classH)],["처치한 악인",nf(C.mon)],
       ["처치한 보스",nf(C.boss)],["해결한 의뢰",nf(C.quest)],["석탑 최고",(S.tower||0)+"층"],["결계의 탑 최고",(S.tower2||0)+"층"],
       ["연무제 최고",S.arena.best+"회전"],["업귀 토벌 공격",nf(C.wb)+"회"],["구역 나들이",nf(C.outing)+"회"],
-      ["수확",nf(C.harvest)+"회"],["낚시",nf(C.fish)+"마리"],["요리",nf(C.cook)+"번"],
+      ["수확",nf(C.harvest)+"회"],["낚시",nf(C.fish)+"마리"],["만두 빚기",nf(C.cook)+"번"],
       ["업적 점수",achPts()],["도감 점수",dexScore()],["전투력",nf(power())]];
     body=`<div class="grid g4">${rows.map(([k,v])=>`<div class="card pad" style="padding:11px 13px">
       <div class="tiny muted">${k}</div><div style="font-size:18px;font-weight:600;color:var(--gold)">${v}</div></div>`).join("")}</div>`;
@@ -527,7 +527,7 @@ VIEWS.rank=()=>{
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">전투력 순위</div>
         <span class="tiny muted">내 순위 ${myRank}위</span></div>
-      <div class="tiny muted" style="margin-bottom:8px">법구·능력치를 반영한 전투력입니다. 물약·요리 같은 시간제 효과는 순위에서 제외합니다.</div>
+      <div class="tiny muted" style="margin-bottom:8px">법구·능력치를 반영한 전투력입니다. 물약·만두 같은 시간제 효과는 순위에서 제외합니다.</div>
       <table class="t">
         <tr style="background:var(--s2)"><td style="width:26px">—</td>
           <td><b style="color:var(--gold)">${esc(S.name)}</b> <span class="tiny muted">${S.course}과정 · Lv ${S.lvl}</span></td>
@@ -872,7 +872,7 @@ NAVDEF.push(
  {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
  {id:"gearn", ic:ic("sword"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
- {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
+ {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"만두 식당"}]},
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"},
                                           {id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"merchant",n:"떠돌이 상인"},{id:"shop",n:"매점"}]},
