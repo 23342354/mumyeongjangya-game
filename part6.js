@@ -11,6 +11,9 @@ function ensureV6(){
   if(!S.sb.claimed) S.sb.claimed=[];
   if(S.sb.chatId===undefined) S.sb.chatId=0;
   if(!S.sb.id) S.sb.id = "S"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  // 이전 버전은 NPC 대사를 각자의 저장 기록에만 넣었습니다. 남아 있는 로컬 잔상을 제거합니다.
+  // 서버 ID가 있는 NPC 발언은 삭제하지 않으며, 다른 러너의 실제 채팅도 건드리지 않습니다.
+  if(Array.isArray(S.msgs)) S.msgs=S.msgs.filter(m=>!(m && m.tab==="전체" && !m.sid && Object.prototype.hasOwnProperty.call(NPC, m.who)));
   // 운영진이 config.js에 적어 둔 값을 그대로 씁니다 (러너는 입력할 필요 없음)
   const CF=window.MMJY_CONFIG||{};
   if(!S.sb.manual){
@@ -575,9 +578,9 @@ wbMyRank = function(){
 };
 
 /* ═══════════════════════════════════════════════════
-   실시간 채팅 — 러너끼리 주고받습니다.
-   전체·이웃·계통은 범위가 같은 사람끼리, 페어·1:1 은 두 사람만 봅니다.
-   교사·직원의 한마디는 각자 화면에만 뜨는 분위기 글이라 서버로 보내지 않습니다.
+   실시간 채팅 — 전체·RP에만 NPC가 모두에게 공유됩니다.
+   전체·이웃·계통은 범위가 같은 사람끼리, 페어·1:1은 두 사람만 봅니다.
+   NPC는 Supabase 트리거가 메시지로 기록합니다. 로컬 단독 반응은 금지합니다.
    ═══════════════════════════════════════════════════ */
 function pairKey(a,b){ return [String(a||""),String(b||"")].sort().join("|"); }
 function chatScope(tab){
@@ -590,7 +593,9 @@ function chatScope(tab){
 /* 지금 탭에서 보여 줄 글인지 — 채널 범위까지 따집니다 */
 chatVisible = function(m){
   if(m.tab!==S.chatTab) return false;
-  if(m.local) return true;                       // 교사 한마디 등 내 화면 전용
+  // 이전 버전의 개인 전용 NPC 대사는 공용 기록과 섞지 않습니다.
+  if(!m.sid && Object.prototype.hasOwnProperty.call(NPC, m.who)) return false;
+  if(m.local) return true;
   const need=chatScope(S.chatTab);
   if(["이웃","계통","페어","1:1"].includes(S.chatTab)) return (m.scope||"")===need;
   return true;
@@ -610,8 +615,9 @@ function chatRows(rows, silent=true){
     if(S.msgs.some(m=>m.sid===r.id)) return;
     const d=new Date(r.created_at||Date.now());
     const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
+    const isNPC=String(r.from_id||"").startsWith("mmjy-npc:");
     S.msgs.push({sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
-      c:r.color||"var(--violetL)", title:r.title||"", mode:chatModeOf(r.mode),
+      npc:isNPC, c:r.color||"var(--violetL)", title:r.title||"", mode:chatModeOf(r.mode),
       ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`});
     if(!silent && typeof incomingSoundKind==="function") sound=incomingSoundKind(r)||sound;
     added++;
@@ -661,12 +667,8 @@ sendChat = function(){
   if(mine && sbOn()) chatPush(tab, mine.body, mine.mode);
   return mine;
 };
-/* 교사 한마디는 내 화면에만 */
-const _npcChatSb = npcChat;
-npcChat = function(tab){
-  _npcChatSb("전체");                       // 교사·직원은 전체 채팅에서만
-  const m=S.msgs[S.msgs.length-1]; if(m){ m.local=true; m.tab="전체"; }
-};
+/* NPC 발언은 브라우저가 생성하지 않습니다. 서버에 한 번만 기록되어 모두에게 전달됩니다. */
+npcChat=function(){ return null; };
 
 /* ─── 1:1 상대 고르기 · 연결 상태 알림 ─── */
 function dmPick(id){
