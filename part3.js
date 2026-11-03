@@ -866,6 +866,29 @@ function giveSnack(id){
 /* ═══════════════════════════════════════════════════
    의뢰 화면 — 실시간 일지
    ═══════════════════════════════════════════════════ */
+/* 자리를 비운 사이에 얻은 것 — 일지 맨 위에 붙여 둡니다 */
+function runAwayHTML(){
+  const a=S.run&&S.run.away;
+  if(!a||!a.open) return "";
+  const mats=Object.entries(a.mats||{}).filter(([k,v])=>v>0);
+  const bits=[];
+  if(a.kills) bits.push(`처치 <b>${nf(a.kills)}</b>체`);
+  if(a.rin)   bits.push(`륜 <b style="color:var(--gold)">+${nf(a.rin)}</b>`);
+  if(a.exp)   bits.push(`경험치 <b>+${nf(a.exp)}</b>`);
+  if(a.know)  bits.push(`지식 <b>+${nf(a.know)}</b>`);
+  if(a.lvlUp) bits.push(`<b style="color:var(--gold)">Lv +${a.lvlUp}</b>`);
+  return `<div class="sub" id="runaway" style="margin:10px 0 0;border-color:var(--gold2);background:var(--s1)">
+    <div class="spread">
+      <div class="tiny" style="color:var(--gold)">자리를 비운 ${hhmm(a.mins)} 동안 얻은 것</div>
+      <button class="btn sm ghost" onclick="runAwayClose()">닫기</button></div>
+    ${bits.length?`<div class="tiny" style="margin-top:6px">${bits.join(" · ")}</div>`:""}
+    ${a.gear&&a.gear.length?`<div class="row" style="gap:5px;flex-wrap:wrap;margin-top:7px">
+      ${a.gear.map(g=>`<span class="tag g">${ic("sword",11)} ${esc(g.n)}</span>`).join("")}</div>`:""}
+    ${mats.length?`<div class="row" style="gap:5px;flex-wrap:wrap;margin-top:6px">
+      ${mats.map(([k,v])=>`<span class="tag">${esc(k)} +${nf(v)}</span>`).join("")}</div>`:""}
+    ${!bits.length&&!mats.length&&!(a.gear&&a.gear.length)?'<div class="tiny muted" style="margin-top:6px">아직 손에 들어온 것이 없습니다.</div>':""}
+  </div>`;
+}
 const _quest=VIEWS.quest;
 VIEWS.quest=()=>{
   let head1="";
@@ -883,10 +906,11 @@ VIEWS.quest=()=>{
         <div class="tiny muted" id="runclock">${R.done?"종료됨":hhmm(R.left)+" 남음"}</div></div>
       <div class="bar" style="margin:8px 0 2px"><i id="runprog" style="width:${clamp((1-R.left/Math.max(1,R.total))*100,0,100)}%"></i></div>
       <div class="tiny muted" id="runpace">${R.done?"":`전체 ${hhmm(R.total)} 가운데 ${hhmm(Math.max(0,R.total-R.left))} 지났습니다. 시계와 같은 속도로 흐릅니다.`}</div>
-      <div class="log" id="runlog" style="margin:10px 0;max-height:250px">
-        ${R.logs.map(l=>`<div><span class="muted" style="font-size:10.5px">${l.time}</span> ${l.t}</div>`).join("")}
+      ${runAwayHTML()}
+      <div class="log" id="runlog" style="margin:10px 0;height:clamp(190px,34vh,300px);max-height:none">
+        ${R.logs.map(l=>`<div><span class="muted" style="font-size:10.5px">${l.time}</span> ${l.t}</div>`).reverse().join("")}
       </div>
-      <div class="tiny muted" style="margin-bottom:6px">일지는 <b>30초에 한 줄</b>씩 적힙니다. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.</div>
+      <div class="tiny muted" style="margin-bottom:6px"><b>새 줄이 맨 위</b>에 적힙니다 · 30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.</div>
       ${bar(R.me)}
       ${R.allies.map(a=>bar(a)).join("")}
       ${R.foes.filter(f=>f.hp>0).map(f=>`<div class="spread" style="padding:4px 0">
@@ -987,6 +1011,39 @@ boot=function(){ ensureV3(); _boot3(); ensureV3(); achCheck(); renderNav(); rend
 /* ═══════════ 실시간 의뢰 전용 시계 ═══════════ */
 const RUNPACE = 1/60;         // 현실 1초 = 의뢰 1초. 「50분」이라 적힌 의뢰는 정말 50분 걸립니다.
 const RUNSTEPMIN = 0.5;       // 일지 한 줄 = 의뢰 30초
+
+/* ─ 자리를 비운 사이에 얻은 것 추리기 ─ */
+function runPouch(){                     // 지금 가진 재료 전부를 한 장으로
+  const o={};
+  if(S.mat)  Object.keys(S.mat).forEach(k=>o[k]=Number(S.mat[k])||0);
+  if(S.ing)  Object.keys(S.ing).forEach(k=>o[k]=Number(S.ing[k])||0);
+  if(S.bmat) Object.keys(S.bmat).forEach(k=>o[k]=Number(S.bmat[k])||0);
+  return o;
+}
+function runSnap(){
+  const R=S.run;
+  return {rin:R.rin||0, exp:R.exp||0, know:R.know||0, kills:R.kills||0,
+          bag:(S.bag||[]).length, pouch:runPouch(), lvl:S.lvl};
+}
+function runGains(s, mins){
+  const R=S.run, now=runPouch(), mats={};
+  Object.keys(now).forEach(k=>{ const d=now[k]-(s.pouch[k]||0); if(d>0) mats[k]=d; });
+  const got=(S.bag||[]).slice(s.bag).map(it=>({n:it.name, g:it.grade}));
+  const prev=(R.away&&R.away.open!==false)?R.away:null;   // 연달아 비웠으면 합쳐서 보여 줍니다
+  return {
+    open:true, at:Date.now(),
+    mins:Math.round((prev?prev.mins:0)+mins),
+    kills:(prev?prev.kills:0)+((R.kills||0)-s.kills),
+    rin:(prev?prev.rin:0)+((R.rin||0)-s.rin),
+    exp:(prev?prev.exp:0)+((R.exp||0)-s.exp),
+    know:(prev?prev.know:0)+((R.know||0)-s.know),
+    lvlUp:(prev?prev.lvlUp:0)+(S.lvl-s.lvl),
+    gear:(prev?prev.gear:[]).concat(got).slice(-8),
+    mats:(()=>{ const m=Object.assign({},(prev&&prev.mats)||{});
+      Object.keys(mats).forEach(k=>m[k]=(m[k]||0)+mats[k]); return m; })()
+  };
+}
+function runAwayClose(){ if(S.run&&S.run.away) S.run.away.open=false; renderMain(true); save(); }
 let RUNTICK = null;
 function runRealTick(){
   if(RUNTICK) clearInterval(RUNTICK);
@@ -998,10 +1055,15 @@ function runRealTick(){
     S.run.lastTick = now;
     if(m <= 0) return;
     if(m > S.run.left) m = S.run.left;          // 자리를 비웠어도 의뢰 분량만큼만
+    /* 2분 넘게 한꺼번에 흘렀다면 자리를 비웠던 것입니다.
+       그 사이에 얻은 것만 따로 적어 두었다가 일지 맨 위에 붙여 둡니다. */
+    const awayFor = m > 2 ? m : 0;
+    const snap = awayFor ? runSnap() : null;
     S.run.left -= m;
     S.run.acc  += m;
     let guard = 0;
     while(S.run.acc >= RUNSTEPMIN && S.run && !S.run.done && guard++ < 600){ S.run.acc -= RUNSTEPMIN; runStep(); }
+    if(snap && S.run) S.run.away = runGains(snap, awayFor);
     if(S.run && !S.run.done && S.run.left <= 0) endRun(true);
   }, 1000);
 }

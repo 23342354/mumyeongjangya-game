@@ -910,3 +910,376 @@ if(typeof PLACES!=="undefined") PLACES.push({id:"woodp", n:"목석 공방", e:ic
 
 const _boot8 = boot;
 boot = function(){ _boot8(); ensureV8(); renderTop(); renderNav(); renderMain(); };
+
+/* ═══════════════════════════════════════════════════
+   확장 8 · 두 번째 묶음
+   ① 안내도 중복 메뉴 정리
+   ② 페어 헤더 — 둘이 함께 쓰는 머리 그림
+   ③ 페어 전용 게시판 — 둘만 보는 기록
+   ═══════════════════════════════════════════════════ */
+
+/* ───────── ① 안내도 — 「사무전 광장」 아래와 「페어」에 같은 항목이 두 번 뜨던 것 ───────── */
+(()=>{
+  for(let i=NAVDEF.length-1;i>=0;i--) if(NAVDEF[i].id==="pairmenu") NAVDEF.splice(i,1);
+  const pg=NAVDEF.find(g=>g.id==="plaza");
+  if(pg){
+    pg.n="광장 · 페어";
+    pg.ic=ic("gate");
+    pg.sub=[{id:"plaza",n:"사무전 광장"},{id:"pairhub",n:"우리 페어"},
+            {id:"pairboard",n:"둘의 기록"},{id:"hallv",n:"거처"}];
+  }
+  if(typeof MOBILE_GROUP_NAMES!=="undefined") MOBILE_GROUP_NAMES.plaza="광장";
+  /* 거처가 기록 묶음에 남아 있으면 그것도 한 번만 */
+  const rg=NAVDEF.find(g=>g.id==="rec");
+  if(rg&&rg.sub) rg.sub=rg.sub.filter(s=>s.id!=="hallv");
+})();
+
+/* ───────── 사람 카드에 쓰는 거리들 ───────── */
+function pairMe(){
+  return {id:String(S.sb&&S.sb.id||""), name:S.name, line:S.line||"", course:S.course,
+          lvl:S.lvl, color:S.color, av:S.av, av_img:S.avImg||"", title:S.title||""};
+}
+function pairPeer(){
+  const P=(typeof pairEnsure==="function")?pairEnsure():null;
+  if(!P||!P.mine) return null;
+  const o=pairOther(P.mine);
+  const r=(S.sb.roster||[]).find(x=>String(x.id)===String(o.id)) ||
+          (P.partner&&String(P.partner.id)===String(o.id)?P.partner:null);
+  return {id:String(o.id), name:(r&&r.name)||o.name||"", line:(r&&r.line)||"",
+          course:(r&&r.course)||1, lvl:(r&&r.lvl)||1, color:(r&&r.color)||"var(--violet)",
+          av:(r&&r.av)||"lantern", av_img:(r&&r.av_img)||"", title:(r&&r.title)||"", nick:o.nick||""};
+}
+function faceHTML(p, size){
+  const b=p.color||"var(--violet)";
+  if(p.av_img) return `<div style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;
+    border:2px solid ${b};flex:none;background:var(--s0)">
+    <img src="${p.av_img}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>`;
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${b};
+    display:grid;place-items:center;background:var(--s0);flex:none">${ic(p.av||"lantern",Math.round(size*0.5))}</div>`;
+}
+/* 장인이 앞, 마무기가 뒤 */
+function pairOrder(){
+  const me=pairMe(), you=pairPeer();
+  if(!you) return [me];
+  const rank=p=>/장인/.test(p.line||"") ? 0 : /무기/.test(p.line||"") ? 1 : 2;
+  const a=[me,you];
+  a.sort((x,y)=>rank(x)-rank(y));
+  return a;
+}
+
+/* ───────── ② 페어 헤더 ───────── */
+const PAIRHEADW=1500, PAIRHEADH=1000, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
+/* 헤더 그림과 글 목록은 저장본에 넣지 않습니다 — 커서 저장이 무거워집니다.
+   서버가 원본을 갖고 있으니 켤 때마다 다시 받아 옵니다. */
+const PAIRHEAD={img:"", at:"", loading:false, forId:null};
+function pairHeadState(){ return PAIRHEAD; }
+/* 바뀌었을 때만 내려받습니다 — 그림이 커서 20초마다 받으면 느려집니다 */
+let PAIRHEADAT=0;
+function pairHeadFetch(force){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return Promise.resolve(false);
+  const H=pairHeadState();
+  if(!force && Date.now()-PAIRHEADAT<20000) return Promise.resolve(false);
+  PAIRHEADAT=Date.now();
+  const id=encodeURIComponent(P.mine.id);
+  return sbGet(`pairs?select=id,header_at&id=eq.${id}&limit=1`)
+    .then(rows=>{
+      const row=(rows||[])[0];
+      if(!row) return false;
+      const at=row.header_at||"";
+      if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
+      if(!at){ H.img=""; H.at=""; H.forId=String(P.mine.id);
+               if(VIEW==="pairhub") renderMain(true); return true; }
+      H.loading=true;
+      return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
+        const f=(full||[])[0]||{};
+        H.img=f.header||""; H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
+        if(VIEW==="pairhub") renderMain(true);
+        return true;
+      });
+    })
+    .catch(()=>{ pairHeadState().loading=false; return false; });
+}
+/* 그림을 1500×1000 안쪽으로 줄여 글자로 바꿉니다 */
+function pairHeadShrink(img){
+  let w=PAIRHEADW, h=PAIRHEADH;
+  for(const q of [0.82,0.72,0.62,0.52]){
+    for(const scale of [1,0.8,0.65]){
+      const cw=Math.round(w*scale), ch=Math.round(h*scale);
+      const c=document.createElement("canvas"); c.width=cw; c.height=ch;
+      const g=c.getContext("2d");
+      g.imageSmoothingEnabled=true; g.imageSmoothingQuality="high";
+      /* 가운데를 기준으로 3:2 로 잘라 채웁니다 */
+      const s=Math.max(cw/img.naturalWidth, ch/img.naturalHeight);
+      const dw=img.naturalWidth*s, dh=img.naturalHeight*s;
+      g.drawImage(img, (cw-dw)/2, (ch-dh)/2, dw, dh);
+      let url="";
+      try{ url=c.toDataURL("image/jpeg", q); }catch(e){ return ""; }
+      if(url.length<=PAIRHEADMAX) return url;
+    }
+  }
+  return "";
+}
+function pairHeadPick(){
+  const P=pairEnsure();
+  if(!P.mine){ toast("페어가 있어야 헤더를 걸 수 있습니다.","bad"); return; }
+  modal("페어 헤더 걸기", `
+    <div class="tiny muted" style="line-height:1.9">
+      <b>1500 × 1000</b>(가로:세로 3:2) 그림이 가장 잘 맞습니다. 다른 비율은 가운데를 기준으로 잘라 씁니다.<br>
+      건 그림은 <b>페어 두 사람에게 똑같이</b> 보입니다. 상대가 바꾸면 내 화면도 함께 바뀝니다.<br>
+      <b>생성형 AI로 만든 그림, 허락받지 않은 다른 사람의 그림은 사용할 수 없습니다.</b>
+      받은 그림이라면 아래에 출처를 남겨 주세요.</div>
+    <label class="f" style="margin-top:12px">그림 고르기</label>
+    <input type="file" id="phfile" accept="image/*" class="inp">
+    <label class="f" style="margin-top:10px">출처 (선택 · 30자)</label>
+    <input class="inp" id="phsrc" maxlength="30" placeholder="예: ○○님 커미션">
+    <div id="phprev" style="margin-top:12px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn pri" id="phsave" disabled onclick="pairHeadSave()">걸기</button>
+      ${pairHeadState().img?'<button class="btn sm red" onclick="pairHeadClear()">지금 헤더 내리기</button>':""}
+    </div>`, "wide");
+  const f=document.getElementById("phfile");
+  f.onchange=e=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    if(file.size>14*1024*1024){ toast("그림이 너무 큽니다. 14MB 이하로 올려 주세요.","bad"); return; }
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const im=new Image();
+      im.onload=()=>{
+        const url=pairHeadShrink(im);
+        if(!url){ toast("그림을 줄이지 못했습니다. 더 작은 그림으로 해 주세요.","bad"); return; }
+        PAIRHEADNEW=url;
+        document.getElementById("phprev").innerHTML=
+          `<img src="${url}" style="width:100%;border-radius:10px;display:block">
+           <div class="tiny muted" style="margin-top:5px">보관 크기 약 ${Math.round(url.length/1024)}KB</div>`;
+        document.getElementById("phsave").disabled=false;
+      };
+      im.onerror=()=>toast("그림을 읽지 못했습니다.","bad");
+      im.src=rd.result;
+    };
+    rd.onerror=()=>toast("파일을 읽지 못했습니다.","bad");
+    rd.readAsDataURL(file);
+  };
+}
+let PAIRHEADNEW="";
+function pairHeadSave(){
+  const P=pairEnsure();
+  if(!P.mine || !PAIRHEADNEW) return;
+  const src=(document.getElementById("phsrc")||{}).value||"";
+  const at=new Date().toISOString();
+  const btn=document.getElementById("phsave"); if(btn) btn.disabled=true;
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:PAIRHEADNEW, header_at:at},"return=minimal")
+    .then(()=>{
+      const H=pairHeadState();
+      H.img=PAIRHEADNEW; H.at=at; H.forId=String(P.mine.id);
+      S.pairHeadSrc=src.trim().slice(0,30);
+      PAIRHEADNEW="";
+      closeModal(); renderMain(true); save();
+      toast("헤더를 걸었습니다. 페어 두 사람에게 같이 보입니다.","good");
+      pushNews(`[인연] ${S.name} 학생이 페어 헤더를 바꿨습니다.`);
+    })
+    .catch(()=>{
+      if(btn) btn.disabled=false;
+      toast("헤더를 걸지 못했습니다. 「페어-헤더-게시판.sql」을 실행했는지 확인해 주세요.","bad");
+    });
+}
+function pairHeadClear(){
+  const P=pairEnsure(); if(!P.mine) return;
+  if(!confirm("헤더를 내릴까요? 두 사람 화면에서 모두 사라집니다.")) return;
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:null, header_at:null},"return=minimal")
+    .then(()=>{ const H=pairHeadState(); H.img=""; H.at=""; closeModal(); renderMain(true);
+      toast("헤더를 내렸습니다."); })
+    .catch(()=>toast("내리지 못했습니다.","bad"));
+}
+/* 헤더 카드 — 그림 · 페어명 · 장인/무기 순서의 두 사람 */
+function pairHeadHTML(){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return "";
+  const H=pairHeadState();
+  const shared=(typeof SOCIAL!=="undefined") && SOCIAL.pairs.find(r=>String(r.id)===String(P.mine.id));
+  const title=(shared&&shared.pair_name)||"";
+  const people=pairOrder();
+  const lineTag=p=>/장인/.test(p.line||"") ? "장인" : /무기/.test(p.line||"") ? "마무기" : (p.line||"");
+  return `<div class="card" style="margin-bottom:14px;overflow:hidden;border-color:var(--gold2);padding:0">
+    <div style="position:relative;width:100%;aspect-ratio:3/2;max-height:460px;background:var(--s1)">
+      ${H.img
+        ? `<img src="${H.img}" alt="페어 헤더" style="width:100%;height:100%;object-fit:cover;display:block">`
+        : `<div style="width:100%;height:100%;display:grid;place-items:center">
+             <div class="tiny muted" style="text-align:center;line-height:2">
+               ${ic("camera",22)}<br>아직 헤더가 없습니다<br>
+               <span style="opacity:.75">1500 × 1000 그림을 걸어 보세요</span></div></div>`}
+      <div style="position:absolute;inset:auto 0 0 0;height:62%;pointer-events:none;
+        background:linear-gradient(180deg,transparent 0%,var(--cardB) 48%,var(--cardA) 62%,var(--cardA) 100%)"></div>
+      <div style="position:absolute;inset:auto 0 16px 0;text-align:center">
+        <div style="font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--tx)">
+          ${esc(title||"이름 없는 페어")}</div>
+        <div class="tiny muted" style="letter-spacing:.5em;margin:6px 0 10px">· · ·</div>
+        <div class="row" style="justify-content:center;gap:26px;align-items:flex-start">
+          ${people.map(p=>`<div style="text-align:center;width:104px">
+            <div style="display:flex;justify-content:center">${faceHTML(p,64)}</div>
+            <div class="tag" style="margin-top:7px;display:inline-block;max-width:100%;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap">${esc(p.name||"")}</div>
+            <div class="tiny muted" style="margin-top:3px">${esc(lineTag(p))}</div>
+          </div>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div class="spread" style="padding:10px 14px">
+      <span class="tiny muted">${H.loading?"헤더를 불러오는 중입니다":
+        S.pairHeadSrc?`두상·헤더 출처 — ${esc(S.pairHeadSrc)}`:"헤더는 두 사람이 함께 씁니다"}</span>
+      <div class="row">
+        <button class="btn sm ghost" onclick="pairHeadPick()">${H.img?"헤더 바꾸기":"헤더 걸기"}</button>
+        <button class="btn sm ghost" onclick="pairHeadFetch(true)">새로 고침</button></div>
+    </div>
+  </div>`;
+}
+
+/* ───────── ③ 페어 전용 게시판 ───────── */
+const PAIRBOARD={rows:[], at:0, forId:null, err:""};
+function pairPostState(){ return PAIRBOARD; }
+let PAIRBOARDBUSY=false;
+function pairPostFetch(force){
+  const P=pairEnsure();
+  if(!sbOn() || !P.mine) return Promise.resolve(false);
+  const B=pairPostState();
+  if(PAIRBOARDBUSY) return Promise.resolve(false);
+  if(!force && B.forId===String(P.mine.id) && Date.now()-B.at<12000) return Promise.resolve(false);
+  PAIRBOARDBUSY=true; B.at=Date.now();
+  const id=encodeURIComponent(P.mine.id);
+  return sbGet(`pair_posts?select=*&pair_id=eq.${id}&order=id.desc&limit=300`)
+    .then(rows=>{
+      B.rows=rows||[]; B.forId=String(P.mine.id); B.err="";
+      if(VIEW==="pairboard") renderMain(true);
+      return true;
+    })
+    .catch(()=>{ B.err="둘의 기록을 불러오지 못했습니다. 「페어-헤더-게시판.sql」을 실행했는지 확인해 주세요."; 
+      if(VIEW==="pairboard") renderMain(true); return false; })
+    .finally(()=>{ PAIRBOARDBUSY=false; });
+}
+function pairPostSend(parent){
+  const P=pairEnsure(); if(!P.mine) return;
+  const el=document.getElementById(parent?("pb-reply-"+parent):"pb-write");
+  const body=(el&&el.value||"").trim();
+  if(!body){ toast("쓸 말을 적어 주세요."); return; }
+  if(body.length>1000){ toast("1000자까지 쓸 수 있습니다.","bad"); return; }
+  sbSend("POST","pair_posts",[{pair_id:P.mine.id, author_id:String(S.sb.id),
+    author_name:S.name, body, parent_id:parent||null}],"return=minimal")
+    .then(()=>{ if(el) el.value=""; closeModal(); return pairPostFetch(true); })
+    .then(()=>{ renderMain(true); })
+    .catch(()=>toast("남기지 못했습니다. 연결과 SQL 적용을 확인해 주세요.","bad"));
+}
+function pairPostReply(id){
+  const B=pairPostState();
+  const p=B.rows.find(x=>x.id===id); if(!p) return;
+  modal("답하기", `<div class="sub" style="margin-bottom:10px">
+      <b>${esc(p.author_name||"")}</b>
+      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px">${fmtChat(p.body)}</div></div>
+    <textarea class="inp" id="pb-reply-${id}" rows="5" maxlength="1000" placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
+    <button class="btn pri" style="margin-top:10px" onclick="pairPostSend(${id})">남기기</button>`);
+}
+function pairPostDelete(id){
+  if(!confirm("이 글을 지울까요? 답글도 함께 사라집니다.")) return;
+  sbSend("DELETE",`pair_posts?id=eq.${id}&author_id=eq.${encodeURIComponent(String(S.sb.id))}`,undefined,"return=minimal")
+    .then(()=>pairPostFetch(true)).then(()=>renderMain(true))
+    .catch(()=>toast("지우지 못했습니다.","bad"));
+}
+function pairPostWhen(t){
+  const ms=new Date(t).getTime(), gap=(Date.now()-ms)/60000;
+  if(gap<1) return "방금";
+  if(gap<60) return Math.floor(gap)+"분 전";
+  if(gap<1440) return Math.floor(gap/60)+"시간 전";
+  if(gap<43200) return Math.floor(gap/1440)+"일 전";
+  return new Date(ms).toLocaleDateString("ko-KR");
+}
+function pairHandle(p){
+  return "@"+String(p.id||"").replace(/^ACC_/,"").slice(0,14);
+}
+function pairPostRow(p, depth){
+  const me=pairMe(), you=pairPeer();
+  const who = String(p.author_id)===me.id ? me : (you&&String(p.author_id)===you.id ? you : {name:p.author_name||"", av:"lantern", color:"var(--s5)", id:p.author_id});
+  const mine = String(p.author_id)===me.id;
+  const B=pairPostState();
+  const kids=B.rows.filter(x=>x.parent_id===p.id).sort((a,b)=>a.id-b.id);
+  return `<div style="display:flex;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line);
+      ${depth?"margin-left:22px;border-left:2px solid var(--line2);padding-left:13px":""}">
+    ${faceHTML(who,depth?34:42)}
+    <div style="flex:1;min-width:0">
+      <div class="row" style="gap:7px;align-items:baseline;flex-wrap:wrap">
+        <b>${esc(who.name||"")}</b>
+        <span class="tiny muted">${esc(pairHandle(who))}</span>
+        <span class="tiny muted">· ${esc(pairPostWhen(p.created_at))}</span>
+      </div>
+      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0 2px">${fmtChat(p.body)}</div>
+      <div class="row" style="gap:4px;margin-top:6px">
+        ${depth?"":`<button class="btn sm ghost" onclick="pairPostReply(${p.id})">${ic("bubble",12)} 답하기${kids.length?" "+kids.length:""}</button>`}
+        ${mine?`<button class="btn sm ghost" onclick="pairPostDelete(${p.id})">지우기</button>`:""}
+      </div>
+    </div></div>
+    ${depth?"":kids.map(k=>pairPostRow(k,1)).join("")}`;
+}
+VIEWS.pairboard=()=>{
+  const P=pairEnsure();
+  const head1=head("둘만 보는 자리", ic("memo")+" 둘의 기록",
+    "페어 두 사람 말고는 화면에 뜨지 않습니다");
+  if(!sbOn()) return head1+`<div class="card pad">
+    <div class="tiny muted">공유 기록을 연결해야 둘의 기록을 쓸 수 있습니다.</div>
+    <button class="btn pri" style="margin-top:10px" onclick="sbConnect()">공유 기록 연결</button></div>`;
+  if(!P.mine) return head1+`<div class="card pad">
+    <div class="tiny muted" style="margin-bottom:10px">아직 페어가 없습니다. 페어를 맺으면 둘만의 기록이 열립니다.</div>
+    <button class="btn" onclick="go('roster')">학생 명부</button></div>`;
+  const B=pairPostState();
+  const roots=B.rows.filter(p=>!p.parent_id).sort((a,b)=>b.id-a.id);
+  const you=pairPeer();
+  return head1
+   + (B.err?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD)">
+        <span class="tiny">${esc(B.err)}</span></div>`:"")
+   + `<div class="card pad" style="margin-bottom:14px">
+      <div style="display:flex;gap:11px">
+        ${faceHTML(pairMe(),42)}
+        <div style="flex:1;min-width:0">
+          <textarea class="inp" id="pb-write" rows="3" maxlength="1000" style="width:100%"
+            placeholder="${esc((you&&you.name)||"페어")} 님만 볼 수 있습니다. 대사와 *행동*을 남겨 보세요."></textarea>
+          <div class="spread" style="margin-top:8px">
+            <span class="tiny muted">1000자까지 · 최근 300개를 보여 줍니다</span>
+            <div class="row">
+              <button class="btn sm ghost" onclick="pairPostFetch(true)">새로 고침</button>
+              <button class="btn pri" onclick="pairPostSend(null)">남기기</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="tiny muted" style="margin-top:10px;line-height:1.8">
+        화면에는 페어 두 사람에게만 보입니다. 다만 이 게임은 공개된 열쇠 하나로 돌아가므로,
+        채팅과 마찬가지로 <b>정말 남이 보면 안 되는 이야기는 적지 않는 편이 좋습니다.</b></div>
+    </div>`
+   + `<div class="card pad">
+      ${roots.length?roots.map(p=>pairPostRow(p,0)).join("")
+        :`<div class="tiny muted" style="padding:28px 2px;text-align:center">
+           아직 아무것도 적히지 않았습니다. 첫 줄을 남겨 보세요.</div>`}
+    </div>`;
+};
+
+/* 페어 화면 — 헤더를 맨 위에, 둘의 기록으로 가는 길 */
+const _pairhub8 = VIEWS.pairhub;
+VIEWS.pairhub = () => {
+  const P=pairEnsure();
+  let h=_pairhub8();
+  if(!sbOn() || !P.mine) return h;
+  const i=h.indexOf('<div class="card pad"');
+  const head2=pairHeadHTML()+`<div class="card pad" style="margin-bottom:14px">
+    <div class="spread"><div class="sect-t" style="margin:0">둘의 기록</div>
+      <button class="btn sm" onclick="go('pairboard')">열기</button></div>
+    <div class="tiny muted" style="margin-top:4px">페어 두 사람만 보는 자리입니다. 짧게 남기고 서로 이어 쓸 수 있습니다.</div>
+  </div>`;
+  return i<0 ? head2+h : h.slice(0,i)+head2+h.slice(i);
+};
+
+/* 페어 화면·게시판에 들어갈 때 받아 옵니다 */
+const _go8 = go;
+go = function(v){
+  _go8(v);
+  if(v==="pairhub"){ pairHeadFetch(false); }
+  if(v==="pairboard"){ pairHeadFetch(false); pairPostFetch(true); }
+};
+setInterval(()=>{ if(VIEW==="pairboard") pairPostFetch(false); }, 12000);
+const _boot8b = boot;
+boot = function(){ _boot8b(); if(sbOn()) setTimeout(()=>pairHeadFetch(true), 2500); };
