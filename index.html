@@ -820,7 +820,11 @@ const FAKENAMES=[];  /* 모브 학생 없음 — 사무전에는 실제 러너�
 const _UNUSED_NAMES=["서하","윤경","이비","케렌","도윤","설아","하진","묘운","백로","연오","청하","시월","해랑","무영","소윤","라온","단우","제이","현서","유란"];
 
 /* 염라제 기념품 */
-const SOUVENIRS=[{id:"sv1",n:"염라 인형",e:ic("teddy")},{id:"sv2",n:"금붕어 자수 복주머니",e:ic("fan")},{id:"sv3",n:"작은 유리 풍경",e:ic("windchime")}];
+const SOUVENIRS=[
+ {id:"sv1",n:"염라 인형",e:ic("teddy"),desc:"수업 보상 +3%",key:"study",bonus:.03},
+ {id:"sv2",n:"금붕어 자수 복주머니",e:ic("fan"),desc:"륜 획득 +3%",key:"gold",bonus:.03},
+ {id:"sv3",n:"작은 유리 풍경",e:ic("windchime"),desc:"체력·이성 자연 회복 +5%",key:"rest",bonus:.05}
+];
 const BOOTHS=[
  {id:"shoot", n:"염라 님을 맞혀라", kw:"사격",   e:ic("target"), d:"염라의 얼굴을 본뜬 과녁을 장난감 총으로 쏜다. 세 턴에 걸쳐 세 발씩."},
  {id:"fish",  n:"달빛 금붕어 건지기", kw:"금붕어", e:ic("goldfish"), d:"뜰채가 찢어지기 전에 멈출지, 한 번 더 건질지 판단한다."},
@@ -848,7 +852,7 @@ function newState(){
   return {
     made:false, v:1,
     name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"", combatStyle:null,
-    hall:"dorm", title:"첫 번째 별", intro:"", bio:"", color:"var(--gold)", av:"lantern", avImg:null, avSrc:"",
+    hall:"dorm", title:"첫 번째 밤", intro:"", bio:"", color:"var(--gold)", av:"lantern", avImg:null, avSrc:"",
     base:{atk:3,def:3,agi:3,men:2,res:2},
     bonus:{atk:0,def:0,agi:0,men:0,res:0},
     course:1, exp:0, lvl:1,
@@ -895,6 +899,9 @@ function load(){
        if(o.av && !ICONS[o.av]) o.av="lantern";
        if(o.chatFilter===undefined) o.chatFilter=o.chatTab==="1:1"&&["RP","오너"].includes(o.dmTab)?o.dmTab:"모두";
        /* 제거된 옛 콘텐츠의 저장 기록 정리. 나머지 캐릭터 진행도는 유지합니다. */
+       if(o.title==="첫 번째 별") o.title="첫 번째 밤";
+       if(o.place==="lounge") o.place="plaza";
+       delete o.lounge;
        delete o.pets;
        delete o.mile;
        delete o.snack;
@@ -1804,7 +1811,7 @@ VIEWS.research=()=>{
   const bookBox=`
    <div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div class="sect-t" style="margin:0">죄업 기록 서고</div>
-      <span class="tiny muted">열람 비용 지식 <b style="color:var(--jade)">${nf(bookCost())}</b> · 보유 ${nf(S.know)}</span></div>
+      <span class="tiny muted">고정 열람료 지식 <b style="color:var(--jade)">${nf(bookCost())}</b> · 보유 ${nf(S.know)}</span></div>
     <div class="tiny muted" style="margin:4px 0 10px">지식을 들여 고서를 펼치면 3시간 동안 효과가 적용됩니다. 같은 책을 다시 펼치면 시간이 이어집니다(최대 9시간).</div>
     ${S.book?`<div class="row" style="margin-bottom:10px"><span class="tag g">열람 중</span>
       <b>${BOOKS.find(b=>b.id===S.book.id).n}</b> · ${BOOKS.find(b=>b.id===S.book.id).e}
@@ -1877,7 +1884,7 @@ function finishResearch(){
   pushNews(`[서가] ${S.name} 학생이 ${r.n} ${S.res[r.id]}단계를 마쳤습니다.`);
   save();
 }
-function bookCost(){ return Math.round(1200+S.lvl*140+S.course*600); }
+function bookCost(){ return 1940; } // 모든 과정·레벨에서 같은 열람료
 function readBook(id){
   const c=bookCost();
   if(S.book&&S.book.id===id){
@@ -2132,7 +2139,7 @@ VIEWS.quest=()=>{
     <div class="tiny muted" style="margin-top:3px">법구 약 ${est.gear}개 · 건축자재 약 ${nf(est.bmat)}개
       · 끝까지 버티면 해결 보상 륜 +${nf(est.clearRin)} · 경험치 +${nf(est.clearExp)}</div>
     <div class="tiny muted" style="margin-top:3px">처치할 때마다 그 자리에서 들어옵니다.
-      창을 닫아 두어도 시계대로 진행됩니다. 주사위 판정이라 예상과 차이가 납니다.</div>
+      <b>현실 1분 = 의뢰 1분</b>으로 흐릅니다(30분을 선택하면 실제 30분 소요). 창을 닫아 두어도 같은 속도로 진행됩니다. 주사위 판정이라 예상과 차이가 납니다.</div>
 
     <div class="row" style="margin-top:13px">
       <button class="btn pri" ${locked||tooShort?"disabled":""} onclick="runQuest(${st},false,${d.m})">${d.n} 출정</button>
@@ -2570,7 +2577,7 @@ function drawOuting(){
     renderTop(); renderNav(); save(); return;
   }
   const scene=pick(w.ev);
-  const cs=[...OCHOICE].sort(()=>Math.random()-.5).slice(0,2).concat(OCHOICE[5]);
+  const cs=[...OCHOICE.slice(0,-1)].sort(()=>Math.random()-.5).slice(0,2).concat(OCHOICE[OCHOICE.length-1]);
   OUTING.cs=cs;
   modal(`${w.n} · ${O.step+1}번째 이야기`,`
     <div class="tiny" style="color:${w.c};letter-spacing:.1em">${w.t}</div>
@@ -2632,7 +2639,7 @@ VIEWS.fest=()=>{
     <div class="card pad">
       <div class="sect-t">내 축제 표식</div>
       <div style="font-size:30px;font-weight:600;color:var(--gold)">${S.fest.marks}<span style="font-size:14px;color:var(--dim)"> 개 보유</span></div>
-      <div class="tiny muted">수업·의뢰·수행·나들이 등 평소 활동으로 모입니다(활동 점수 20점마다 1개). 하루에 100개까지 모을 수 있으며, 오늘 ${S.fest.todayMarks}개를 모았습니다.</div>
+      <div class="tiny muted">수업·의뢰·수행·나들이 등 활동으로 모입니다. 하루 활동 획득 상한 100개이며, 오늘 ${S.fest.todayMarks}개를 모았습니다.</div>
       <div class="bar jd" style="margin:8px 0"><i style="width:${S.fest.todayMarks}%"></i></div>
       <div class="row">
         <button class="btn sm" onclick="exchangeMark(10)">표식 10 → 륜 4,740</button>
@@ -2656,10 +2663,25 @@ VIEWS.fest=()=>{
     <div class="tiny muted" style="margin:5px 0 8px">부스를 처음 체험할 때 승패와 무관하게 도장 한 개를 받습니다. 서로 다른 세 곳을 체험하면 기념품 한 종을 고를 수 있습니다.</div>
     <div class="row">${BOOTHS.map(b=>`<span class="buffchip" style="${S.fest.stamps.includes(b.id)?"border-color:var(--gold2);color:var(--gold)":"opacity:.5"}">${b.e} ${b.kw}</span>`).join("")}</div>
     ${S.fest.stamps.length>=3&&!S.fest.souv?`<div class="row" style="margin-top:10px">
-      ${SOUVENIRS.map(s=>`<button class="btn" onclick="takeFestSouv('${s.id}')">${s.e} ${s.n}</button>`).join("")}</div>`:""}
+      ${SOUVENIRS.map(s=>`<button class="btn" onclick="takeFestSouv('${s.id}')">${s.e} ${s.n} · ${s.desc}</button>`).join("")}</div>`:""}
     ${S.fest.souv?`<div class="row" style="margin-top:10px"><span class="tag g">기념품</span>
       ${SOUVENIRS.find(s=>s.id===S.fest.souv).e} ${SOUVENIRS.find(s=>s.id===S.fest.souv).n}
-      <span class="tiny muted">능력치 변화 없이 추억으로 남는 물건입니다.</span></div>`:""}
+      <span class="tiny muted">영구 효과: ${SOUVENIRS.find(s=>s.id===S.fest.souv).desc}</span></div>`:""}
+  </div>
+
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="sect-t">염라제 한정 교환소 · 실용 보상</div>
+    <div class="tiny muted" style="margin-bottom:9px">표식을 사용해 실제 게임에서 쓸 수 있는 물품을 받습니다. 모든 교환 품목은 종류별로 명계력 하루 1회 교환할 수 있습니다.</div>
+    <div class="grid g3">
+      ${[
+        {id:"ward",n:"의뢰 안전 꾸러미",cost:30,d:"호신 부적 1개 + 수호의 탕약 2개"},
+        {id:"rare",n:"희귀 법구 상자",cost:55,d:"현재 레벨 착용 가능 · 희귀 등급 법구 1개"},
+        {id:"hero",n:"영웅 법구 상자",cost:90,d:"현재 레벨 착용 가능 · 영웅 등급 법구 1개"}
+      ].map(x=>`<div class="sub">
+        <b>${x.n}</b><div class="tiny muted" style="margin:5px 0 10px">${x.d}</div>
+        <button class="btn sm pri" ${S.fest.marks<x.cost||festExchanged(x.id)?"disabled":""} onclick="festivalExchange('${x.id}')">${festExchanged(x.id)?"오늘 교환 완료":`표식 ${x.cost}개로 교환`}</button>
+      </div>`).join("")}
+    </div>
   </div>
 
   <div class="grid g3">
@@ -2667,12 +2689,15 @@ VIEWS.fest=()=>{
       <h4>${b.e} ${b.n} <span class="tag">${b.kw}</span></h4>
       <div class="tiny muted" style="margin:5px 0 9px;min-height:40px">${b.d}</div>
       <button class="btn pri sm" onclick="booth('${b.id}')">체험하기</button>
-      ${S.fest.stamps.includes(b.id)?'<span class="tag g" style="margin-left:6px">도장 ${ic("check",11)}</span>':""}
+      ${S.fest.stamps.includes(b.id)?`<span class="tag g" style="margin-left:6px">도장 ${ic("check",11)}</span>`:""}
     </div>`).join("")}
   </div>`;
 };
-function stamp(id){ if(!S.fest.stamps.includes(id)){ S.fest.stamps.push(id); toast("도장 한 개를 받았습니다.","good"); } }
-function takeFestSouv(id){ S.fest.souv=id; renderMain(); toast("기념품을 받았습니다.","good"); save(); }
+function stamp(id){ if(!S.fest.stamps.includes(id)){ S.fest.stamps.push(id); if(typeof achCheck==="function") achCheck(); toast("도장 한 개를 받았습니다.","good"); } }
+function takeFestSouv(id){
+  if(S.fest.stamps.length<3||S.fest.souv||!SOUVENIRS.some(s=>s.id===id)) return;
+  S.fest.souv=id; renderMain(); renderTop(); toast("영구 효과가 있는 축제 기념품을 받았습니다.","good"); save();
+}
 function openBasket(){
   S.fest.basket=1;
   const r=Math.random();
@@ -2698,6 +2723,31 @@ function visitRoom(){
     <div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">축제 표식 +${got}${lamp?" (등롱 +4 포함)":""}</div></div>
     <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain()">닫기</button></div>`);
   save();
+}
+function festExchanged(id){
+  const e=S.fest.exchange||{};
+  return e.day===cal().day && !!(e.items||{})[id];
+}
+function festivalExchange(id){
+  const costs={ward:30,rare:55,hero:90};
+  const c=costs[id];
+  if(!c || S.fest.marks<c || festExchanged(id)) { toast("표식이 부족하거나 오늘 이미 교환했습니다.","bad"); return; }
+  if((id==="rare"||id==="hero") && S.bag.length>=40+(S.res.r11||0)*5){
+    toast("바랑이 가득 찼습니다. 공간을 비운 뒤 교환해 주세요.","bad"); return;
+  }
+  S.fest.marks-=c;
+  if(id==="ward"){
+    S.inv.p9=(S.inv.p9||0)+1;
+    S.inv.p6=(S.inv.p6||0)+2;
+    toast("호신 부적 1개와 수호의 탕약 2개를 받았습니다.","good");
+  } else {
+    const it=mkGear(Math.max(1,S.lvl),id==="hero"?3:2);
+    S.bag.push(it);
+    toast(`${id==="hero"?"영웅":"희귀"} 법구 「${esc(it.name)}」를 받았습니다.`,"good");
+  }
+  if(!S.fest.exchange || S.fest.exchange.day!==cal().day) S.fest.exchange={day:cal().day,items:{}};
+  S.fest.exchange.items[id]=true;
+  renderTop();renderMain();save();
 }
 function exchangeMark(n){
   if(S.fest.marks<n){ toast("표식이 부족합니다.","bad"); return; }
@@ -3098,8 +3148,8 @@ function drawMe(){
   }
 
   if(METAB==="꾸미기"){
-    b=`<div class="sect-t">칭호 도감 (${TITLES.filter((t,i)=>i<=S.course+1).length} / ${TITLES.length})</div>
-      <div class="row">${TITLES.map((t,i)=>{const open=i<=S.course+1;
+    b=`<div class="sect-t">칭호 도감 (${TITLES.filter((t,i)=>titleUnlocked(i)).length} / ${TITLES.length})</div>
+      <div class="row">${TITLES.map((t,i)=>{const open=titleUnlocked(i);
         return `<button class="btn sm ${S.title===t?"pri":""}" ${open?"":"disabled"} onclick="setTitle('${t}')">${open?t:"???"}</button>`}).join("")}</div>
       <hr class="hr">
       <div class="sect-t">방 꾸미기</div>

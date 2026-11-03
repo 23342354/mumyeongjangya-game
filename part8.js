@@ -886,11 +886,11 @@ setInterval(()=>{
     renderMain(true);
     return;
   }
-  clock.textContent=hhmm(R.left)+" 남음";
+  clock.textContent=runTimeText(R.left)+" 남음";
   const bar=document.getElementById("runprog");
   if(bar) bar.style.width=clamp((1-R.left/Math.max(1,R.total))*100,0,100)+"%";
   const pace=document.getElementById("runpace");
-  if(pace) pace.textContent=`전체 ${hhmm(R.total)} 가운데 ${hhmm(Math.max(0,R.total-R.left))} 지났습니다. 시계와 같은 속도로 흐릅니다.`;
+  if(pace) pace.textContent=`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(Math.max(0,R.total-R.left))} 지났습니다. 현실 시계와 같은 속도로 흐릅니다.`;
   const kills=document.getElementById("runkills");
   if(kills) kills.textContent=`처치 ${R.kills}체 · 받은 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}`;
 }, 1000);

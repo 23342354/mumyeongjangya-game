@@ -1,7 +1,7 @@
 "use strict";
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장 3
-   기록실 · 랭킹 · 거처 · 휴게실 · 세계관
+   기록실 · 랭킹 · 거처 · 세계관
    경매 · 매점 확장 · 실시간 의뢰 일지
    ═══════════════════════════════════════════════════ */
 
@@ -52,8 +52,8 @@ const ACH=[
  {id:"a25", n:"접수대의 단골", d:"의뢰 200건 해결",            c:"quest",  g:200,p:45},
  {id:"a26", n:"첫 수확",       d:"약초밭 1회 수확",            c:"harvest",g:1,  p:3},
  {id:"a27", n:"온실의 주인",   d:"약초밭 100회 수확",          c:"harvest",g:100,p:20},
- {id:"a28", n:"첫 낚시",       d:"물고기 1마리",               c:"fish",   g:1,  p:3},
- {id:"a29", n:"검은 바다의 손",d:"물고기 100마리",             c:"fish",   g:100,p:20},
+ {id:"a28", n:"첫 낚시",       d:"낚시 1회 성공",               c:"fish",   g:1,  p:3},
+ {id:"a29", n:"검은 바다의 손",d:"낚시 100회 성공",             c:"fish",   g:100,p:20},
  {id:"a30", n:"주방 보조",     d:"요리 10번 만들기",           c:"cook",   g:10, p:10},
  {id:"a31", n:"삼장의 제자",   d:"요리 100번 만들기",          c:"cook",   g:100,p:30},
  {id:"a35", n:"연무제 입상",   d:"연무제 5회전 돌파",          c:"arenaBest",g:5, p:20},
@@ -129,12 +129,14 @@ function ensureV3(){
   d("ct",{classH:0,mon:0,boss:0,quest:0,harvest:0,fish:0,cook:0,
           wb:0,outing:0,duelWin:0,gradeA:0,gradeS:0,enhMax:0,days:0});
   d("dex",{mon:[],plant:[],fish:[],dish:[],title:[],wards:[]});
+  if(!Array.isArray(S.dex.title)) S.dex.title=[];
+  // 과정만으로 열린 잘못된 칭호를 재검증합니다.
+  syncTitles();
   d("ach",[]);
   d("storyRead",[]);
   d("hall",S.hall);
   d("war",{mine:0,week:0});      // 활동량 집계용으로만 남아 있습니다
   d("home",{stage:0, due:0, auto:true});
-  d("lounge",{pts:0,stage:0,today:{rin:false,mana:false,mat:false},month:0});
   d("auc",{phase:"idle",left:0,next:0,lots:[],hist:[],slot:0});
   d("mart",{});
   d("crest",null);
@@ -167,6 +169,7 @@ function achVal(a){
   }
 }
 function achCheck(){
+  syncTitles();
   ACH.forEach(a=>{
     if(S.ach.includes(a.id)) return;
     if(achVal(a)>=a.g){
@@ -185,11 +188,9 @@ const _mod3=mod;
 mod=function(key){
   let v=_mod3(key);
   const hb=HALLBONUS[S.hall]; if(hb&&hb[key]) v+=hb[key];
-  if(S.lounge && S.lounge.stage>0){
-    if(key==="rest") v+=S.lounge.stage*.05;
-    if(key==="know") v+=S.lounge.stage*.02;
-  }
   if(S.crest && S.crest.key===key) v+=S.crest.v/100;
+  const souv=(S.fest && S.fest.souv)?SOUVENIRS.find(x=>x.id===S.fest.souv):null;
+  if(souv && souv.key===key) v+=souv.bonus;
   return v;
 };
 const _hallBonus=hallBonus;
@@ -401,11 +402,10 @@ const _onNewDay3=onNewDay;
 onNewDay=function(){
   _onNewDay3();
   S.mart={};
-  S.lounge.today={rin:false,mana:false,mat:false};
 };
 
 /* ═══════════════════════════════════════════════════
-   화면 — 기록실 · 랭킹 · 기숙사 · 휴게실 · 세계관
+   화면 — 기록실 · 랭킹 · 기숙사 · 세계관
    ═══════════════════════════════════════════════════ */
 let RECTAB="업적", ACHFILTER="전체";
 VIEWS.record=()=>{
@@ -443,12 +443,19 @@ VIEWS.record=()=>{
 
   if(RECTAB==="악인 도감") body=`<div class="tiny muted" style="margin-bottom:10px">의뢰와 탑에서 마주친 악인·업귀가 기록됩니다. ${S.dex.mon.length} / ${MONS.length}</div>`+dexGrid("악인",MONS,"mon");
   if(RECTAB==="식물 도감") body=`<div class="tiny muted" style="margin-bottom:10px">약초밭에서 길러 수확한 작물이 기록됩니다. ${S.dex.plant.length} / ${CROPS.length}</div>`+dexGrid("식물",CROPS,"plant");
-  if(RECTAB==="낚시 도감") body=`<div class="tiny muted" style="margin-bottom:10px">검은 바다에서 올라온 것들입니다. ${S.dex.fish.length} / ${FISHES.length}</div>`+dexGrid("낚시",FISHES,"fish");
+  if(RECTAB==="낚시 도감") body=`<div class="tiny muted" style="margin-bottom:10px">발견 ${S.dex.fish.length} / ${FISHES.length}종 · 수치는 <b>보유 수량이 아닌 기본 출현 확률</b>입니다. 획득 횟수는 실제 낚시 기록입니다.</div>
+    <div class="grid g4">${FISHES.map(it=>{
+      const got=S.dex.fish.includes(it.n), c=(S.fish.catches||{})[it.n]||0;
+      return `<div class="sub" style="${got?"":"opacity:.6"}">
+        <div class="spread"><b>${got?it.e+" "+it.n:"???"}</b>${got?'<span class="tag g">등록</span>':""}</div>
+        <div class="tiny muted" style="margin-top:5px">기본 출현 확률 ${it.w}%</div>
+        <div class="tiny" style="color:var(--jade);margin-top:4px">${got?`내가 낚은 횟수 ${c}회`:"아직 낚은 적 없음"}</div>
+      </div>`; }).join("")}</div>`;
   if(RECTAB==="요리 도감") body=`<div class="tiny muted" style="margin-bottom:10px">직접 만들어 본 요리가 기록됩니다. ${S.dex.dish.length} / ${DISHES.length}</div>`+dexGrid("요리",DISHES,"dish");
   if(RECTAB==="칭호 도감"){
     body=`<div class="tiny muted" style="margin-bottom:10px">${S.dex.title.length} / ${TITLES.length} · 누르면 학생증의 칭호가 바뀝니다</div>
     <div class="grid g4">${TITLES.map((t,i)=>{
-      const got=S.dex.title.includes(t)||i<=S.course+1;
+      const got=titleUnlocked(i);
       return `<div class="sub" style="${got?"":"opacity:.42"}">
         <div class="spread"><b>${got?t:"???"}</b>${S.title===t?'<span class="tag g">사용 중</span>':""}</div>
         <div class="tiny muted" style="margin:5px 0 7px">${got?titleHow(i):"조건이 알려지지 않았습니다"}</div>
@@ -483,10 +490,32 @@ VIEWS.record=()=>{
     ${tabs.map(t=>`<div class="tab ${RECTAB===t?"on":""}" onclick="RECTAB='${t}';renderMain()">${t}${t==="도감 점수"?` <span class="tag g">${dexScore()}</span>`:""}</div>`).join("")}
   </div>${body}`;
 };
+function titleUnlocked(i){
+  if(!S) return i===0;
+  const sub=S.sub||{}, dex=S.dex||{}, ct=S.ct||{}, f=S.fest||{};
+  switch(i){
+    case 0: return true;
+    case 1: return !!(sub.s13 && ((sub.s13.p||0)>0 || (sub.s13.lv||0)>0));
+    case 2: return (ct.quest||0)>=50;
+    case 3: return Object.values(S.res||{}).reduce((n,v)=>n+(Number(v)||0),0)>=10;
+    case 4: return (f.stamps||[]).length>=1;
+    case 5: return (dex.wards||[]).length>=6;
+    case 6: return typeof stat==="function" && stat("res")>=12;
+    case 7: return !!(sub.s14 && (sub.s14.lv||0)>=1);
+    case 8: return (f.stamps||[]).length>=5;
+    case 9: return (S.tower||0)>=100;
+    default: return false;
+  }
+}
+function syncTitles(){
+  if(!S || !S.dex) return;
+  S.dex.title=TITLES.filter((t,i)=>titleUnlocked(i));
+  if(!S.dex.title.includes(S.title)) S.title=TITLES[0];
+}
 function titleHow(i){
-  return ["입학한 모든 학생에게 주어집니다","무명 관조 수업을 들으면 주어집니다","의뢰를 50건 해결하면 주어집니다",
-   "수행 단계가 오를 때마다 가까워집니다","염라제에 참여하면 주어집니다","서로 다른 여섯 구역을 걸으면 주어집니다",
-   "공명 적성이 일정 이상이면 주어집니다","죄업 기록학을 수료하면 주어집니다","염라제 부스 도장 다섯 개","석탑 100층 돌파"][i]||"";
+  return ["입학하면 기본 지급","무명 관조 수업 1교시 이상 수강","의뢰 50건 해결",
+   "수행 누적 10단계 달성","염라제 부스 1곳 체험","서로 다른 여섯 구역 방문",
+   "기본 공명 적성 12 이상","죄업 기록학 과목 Lv 1 달성","염라제 부스 도장 다섯 개","석탑 100층 돌파"][i]||"";
 }
 
 VIEWS.rank=()=>{
@@ -549,59 +578,6 @@ function moveHall(id){
   if(S.home){ S.home.stage=0; S.home.due=0; }   // 집은 두고 갑니다
   renderTop(); renderNav(); renderMain(); save();
   toast(`${homeOf(id).n}으로 옮겼습니다.`,"good");
-}
-
-VIEWS.lounge=()=>{
-  const L=S.lounge;
-  const stages=[{n:"1. 화분 정리",p:5800},{n:"2. 유리 지붕 수리",p:14500},{n:"3. 달빛 약초 심기",p:26100},{n:"4. 온실 완성",p:37700}];
-  const cur=stages[Math.min(3,L.stage)];
-  const me=homeOf(S.hall);
-  return head(`${me.n} · 뒤집힌 응접실`,ic("sofa")+" 휴게실", `복원 ${L.stage} / 4단계`)+`
-  <div class="card pad" style="margin-bottom:14px;padding:10px 14px">
-    <div class="quote">창밖이 오늘은 눈 덮인 산이다. 어제는 바다였다.</div>
-  </div>
-  <div class="grid g2">
-    <div class="card pad">
-      <div class="spread"><div class="sect-t" style="margin:0">${ic("herb",15)} 창가 온실 가꾸기</div>
-        <span class="tiny muted">이번 달 남은 기간 ${30-(cal().day%30)}일</span></div>
-      <div class="tiny muted">햇빛이 들지 않는 창가를 작은 온실로 꾸밉니다. 달빛 약초가 자라면 휴게실에 은은한 향이 감돕니다.</div>
-      <div class="spread" style="margin:10px 0 4px"><b>복원 점수 ${nf(L.pts)} / ${nf(cur.p)}</b>
-        <span class="tiny muted">기준 인원 290명 · 이번 달 참여 ${70+(cal().day*7)%40}명</span></div>
-      <div class="bar" style="margin-bottom:10px"><i style="width:${clamp(L.pts/cur.p*100,0,100)}%"></i></div>
-      ${stages.map((s,i)=>`<div class="spread" style="padding:5px 0;border-bottom:1px solid var(--s3)">
-        <span class="${L.stage>i?"":"muted"}">${L.stage>i?ic("check")+" ":""}${s.n}</span>
-        <span class="tiny muted">${nf(s.p)}점</span></div>`).join("")}
-      <div class="tiny" style="color:var(--jade);margin-top:8px">단계마다 체력·이성 회복 +5%, 지식 획득 +2% — 현재 적용 ${L.stage>0?`회복 +${L.stage*5}% · 지식 +${L.stage*2}%`:"없음"}</div>
-    </div>
-    <div>
-      <div class="card pad" style="margin-bottom:12px">
-        <div class="sect-t">오늘의 납부 <span class="muted">종류마다 하루 한 번 · 한 번에 10점</span></div>
-        ${[["rin","륜 납부","륜 4,740"],["mana","파장 납부","파장 1시간분"],["mat","재료 납부","재료 아무거나 4"]]
-          .map(([k,n,c])=>`<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
-          <div><b>${n}</b><div class="tiny muted">${c}</div></div>
-          <button class="btn sm ${L.today[k]?"":"pri"}" ${L.today[k]?"disabled":""} onclick="donateLounge('${k}')">${L.today[k]?"오늘 완료":"납부"}</button></div>`).join("")}
-        <div class="tiny muted" style="margin-top:8px">달이 바뀌면 30점 이상 납부한 학생에게 완료한 단계마다 연등 5개가 우편으로 전달됩니다. 휴게실 복원은 집 짓기와 별개로, 같은 거주지 학생들이 함께 올립니다.</div>
-      </div>
-      <div class="card pad">
-        <div class="sect-t">이번 달 복원에 힘을 보탠 학생</div>
-        ${["이브","코멧","위사 누","포토스","머그 포르투넬","로베르 테넌"].map((n,i)=>
-          `<div class="spread tiny" style="padding:3px 0"><span>${i+1} ${n}</span><span class="muted">30점</span></div>`).join("")}
-        <div class="spread tiny" style="padding:3px 0;background:var(--s2)"><span><b style="color:var(--gold)">${esc(S.name)}</b></span>
-          <span class="muted">${L.month||0}점</span></div>
-      </div>
-    </div>
-  </div>`;
-};
-function donateLounge(k){
-  const L=S.lounge;
-  if(L.today[k]) return;
-  if(k==="rin"){ if(S.rin<4740){ toast("륜이 부족합니다.","bad"); return; } S.rin-=4740; }
-  if(k==="mana"){ const c=Math.round(manaRate()*60); if(S.mana<c){ toast("파장이 부족합니다.","bad"); return; } S.mana-=c; }
-  if(k==="mat"){ const key=Object.keys(S.mat).find(x=>S.mat[x]>=4); if(!key){ toast("재료가 부족합니다.","bad"); return; } S.mat[key]-=4; }
-  L.today[k]=true; L.pts+=10; L.month=(L.month||0)+10;
-  const stages=[5800,14500,26100,37700];
-  while(L.stage<4 && L.pts>=stages[L.stage]){ L.stage++; toast(`휴게실 복원 ${L.stage}단계 완료`,"good"); }
-  toast("복원 점수 +10","good"); renderTop(); renderMain(); save();
 }
 
 VIEWS.world=()=>{
@@ -814,9 +790,9 @@ VIEWS.quest=()=>{
       <div class="spread">
         <div><div class="sect-t" style="margin:0">의뢰 일지 <span class="muted">${q.stage}단계 · ${q.ward.n}</span></div>
           <div class="tiny muted" id="runkills">처치 ${R.kills}체 · 받은 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}</div></div>
-        <div class="tiny muted" id="runclock">${R.done?"종료됨":hhmm(R.left)+" 남음"}</div></div>
+        <div class="tiny muted" id="runclock">${R.done?"종료됨":runTimeText(R.left)+" 남음"}</div></div>
       <div class="bar" style="margin:8px 0 2px"><i id="runprog" style="width:${clamp((1-R.left/Math.max(1,R.total))*100,0,100)}%"></i></div>
-      <div class="tiny muted" id="runpace">${R.done?"":`전체 ${hhmm(R.total)} 가운데 ${hhmm(Math.max(0,R.total-R.left))} 지났습니다. 시계와 같은 속도로 흐릅니다.`}</div>
+      <div class="tiny muted" id="runpace">${R.done?"":`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(Math.max(0,R.total-R.left))} 지났습니다. 현실 시계와 같은 속도로 흐릅니다.`}</div>
       ${runAwayHTML()}
       <div class="log" id="runlog" style="margin:10px 0;height:clamp(190px,34vh,300px);max-height:none">
         ${R.logs.map(l=>`<div><span class="muted" style="font-size:10.5px">${l.time}</span> ${l.t}</div>`).reverse().join("")}
@@ -856,13 +832,7 @@ harvest=function(i){ const p=S.farm.plots[i];
 const _cook=cook;
 cook=function(id){ const before=S.kit.have[id]||0; _cook(id);
   if((S.kit.have[id]||0)>before){ ct("cook"); dexAdd("dish",DISHES.find(d=>d.id===id).n); achCheck(); } };
-const _fishHook=fishHook;
-fishHook=function(){ const before=S.ct.fish; _fishHook();
-  const el=document.getElementById("fres");
-  if(el&&el.innerHTML.includes("card")){ ct("fish");
-    const m=el.textContent.match(/^\s*(\S+)\s/); const nm=(el.querySelector("b")||{}).textContent||"";
-    const f=FISHES.find(x=>nm.includes(x.n)); if(f) dexAdd("fish",f.n);
-    achCheck(); } };
+/* 낚시 카운트와 도감 등록은 낚시 성공 순간(part2)에 한 번만 반영합니다. */
 const _climbTower=climbTower;
 climbTower=function(c){ const b=S.tower||0; _climbTower(c);
   if((S.tower||0)>b){ ct("boss",Math.floor(((S.tower||0)-b)/50)); S.war.mine=(S.war.mine||0)+((S.tower||0)-b)*8;
@@ -890,7 +860,7 @@ const _enhance=enhance;
 enhance=function(slot){ _enhance(slot); const it=S.gear[slot];
   if(it) ctMax("enhMax",it.enh); S.war.mine=(S.war.mine||0)+3; achCheck(); };
 const _setTitle=setTitle;
-setTitle=function(t){ if(!S.dex.title.includes(t)) S.dex.title.push(t); _setTitle(t); achCheck(); };
+setTitle=function(t){ const i=TITLES.indexOf(t); if(i<0 || !titleUnlocked(i)){ toast("아직 칭호 획득 조건을 달성하지 못했습니다.","bad"); return; } syncTitles(); _setTitle(t); achCheck(); };
 const _finishResearch=finishResearch;
 finishResearch=function(){ _finishResearch(); S.war.mine=(S.war.mine||0)+40; achCheck(); };
 
@@ -907,15 +877,20 @@ NAVDEF.push(
                                           {id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"merchant",n:"떠돌이 상인"},{id:"shop",n:"매점"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록·랭킹", sub:[{id:"world",n:"세계관"},{id:"record",n:"업적·도감"},{id:"rank",n:"랭킹"},
-                                          {id:"hallv",n:"거처"},{id:"lounge",n:"휴게실"}]},
+                                          {id:"hallv",n:"거처"}]},
 );
-PLACES.push({id:"loungep", n:"휴게실", e:ic("sofa"), x:96, y:66, view:"lounge"});
 
 const _boot3=boot;
 boot=function(){ ensureV3(); _boot3(); ensureV3(); achCheck(); renderNav(); renderMain(); };
 
 /* ═══════════ 실시간 의뢰 전용 시계 ═══════════ */
-const RUNPACE = 1/60;         // 현실 1초 = 의뢰 1초. 「50분」이라 적힌 의뢰는 정말 50분 걸립니다.
+const RUNPACE = 1/60;         // 호환용 설명: 현실 1초는 의뢰 1초, 배속 없음
+function runTimeText(mins){
+  let secs=Math.max(0,Math.ceil((Number(mins)||0)*60));
+  const hrs=Math.floor(secs/3600); secs-=hrs*3600;
+  const mm=Math.floor(secs/60),ss=secs%60;
+  return `${hrs?hrs+"시간 ":""}${mm}분 ${String(ss).padStart(2,"0")}초`;
+}
 const RUNSTEPMIN = 0.5;       // 일지 한 줄 = 의뢰 30초
 
 /* ─ 자리를 비운 사이에 얻은 것 추리기 ─ */
@@ -957,7 +932,7 @@ function runRealTick(){
     if(!S || !S.made || !S.run || S.run.done) return;
     const now = Date.now();
     if(!S.run.lastTick) S.run.lastTick = now;
-    let m = (now - S.run.lastTick)/1000 * RUNPACE;
+    let m = (now - S.run.lastTick)/60000; // 반드시 실제 경과 밀리초를 의뢰 분으로 변환
     S.run.lastTick = now;
     if(m <= 0) return;
     if(m > S.run.left) m = S.run.left;          // 자리를 비웠어도 의뢰 분량만큼만

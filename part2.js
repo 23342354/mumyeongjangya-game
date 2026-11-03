@@ -97,12 +97,20 @@ function ensureV2(){
   d("pts",0); d("alloc",{atk:0,def:0,agi:0,men:0,res:0}); d("tendency","파괴");
   d("gear",{weapon:null,robe:null,cap:null,charm:null,sutra:null});
   d("bag",[]); d("gid",1);
+  // 이전 버전에서 착용했던 고레벨 법구는 잃지 않도록 바랑으로 되돌립니다.
+  SLOTS.forEach(sl=>{ const it=S.gear[sl.k];
+    if(it && (Number(it.lv)||1)>S.lvl){
+      if(!S.bag.some(b=>b.id===it.id)) S.bag.push(it);
+      S.gear[sl.k]=null;
+    }
+  });
   d("mat",{가루:120,약초:0,어물:0,열매:0,뿌리:0,꽃:0,혼백:0});
   d("tower",0); d("tower2",0);
   d("wb",{dmg:0,tickets:3,next:300,total:6160000000,week:0,boss:0,rank:0});
   d("arena",{round:1,best:0,cool:0});
   d("farm",{plots:Array.from({length:9},()=>null),skill:1,exp:0,fert:3,order:null,done:0});
-  d("fish",{skill:1,exp:0,cool:0});
+  d("fish",{skill:1,exp:0,cool:0,catches:{}});
+  if(!S.fish.catches || typeof S.fish.catches!=="object") S.fish.catches={};
   d("kit",{have:{},eat:null,dess:null});
   d("club",null);
   d("market",{list:[],next:0});
@@ -199,9 +207,12 @@ function gearScore(it){
   let p=it.main.v*900+it.enh*210*GRADES[it.grade].m;
   it.opts.forEach(o=>p+=o.v*95); return Math.round(p);
 }
+function gearCanEquip(it){ return !!it && (Number(it.lv)||1)<=S.lvl; }
 function equip(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
-  const it=S.bag[i]; const old=S.gear[it.slot];
+  const it=S.bag[i];
+  if(!gearCanEquip(it)){ toast(`Lv ${it.lv}부터 착용할 수 있습니다. 현재 Lv ${S.lvl}입니다.`,"bad"); return; }
+  const old=S.gear[it.slot];
   if(old && old.enh>it.enh){
     const keep=Math.floor(old.enh*0.7);
     if(keep>it.enh){
@@ -324,60 +335,84 @@ function deliverOrder(){
 /* ═══════════ 낚시 ═══════════ */
 let FISHGAME=null;
 function openFish(){
-  FISHGAME={state:"idle", bar:0, dir:1, target:rnd(25,70)};
+  if(FISHGAME && FISHGAME.frame) cancelAnimationFrame(FISHGAME.frame);
+  FISHGAME={state:"idle",bar:0,dir:1,target:rnd(14,72),frame:null,started:0,spd:75};
   drawFish2();
+}
+// 실제 클릭 시각과 화면의 막대 위치를 동일한 고해상도 시계로 계산합니다.
+function fishBarAt(F,t){
+  const phase=((t-F.started)/1000*F.spd)%200;
+  return phase<=100?phase:200-phase;
+}
+function fishFrame(){
+  const F=FISHGAME;
+  if(!F||F.state!=="run") return;
+  const el=document.getElementById("fbar");
+  if(!el){ F.state="idle"; return; }
+  F.bar=fishBarAt(F,performance.now());
+  el.style.left=F.bar+"%";
+  F.frame=requestAnimationFrame(fishFrame);
 }
 function drawFish2(){
   const F=FISHGAME;
   modal(ic("fishing")+" 제7구역 검은 바다",`
-    <div class="tiny muted" style="margin-bottom:10px">전자 범종이 울리는 부두. 찌가 흔들리는 순간 「챈다」를 누릅니다. 금빛 구간에 멈출수록 좋은 것이 올라옵니다.</div>
+    <div class="tiny muted" style="margin-bottom:10px">「던진다」를 누르면 붉은 바늘이 움직입니다. 바늘이 <b style="color:var(--gold)">금빛 구간</b>에 있을 때 「챈다」를 누르면 성공하며, 정중앙에 가까울수록 희귀한 어획물을 얻기 쉽습니다. 버튼을 누르는 순간 판정됩니다.</div>
     <div style="position:relative;height:28px;background:var(--s1);border:1px solid var(--line);border-radius:7px;overflow:hidden">
-      <div style="position:absolute;left:${F.target}%;width:16%;top:0;bottom:0;background:rgba(201,45,229,.28);border-left:1px solid var(--gold);border-right:1px solid var(--gold)"></div>
+      <div style="position:absolute;left:${F.target}%;width:16%;top:0;bottom:0;background:rgba(218,173,61,.27);border-left:2px solid var(--gold);border-right:2px solid var(--gold)"></div>
       <div id="fbar" style="position:absolute;left:${F.bar}%;top:0;bottom:0;width:3px;background:var(--red);box-shadow:0 0 8px var(--red)"></div>
     </div>
     <div class="row" style="margin-top:12px">
-      ${F.state==="run"?`<button class="btn pri" onclick="fishHook()">챈다</button>`
+      ${F.state==="run"?`<button class="btn pri" onpointerdown="fishHook(event)" onclick="fishHook(event)">챈다</button>`
         :`<button class="btn pri" onclick="fishCast()">던진다</button>`}
       <span class="tiny muted">낚시 숙련도 Lv ${S.fish.skill} · 어물 ${S.mat.어물}</span>
-      <button class="btn" style="margin-left:auto" onclick="closeModal();renderMain()">그만</button>
+      <button class="btn" style="margin-left:auto" onclick="fishQuit()">그만</button>
     </div>
     <div id="fres" style="margin-top:10px"></div>`);
 }
+function fishQuit(){
+  if(FISHGAME){ FISHGAME.state="idle"; if(FISHGAME.frame) cancelAnimationFrame(FISHGAME.frame); }
+  closeModal(); renderMain();
+}
 function fishCast(){
-  const F=FISHGAME; F.state="run"; F.bar=0; F.dir=1; F.target=rnd(14,72);
+  const F=FISHGAME;
+  if(!F||F.state==="run") return;
+  F.state="run"; F.bar=0; F.target=rnd(14,72); F.spd=60+Math.random()*22;
+  F.started=performance.now();
   drawFish2();
-  const sp=2.4+Math.random()*1.6;
-  F.timer=setInterval(()=>{
-    F.bar+=F.dir*sp;
-    if(F.bar>=100){ F.bar=100; F.dir=-1; }
-    if(F.bar<=0){ F.bar=0; F.dir=1; }
-    const el=document.getElementById("fbar"); if(!el){ clearInterval(F.timer); return; }
-    el.style.left=F.bar+"%";
-  },30);
+  F.frame=requestAnimationFrame(fishFrame);
 }
 function fishHook(){
-  const F=FISHGAME; clearInterval(F.timer); F.state="idle";
+  const F=FISHGAME;
+  if(!F||F.state!=="run") return; // pointerdown 뒤 click 중복 방지
+  F.bar=fishBarAt(F,performance.now());
+  F.state="idle";
+  if(F.frame) cancelAnimationFrame(F.frame);
   const hit=F.bar>=F.target && F.bar<=F.target+16;
   const perfect=hit && Math.abs(F.bar-(F.target+8))<4;
   if(!hit){
     drawFish2();
-    document.getElementById("fres").innerHTML=`<div class="tiny" style="color:var(--red)">빈 바늘입니다. 수면에 파문만 남았습니다.</div>`;
+    document.getElementById("fres").innerHTML=`<div class="tiny" style="color:var(--red)">빈 바늘입니다. 금빛 구간에서 챔질해 보세요.</div>`;
     return;
   }
-  let pool=[...FISHES];
-  const roll=Math.random()*100*(1+S.fish.skill*.02+(perfect?.6:0));
+  // 금빛 정중앙은 뒤쪽 희귀 어종의 가중치를 높입니다(평소에는 표기된 기본 확률 적용).
+  const weights=FISHES.map((f,i)=>f.w*(perfect?1+i*0.75:1));
+  const r=Math.random()*weights.reduce((a,b)=>a+b,0);
   let acc=0, got=FISHES[0];
-  const tot=FISHES.reduce((a,f)=>a+f.w,0);
-  const r=Math.random()*tot*(perfect?.55:1);
-  for(const f of FISHES){ acc+=f.w; if(r<=acc){ got=f; break; } }
+  for(let i=0;i<FISHES.length;i++){
+    acc+=weights[i]; if(r<=acc){ got=FISHES[i]; break; }
+  }
   S.mat[got.y]+=got.s;
   S.fish.exp+=10;
+  S.fish.catches[got.n]=(S.fish.catches[got.n]||0)+1;
+  if(S.dex && S.dex.fish) dexAdd("fish",got.n);
+  if(typeof ct==="function") ct("fish");
   while(S.fish.exp>=S.fish.skill*90){ S.fish.exp-=S.fish.skill*90; S.fish.skill++; toast(`낚시 숙련도 Lv ${S.fish.skill}`,"good"); }
   gainExp(30); addMark(2);
+  if(typeof achCheck==="function") achCheck();
   drawFish2();
   document.getElementById("fres").innerHTML=
-    `<div class="card pad" style="padding:9px 12px"><b>${got.e} ${got.n}</b> ${perfect?'<span class="tag g">완벽</span>':""}
-     <div class="tiny" style="color:var(--jade)">${got.y} +${got.s} · 경험치 +30</div></div>`;
+    `<div class="card pad" style="padding:9px 12px"><b>${got.e} ${got.n}</b> ${perfect?'<span class="tag g">정중앙</span>':""}
+     <div class="tiny" style="color:var(--jade)">${got.y} +${got.s} · 이번 어획 1회 · 경험치 +30</div></div>`;
   renderTop(); save();
 }
 
@@ -512,12 +547,12 @@ function gearLine(it){
 }
 function gearCard(it,where){
   const G=GRADES[it.grade];
-  const equipped = where==="on";
+  const equipped = where==="on", can=gearCanEquip(it);
   return `<div class="sub" style="border-color:${equipped?G.c:"var(--line)"}">
     <div class="spread"><div>
       <b style="color:${G.c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
       ${it.isNew?'<span class="tag r">NEW</span>':""}
-      <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} · Lv ${it.lv} · ${G.n}</div>
+      <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} · Lv ${it.lv} · ${G.n}${can?"":` · <span style="color:var(--red)">착용 불가 (Lv ${it.lv} 필요)</span>`}</div>
     </div><div style="text-align:right"><div class="tiny muted">전투력</div>
       <b style="color:var(--gold)">${nf(gearScore(it))}</b></div></div>
     <div class="tiny" style="margin:6px 0 8px;color:var(--jade)">${gearLine(it)}</div>
@@ -526,7 +561,7 @@ function gearCard(it,where){
         ? `<button class="btn sm pri" onclick="enhance('${it.slot}')">각인 +${it.enh+1}</button>
            <button class="btn sm" onclick="unequip('${it.slot}')">해제</button>
            <span class="tiny muted" style="margin-left:auto">성공 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 가루 ${enhCost(it).dust}</span>`
-        : `<button class="btn sm pri" onclick="equip(${it.id})">장착</button>
+        : `<button class="btn sm pri" ${can?"":"disabled"} onclick="equip(${it.id})">${can?"장착":`Lv ${it.lv} 필요`}</button>
            <button class="btn sm" onclick="sellGear(${it.id})">판매</button>
            <button class="btn sm" onclick="dismantle(${it.id})">분해</button>
            <button class="btn sm ghost" onclick="listMine(${it.id})">중개소에 내놓기</button>`}
@@ -534,7 +569,7 @@ function gearCard(it,where){
 }
 VIEWS.gear=()=>{
   const best=(slot)=>{
-    const cands=S.bag.filter(b=>b.slot===slot);
+    const cands=S.bag.filter(b=>b.slot===slot && gearCanEquip(b));
     if(!cands.length) return null;
     return cands.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
   };
@@ -587,7 +622,7 @@ VIEWS.gear=()=>{
 };
 function equipBest(){
   SLOTS.forEach(sl=>{
-    const cands=S.bag.filter(b=>b.slot===sl.k); if(!cands.length) return;
+    const cands=S.bag.filter(b=>b.slot===sl.k && gearCanEquip(b)); if(!cands.length) return;
     const b=cands.reduce((a,c)=>gearScore(c)>gearScore(a)?c:a);
     if(!S.gear[sl.k]||gearScore(b)>gearScore(S.gear[sl.k])) equip(b.id);
   });
@@ -1020,12 +1055,13 @@ VIEWS.fishv=()=>{
     </div>
   </div>
   <div class="card pad">
-    <div class="sect-t">올라오는 것</div>
+    <div class="sect-t">올라오는 것 · 기본 출현 확률</div>
     <div class="grid g3">
       ${FISHES.map(f=>`<div class="sub"><div class="spread"><b>${f.e} ${f.n}</b>
-        <span class="tiny muted">${(f.w/FISHES.reduce((a,x)=>a+x.w,0)*100).toFixed(0)}%</span></div>
+        <span class="tiny muted">기본 출현 ${((f.w/FISHES.reduce((a,x)=>a+x.w,0))*100).toFixed(0)}%</span></div>
         <div class="tiny" style="color:var(--jade);margin-top:4px">${f.y} +${f.s} · 대략 ${nf(f.p)}륜 값</div></div>`).join("")}
     </div>
+    <div class="tiny muted" style="margin-top:10px">표시된 확률은 기본 가중치입니다. 정중앙 챔질에 성공하면 희귀 어획물의 확률이 높아집니다. 보유 재료 수량과는 다릅니다.</div>
     <div class="tiny muted" style="margin-top:10px">오래된 어부들은 심해에서 정체를 알 수 없는 파장이 감지되는 날에는 출항하지 않는다. 이유를 물으면 대부분 비슷한 대답을 한다 — "바다는 죽은 것까지 품고 있으니까."</div>
   </div>`;
 };
