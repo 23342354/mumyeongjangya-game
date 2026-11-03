@@ -621,6 +621,25 @@ textarea.inp{min-height:76px;resize:vertical}
 .coop-history summary,.coop-legacy summary{cursor:pointer;color:var(--dim);font-size:12px}
 .coop-history .spread{padding:8px 0;gap:8px;border-bottom:1px solid var(--line)}
 @media(max-width:630px){.coop-panel{padding:12px}.coop-panel-head{align-items:center}.coop-start .btn{flex:1}.coop-room-list{grid-template-columns:minmax(0,1fr)}}
+
+/* 중개소: 러너가 올린 매물 / 거래 상태 */
+.market-intro{display:grid;gap:8px}
+.market-finance{margin-top:6px;padding:10px 12px;background:var(--subBg);border:1px solid var(--line);border-radius:9px;gap:9px;flex-wrap:wrap}
+.market-catalog{margin-top:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:270px;overflow:auto}
+.market-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--subBg);min-width:0}
+.market-catalog-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.market-catalog-row .tiny{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.market-catalog-row .btn{flex:none}
+.market-toolbar{gap:10px;flex-wrap:wrap}
+.market-filters{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0}
+.market-offers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.market-offer{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--subBg);min-width:0}
+.market-offer.market-mine{border-color:var(--gold2)}
+.market-name{font-size:15px;word-break:break-word}
+.market-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.market-actions{border-top:1px solid var(--line);padding-top:8px;margin-top:auto;gap:8px;flex-wrap:wrap}
+.market-empty{padding:20px 8px;text-align:center;grid-column:1/-1}
+@media(max-width:920px){.market-offers,.market-catalog{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1177,7 +1196,7 @@ function toast(msg,kind=""){
    운영진이 게임 파일을 새로 올리면, 열어 둔 창은 예전 코드를 그대로 쓰고 있습니다.
    파일의 서버 표식(ETag / 수정 시각)을 5분마다 확인해, 바뀌었으면 띠를 띄웁니다.
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
-const UPDFILES=["index.html","part2.js","part3.js","part4.js","part5.js","part6.js","config.js"];
+const UPDFILES=["index.html","part2.js","part3.js","part4.js","part5.js","part6.js","part7.js","market.js","config.js"];
 let UPDSTAMP=null, UPDSHOWN=false;
 function updStamps(){
   if(location.protocol==="file:") return Promise.resolve(null);   // 로컬 파일은 확인 불가
@@ -3642,6 +3661,7 @@ else setTimeout(()=>init(),0);
 <script src="social.js"></script>
 <script src="part8.js?v=20261103-restore-rp"></script>
 <script src="part9.js"></script>
+<script src="market.js?v=20261103-runner-market1"></script>
 <script src="pvp.js"></script>
 </body>
 </html>

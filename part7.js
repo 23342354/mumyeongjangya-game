@@ -99,24 +99,36 @@ if(typeof ensureV6==="function"){
 }
 
 /* ── 저장본을 서버에 보관 / 되찾기 ───────────────── */
-let PUSHAT=0, PUSHBUSY=false;
+/* 계정 원본 표는 공개하지 않습니다. 보안 RPC가 해시를 확인한 뒤 저장본만 전달합니다. */
+function acctRpc(action,args){
+  return acctFetch('rpc/mm_account_'+action,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)});
+}
+let PUSHAT=0, PUSHBUSY=false, PUSHWAIT=Promise.resolve(), PUSHERROR=null;
 function acctPush(force){
-  if(!acctIn() || !acctOn() || PUSHBUSY) return Promise.resolve();
-  if(typeof S==="undefined" || !S || !S.made) return Promise.resolve();
+  if(!acctIn() || !acctOn()) return Promise.resolve(false);
+  if(PUSHBUSY) return force?PUSHWAIT.then(()=>acctPush(true)):PUSHWAIT;
+  if(typeof S==="undefined" || !S || !S.made) return Promise.resolve(false);
   const now=Date.now();
-  if(!force && now-PUSHAT < 5*60*1000) return Promise.resolve();
-  PUSHAT=now; PUSHBUSY=true;
+  if(!force && now-PUSHAT < 5*60*1000) return Promise.resolve(true);
+  PUSHAT=now; PUSHBUSY=true; PUSHERROR=null;
   let blob=null;
-  try{ blob=JSON.parse(JSON.stringify(S)); }catch(e){ PUSHBUSY=false; return Promise.resolve(); }
-  return acctFetch("accounts?id=eq."+encodeURIComponent(ACCT.id),
-      {method:"PATCH", headers:{"Content-Type":"application/json", Prefer:"return=minimal"},
-       body:JSON.stringify({save:blob, name:S.name||"", seen_at:new Date().toISOString()})})
-    .catch(()=>{})
-    .then(()=>{ PUSHBUSY=false; });
+  try{ blob=JSON.parse(JSON.stringify(S)); }catch(e){ PUSHBUSY=false; return Promise.resolve(false); }
+  PUSHWAIT=acctRpc('save',{p_id:ACCT.id,p_token:ACCT.tok,p_save:blob,p_name:S.name||''})
+  .then(result=>{
+    if(!result || !result.ok) throw new Error('계정 저장을 확인하지 못했습니다.');
+    return true;
+  }).catch(e=>{
+    PUSHERROR=e;
+    if(force && typeof VIEW!=="undefined" && VIEW==="market" && typeof toast==="function")
+      toast("저장본 동기화 필요 · 중개소 매물 새로 고침을 먼저 눌러 주세요.","bad");
+    return false;
+  }).finally(()=>{PUSHBUSY=false;});
+  return PUSHWAIT;
 }
 function acctPull(){
-  return acctFetch("accounts?id=eq."+encodeURIComponent(ACCT.id)+"&select=save")
-    .then(rows=>(rows && rows[0] && rows[0].save) ? rows[0].save : null);
+  return acctRpc('login',{p_id:ACCT.id,p_token:ACCT.tok})
+    .then(row=>row&&row.save||null);
 }
 
 /* ── 로그인 화면 ─────────────────────────────────── */
@@ -179,33 +191,24 @@ function gateSignUp(){
   if(v.pw.length<4){ gateMsg("비밀번호는 4자 이상으로 적어 주세요.",1); return gateShow(); }
   if(v.pw!==v.pw2){ gateMsg("비밀번호 확인이 다릅니다.",1); return gateShow(); }
   gateBusy(true,"아이디 확인 중…");
-  acctFetch("accounts?id=eq."+encodeURIComponent(v.id)+"&select=id")
-    .then(rows=>{
-      if(rows && rows.length){ gateBusy(false); gateMsg("이미 쓰고 있는 아이디입니다.",1); gateShow(); return; }
-      return acctFetch("accounts", {method:"POST",
-        headers:{"Content-Type":"application/json", Prefer:"return=minimal"},
-        body:JSON.stringify([{id:v.id, pw:acctHash(v.id,v.pw), name:"", save:null}])})
-        .then(()=>{
-          ACCT={id:v.id, tok:acctHash(v.id,v.pw)}; acctStore();
-          try{ localStorage.removeItem(SAVEKEY); }catch(e){}
-          acctBoot(null);
-        });
+  acctRpc('register',{p_id:v.id,p_token:acctHash(v.id,v.pw)})
+    .then(()=>{
+      ACCT={id:v.id,tok:acctHash(v.id,v.pw)};acctStore();
+      try{localStorage.removeItem(SAVEKEY);}catch(e){}
+      acctBoot(null);
     })
-    .catch(e=>{ gateBusy(false); gateMsg("서버에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.",1); gateShow(); });
+    .catch(e=>{gateBusy(false);gateMsg(String(e.message||'회원가입에 실패했습니다.').slice(0,160),1);gateShow();});
 }
 function gateLogin(){
   const v=gateVals();
   if(!v.id || !v.pw){ gateMsg("아이디와 비밀번호를 적어 주세요.",1); return gateShow(); }
   gateBusy(true);
-  acctFetch("accounts?id=eq."+encodeURIComponent(v.id)+"&select=id,pw,save")
-    .then(rows=>{
-      const row = rows && rows[0];
-      if(!row){ gateBusy(false); gateMsg("그런 아이디가 없습니다.",1); return gateShow(); }
-      if(row.pw !== acctHash(v.id, v.pw)){ gateBusy(false); gateMsg("비밀번호가 맞지 않습니다.",1); return gateShow(); }
-      ACCT={id:v.id, tok:acctHash(v.id,v.pw)}; acctStore();
+  acctRpc('login',{p_id:v.id,p_token:acctHash(v.id,v.pw)})
+    .then(row=>{
+      ACCT={id:v.id,tok:acctHash(v.id,v.pw)};acctStore();
       acctBoot(row.save||null);
     })
-    .catch(()=>{ gateBusy(false); gateMsg("서버에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.",1); gateShow(); });
+    .catch(e=>{gateBusy(false);gateMsg('아이디나 비밀번호를 확인해 주세요.',1);gateShow();});
 }
 /* 저장본을 자리에 앉히고 게임을 시작합니다 */
 const OLDHALL={h1:"dorm",h2:"dorm",h3:"dorm",h4:"dorm"};
@@ -235,15 +238,13 @@ function gateIntercept(){
   if(!acctOn()) return false;                    // 공유 기록 없으면 예전처럼 혼자 모드
   if(!acctIn()){ gateShow("login"); return true; }
   // 자동 로그인 — 저장해 둔 표식을 서버와 맞춰 봅니다
-  acctFetch("accounts?id=eq."+encodeURIComponent(ACCT.id)+"&select=id,pw,save")
-    .then(rows=>{
-      const row=rows && rows[0];
-      if(!row || row.pw!==ACCT.tok){ acctClear(); gateShow("login"); return; }
-      acctBoot(row.save||null);
-    })
-    .catch(()=>{                                  // 서버에 못 닿으면 이 기기 기록으로라도
+  acctRpc('login',{p_id:ACCT.id,p_token:ACCT.tok})
+    .then(row=>{acctBoot(row.save||null);})
+    .catch(()=>{
+      // 네트워크 오류가 나면 기존처럼 이 기기의 마지막 로컬 기록으로 입장할 수 있습니다.
+      // 서버 거래는 복구 전까지 비활성화됩니다.
       initGame();
-      toast("서버에 닿지 못해 이 기기에 남은 기록으로 시작합니다.","bad");
+      toast('서버 로그인 연결이 끊겨 이 기기 기록으로 시작했습니다. 중개소 이용 전 연결을 확인해 주세요.', 'bad');
     });
   return true;
 }
