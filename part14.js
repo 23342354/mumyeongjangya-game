@@ -142,56 +142,102 @@ function log14ExportRecord(item,kind,mode=""){
     parentName:parent?(kind==="pair"?String(parent.author_name||log14Who(parent.author_id).name):String(log14Who(parent.author_id,parent.author_name).name)):"",
     depth:Math.max(0,Number(item.depth||0)),body:log14Markup(p.body,sourceIsChat),mode};
 }
+const LOG14_EDITOR_EXPORT_CSS=`:root{--avatar:76px;--font:15px;--lh:1.75}
+      *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Pretendard, "Noto Sans KR", system-ui, sans-serif;background:var(--bg);color:var(--text);transition:background .22s ease,color .22s ease}body[data-theme="dark"]{--bg:#263552;--panel:#344462;--text:#F7FAFF;--muted:#C4CEE0;--accent:#9CCFFF;color-scheme:dark}body[data-theme="light"]{--bg:#F7F9FF;--panel:#FFFFFF;--text:#2A405E;--muted:#7B8FA9;--accent:#6EAFE8;color-scheme:light}button,input{font:inherit}.log-header{position:fixed;inset:0 0 auto;z-index:30;height:58px;border-bottom:1px solid color-mix(in srgb,var(--text) 16%,transparent);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(18px);box-shadow:0 8px 28px rgba(0,0,0,.05)}.header-inner{width:min(100%,1200px);height:100%;margin:auto;padding:0 18px;display:flex;align-items:center;gap:14px}.menu-toggle,.theme-toggle{border:1px solid color-mix(in srgb,var(--text) 17%,transparent);background:color-mix(in srgb,var(--panel) 72%,transparent);color:var(--text);cursor:pointer;transition:.18s}.menu-toggle{width:38px;height:34px;border-radius:8px;display:grid;place-items:center;padding:0}.menu-icon,.menu-icon::before,.menu-icon::after{display:block;width:19px;height:2px;border-radius:9px;background:currentColor;content:"";transition:.2s}.menu-icon{position:relative}.menu-icon::before{position:absolute;top:-6px}.menu-icon::after{position:absolute;top:6px}.drawer-open .menu-icon{background:transparent}.drawer-open .menu-icon::before{top:0;transform:rotate(45deg)}.drawer-open .menu-icon::after{top:0;transform:rotate(-45deg)}.title-block{min-width:0;display:flex;align-items:baseline;gap:11px}.title-block h1{margin:0;padding-left:12px;border-left:5px solid var(--accent);font-size:15px;line-height:1.05;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.count{color:var(--muted);font-size:11px;white-space:nowrap}.theme-toggle{margin-left:auto;border-radius:999px;padding:8px 11px;font-size:12px}.menu-toggle:hover,.theme-toggle:hover{border-color:color-mix(in srgb,var(--accent) 62%,transparent);transform:translateY(-1px)}.drawer-shade{position:fixed;inset:58px 0 0;z-index:24;background:rgba(0,0,0,.34);opacity:0;pointer-events:none;transition:.22s}.drawer{position:fixed;left:0;top:58px;bottom:0;z-index:25;width:min(320px,88vw);padding:24px 20px 40px;background:color-mix(in srgb,var(--bg) 82%,#000 18%);border-right:1px solid color-mix(in srgb,var(--text) 14%,transparent);box-shadow:20px 0 60px rgba(0,0,0,.2);overflow:auto;transform:translateX(-101%);transition:.24s ease;color:var(--text)}.drawer-open .drawer{transform:translateX(0)}.drawer-open .drawer-shade{opacity:1;pointer-events:auto}.drawer h2{margin:14px 0 9px;padding-left:10px;border-left:4px solid var(--accent);font-size:12px;letter-spacing:.08em}.drawer-note{margin:0 0 20px;color:var(--muted);font-size:11px;line-height:1.55}.filter-list{display:grid;gap:3px}.filter-item{display:grid;grid-template-columns:18px 10px 1fr;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:color-mix(in srgb,var(--text) 88%,transparent);font-size:12px;cursor:pointer}.filter-item:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}.filter-item input{width:14px;height:14px;accent-color:var(--accent)}.filter-item i{width:7px;height:7px;border-radius:50%;background:var(--dot)}.page{width:min(100%,1120px);margin:auto;padding:90px clamp(18px,5vw,64px) 100px}.log-list{border-top:1px solid color-mix(in srgb,var(--text) 13%,transparent)}.entry{display:grid;grid-template-columns:var(--avatar) minmax(0,1fr);gap:18px;margin:0;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--text) 13%,transparent)}.entry[hidden],.system[hidden],.illustration[hidden]{display:none!important}.entry.no-avatar{display:block}.entry.no-avatar .avatar-col{display:none}.avatar-col{display:block;position:relative}.avatar-col::after{content:"";position:absolute;top:calc(var(--avatar) + 8px);bottom:-16px;left:50%;width:1px;background:linear-gradient(color-mix(in srgb,var(--text) 12%,transparent),transparent)}.entry:last-child .avatar-col::after{display:none}.avatar-col img,.avatar-empty{width:var(--avatar);height:var(--avatar);object-fit:cover;border-radius:16px;background:var(--panel);border:1px solid color-mix(in srgb,var(--text) 14%,transparent);box-shadow:none}.hide-image-frame .avatar-col img{background:transparent;border-color:transparent}.avatar-empty{display:grid;place-items:center;color:var(--muted);font-weight:900}.content{position:relative;padding:3px 0 5px;background:transparent;border:0}.meta{min-height:25px;display:flex;align-items:baseline;gap:9px;margin-bottom:8px;padding-bottom:7px;border-bottom:1px dotted color-mix(in srgb,var(--text) 20%,transparent)}.meta b{font-size:12px;letter-spacing:.055em}.meta span{margin-left:auto;padding:2px 8px 3px 10px;font-size:10px;color:var(--muted);border:0;border-left:1px solid color-mix(in srgb,var(--text) 15%,transparent);border-bottom:1px solid color-mix(in srgb,var(--text) 15%,transparent);border-radius:0 0 0 11px;background:color-mix(in srgb,var(--panel) 68%,transparent)}.content.tab-tinted{padding:13px 15px 14px;background:linear-gradient(135deg,var(--tab-bg),color-mix(in srgb,var(--tab-bg) 72%,transparent));border:1px solid var(--tab-border);border-radius:10px}.content.align-center .meta{justify-content:center}.content.align-center .meta span{margin-left:0}.content.align-center .message{text-align:center}.message{font-size:var(--font);line-height:var(--lh);letter-spacing:-.012em;word-break:break-word;text-wrap:pretty}.message-segment+.message-segment{margin-top:4px;padding-top:7px;border-top:1px solid color-mix(in srgb,var(--text) 6%,transparent)}.message-segment.dice-result{position:relative;margin:8px 0;padding:11px 13px 12px;overflow:hidden;border:1px solid color-mix(in srgb,var(--dice-color) 42%,transparent);border-left:4px solid var(--dice-color);border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--dice-color) 14%,var(--panel)),color-mix(in srgb,var(--dice-color) 5%,transparent));box-shadow:0 8px 22px color-mix(in srgb,var(--dice-color) 7%,transparent)}.dice-badge{display:inline-flex;align-items:center;min-height:21px;margin:0 8px 5px 0;padding:2px 8px;border:1px solid color-mix(in srgb,var(--dice-color) 55%,transparent);border-radius:999px;background:color-mix(in srgb,var(--dice-color) 19%,var(--panel));color:var(--dice-color);font-size:10px;font-weight:900;letter-spacing:.075em;vertical-align:middle}.dice-roll-text{display:block;color:color-mix(in srgb,var(--text) 92%,var(--dice-color) 8%)}.novel .message-segment.dice-result{margin:4px 0;padding:9px 11px 10px}.message img{max-width:100%;border-radius:12px}.message a{color:var(--accent);text-underline-offset:3px}.message strong{font-weight:850;color:color-mix(in srgb,var(--text) 94%,var(--accent) 6%)}.message em{font-style:italic}.message del{color:var(--muted);text-decoration-thickness:1px}.message code{padding:2px 6px;border:1px solid color-mix(in srgb,var(--text) 13%,transparent);border-radius:6px;background:color-mix(in srgb,var(--text) 6%,transparent);font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:.9em}.segment-content{display:block;min-width:0}.message-segment.format-bold>.segment-content,.message-segment.format-bold>.dice-roll-text{font-weight:800}.message-segment.format-italic>.segment-content,.message-segment.format-italic>.dice-roll-text{font-style:italic}.message-segment.format-bold.format-italic>.segment-content,.message-segment.format-bold.format-italic>.dice-roll-text{font-weight:800;font-style:italic}a{color:var(--accent)}.system{width:min(100%,920px);margin:18px auto;padding:12px 16px;color:var(--muted);line-height:1.65;border-left:4px solid color-mix(in srgb,var(--muted) 78%,transparent);border-top:1px solid color-mix(in srgb,var(--text) 9%,transparent);border-bottom:1px solid color-mix(in srgb,var(--text) 9%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--text) 4%,transparent),transparent)}.system.tab-tinted{background:var(--tab-bg);border-color:var(--tab-border)}.system.align-center{text-align:center;border-left:0}.novel .entry{display:block;padding:0}.novel .content{display:grid;grid-template-columns:minmax(120px,18%) minmax(0,1fr);padding:0;border-bottom:0}.novel .meta{grid-column:1;display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:5px;margin:0;padding:9px 14px 9px 0;text-align:right;border-right:1px dotted color-mix(in srgb,var(--text) 28%,transparent);border-bottom:0}.novel .meta span{width:max-content;margin-left:auto;background:transparent}.novel .message{grid-column:2;padding:9px 0 9px 16px}.novel .content.tab-tinted{margin:4px 0;padding:0;border:1px solid var(--tab-border);border-radius:9px;overflow:hidden}.novel .content.align-center{display:block;padding:14px 18px;text-align:center}.novel .content.align-center .meta{justify-content:center;padding:0 0 7px;border:0;text-align:center}.novel .content.align-center .meta span{margin-left:0}.novel .content.align-center .message{padding:0}.novel .message-segment+.message-segment{margin-top:2px;padding-top:4px;border-top:0}.novel .message-segment.dice-result{margin:4px 0;padding:9px 11px 10px;border-top:1px solid color-mix(in srgb,var(--dice-color) 42%,transparent)}.illustration{width:min(100%,1080px);margin:24px auto 30px;padding:0 4px;display:flex}.illustration.align-left{justify-content:flex-start}.illustration.align-center{justify-content:center}.illustration.align-right{justify-content:flex-end}.illustration>div{min-width:40px;max-width:100%}.illustration img{display:block;width:100%;height:auto;border-radius:12px}.empty-filter{display:none;padding:80px 20px;text-align:center;color:var(--muted)}.empty-filter.show{display:block}.footer{padding:0 18px 28px;text-align:center;color:var(--muted);font-size:10px}@media(max-width:700px){.header-inner{padding:0 10px}.title-block h1{padding-left:9px;border-left-width:4px;font-size:13px}.count{display:none}.page{padding:78px 10px 70px}:root{--avatar:58px}.entry{gap:11px}.avatar-col::after{display:none}.meta{flex-wrap:wrap}.meta span{margin-left:0}.novel .content{grid-template-columns:minmax(92px,28%) minmax(0,1fr)}.novel .meta{padding-right:10px}.novel .message{padding-left:11px}.theme-toggle{padding:7px 9px}.drawer{top:58px}}
+
+/* 사무전 고유 데이터 표기. 원본 편집기의 HTML 내보내기 CSS는 위에 그대로 보존합니다. */
+.layout-toggle{border:1px solid color-mix(in srgb,var(--text) 17%,transparent);background:color-mix(in srgb,var(--panel) 72%,transparent);color:var(--text);cursor:pointer;transition:.18s;border-radius:999px;padding:8px 11px;font-size:12px;margin-left:auto}
+.layout-toggle:hover{border-color:color-mix(in srgb,var(--accent) 62%,transparent);transform:translateY(-1px)}
+.layout-toggle+.theme-toggle{margin-left:0}
+.log-time{margin:0 0 8px;color:var(--muted);font-size:11px;letter-spacing:.015em}
+.log-reply{display:block;margin:0 0 10px;padding:8px 11px;border-left:2px solid color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 6%,transparent);color:var(--muted);font-size:11px;line-height:1.55}
+.log-reply a{color:var(--accent);text-underline-offset:3px}
+.log-extra{font-size:10px;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:8px}
+.log-search{width:100%;margin:0 0 14px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--text) 20%,transparent);background:var(--panel);color:var(--text);border-radius:8px;font-size:12px}
+.log-search:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:2px}
+.log-search::placeholder{color:var(--muted)}
+.ccfolia-import-row{display:none!important}
+.entry:target .content{outline:2px solid var(--accent);outline-offset:4px;border-radius:5px}
+.log-header button:focus-visible,.drawer input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:700px){.layout-toggle{font-size:11px;padding:7px 9px}.header-inner{gap:7px}.log-time{font-size:10px}.log-extra{display:none}}
+@media print{.log-header,.drawer,.drawer-shade{display:none!important}.page{padding-top:16px}.entry{break-inside:avoid;page-break-inside:avoid}.log-reply a{text-decoration:none}body{color-adjust:exact;print-color-adjust:exact}}
+`;
 function log14Build(records,title,kind){
   const names=[...new Set(records.map(x=>x.name))];
+  const tabs=[...new Set(records.map(x=>x.tab))];
   const safeTitle=log14Esc(title),count=records.length;
-  const madeAt=log14When(Date.now());
+  const charMap=new Map(names.map((name,i)=>[name,`author-${i}`]));
+  const tabMap=new Map(tabs.map((name,i)=>[name,`tab-${i}`]));
   const entries=records.map(rec=>{
     const label=log14Esc(rec.name),id=log14Esc(rec.id),tab=log14Esc(rec.tab);
-    const avatar=rec.avatar?`<img src="${log14Esc(rec.avatar)}" alt="" class="log-avatar" loading="lazy">`
-      :`<div class="log-avatar log-initial" aria-hidden="true">${log14Esc(rec.name.slice(0,1)||"?")}</div>`;
-    const relation=rec.parentId?`<small class="log-reply">↳ ${log14Esc(rec.parentName)} 님에게 답글 · <a href="#log-${log14Esc(rec.parentId)}">원글 보기</a></small>`:"";
-    return `<article class="log-entry" id="log-${id}" data-author="${label}" data-root="${log14Esc(rec.rootId)}" data-search="${log14Esc((rec.name+" "+rec.tab+" "+rec.when+" "+rec.body.replace(/<[^>]*>/g," ")).toLowerCase())}">
-      <div class="log-portrait">${avatar}</div>
-      <div class="log-main">
-        <div class="log-time">${log14Esc(rec.when)}${rec.parentId?` · 타래 답글`:""}${kind==="chat"?` · ${log14Esc(rec.tab.replace("페어 채팅 · ",""))}`:""}</div>
-        <p class="log-line"><span class="log-source-tab">[${tab}]</span><span class="log-speaker" style="color:${rec.color}">${label}</span><span class="log-body">${relation}${rec.body}</span></p>
-      </div>
-    </article>`;
+    const speakerColor=log14Color(rec.color,rec.name);
+    const portrait=rec.avatar
+      ?`<img src="${log14Esc(rec.avatar)}" alt="${label}" loading="lazy" decoding="async">`
+      :`<div class="avatar-empty" aria-hidden="true">${log14Esc(rec.name.slice(0,1)||"?")}</div>`;
+    const reply=rec.parentId?`<div class="log-reply">↳ ${log14Esc(rec.parentName)} 님에게 답글 · <a href="#log-${log14Esc(rec.parentId)}">원글 보기</a></div>`:"";
+    const replyImport=rec.parentId?`↳ ${log14Esc(rec.parentName)} 님에게 답글<br>`:"";
+    const personId=charMap.get(rec.name),tabId=tabMap.get(rec.tab);
+    /* The editor imports a p with three direct span children: tab, speaker, content.
+       Keep this row invisible in the exported reader to avoid duplicate content. */
+    const importer=`<p class="ccfolia-import-row" style="color:${speakerColor}"><span>[${tab}]</span><span>${label}</span><span>${replyImport}${rec.body}</span></p>`;
+    return `<article class="entry" id="log-${id}" data-entry data-char="${log14Esc(personId)}" data-tab="${log14Esc(tabId)}" data-author="${label}">
+      <div class="avatar-col">${portrait}</div>
+      <div class="content"><div class="meta"><b class="speaker" style="color:${speakerColor}">${label}</b><span>${tab}</span></div>
+        <div class="log-time">${log14Esc(rec.when)}</div>
+        <div class="message">${reply}<div class="message-segment"><span class="segment-content">${rec.body}</span></div></div>
+      </div>${importer}</article>`;
   }).join("\n");
-  /* 이 HTML은 브라우저 자체로 열 수 있고, 각 p.log-line에는 코코포리아 로그
-     편집기의 파서가 읽는 탭/화자/본문의 3개 직접 span 자식만 둡니다. */
-  return `<!doctype html>
-<html lang="ko" data-theme="light" data-layout="timeline">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${safeTitle} · 無明長夜</title>
-<style>
-:root{color-scheme:light;--bg:#f5f8fe;--panel:#fff;--text:#283d5c;--muted:#778ca5;--line:#dbe6f4;--accent:#6aaee7;--hint:#eff6ff;--avatar:62px}
-html[data-theme="dark"]{color-scheme:dark;--bg:#101725;--panel:#19253a;--text:#eef3fc;--muted:#a3b3c9;--line:#354763;--accent:#a3cfff;--hint:#202f49}
-*{box-sizing:border-box}[hidden]{display:none!important}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;color:var(--text);background:radial-gradient(circle at 0 0,rgba(128,172,248,.14),transparent 30%),var(--bg);font:15px/1.85 Pretendard,"Noto Sans KR","Malgun Gothic",system-ui,sans-serif}
-.page{width:min(100%,1000px);margin:auto;padding:38px clamp(14px,4vw,54px) 92px}.document-head{padding:0 0 20px;border-bottom:1px solid var(--line)}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.17em;color:var(--accent)}h1{font-size:27px;line-height:1.3;letter-spacing:-.04em;margin:9px 0 10px}.intro{color:var(--muted);font-size:12px;line-height:1.7;margin:0}.summary{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;color:var(--muted);font-size:12px}.summary strong{color:var(--text)}
-.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:18px 0;position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}.tools input,.tools select,.tools button{font:inherit;font-size:12px;color:var(--text);border:1px solid var(--line);background:var(--panel);padding:8px 10px;border-radius:9px;min-height:34px}.tools input{flex:1;min-width:120px}.tools button{cursor:pointer}.tools button:hover{border-color:var(--accent)}.tools select{max-width:160px}.counter{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
-.log-list{max-width:900px;margin:16px auto 0}.log-entry{display:grid;grid-template-columns:var(--avatar) minmax(0,1fr);gap:17px;padding:20px 0;border-bottom:1px solid var(--line);scroll-margin-top:78px}.log-entry:first-child{border-top:1px solid var(--line)}.log-entry:target{background:var(--hint);outline:9px solid var(--hint);border-radius:2px}.log-portrait{width:var(--avatar)}.log-avatar{display:block;width:var(--avatar);height:var(--avatar);border:1px solid var(--line);border-radius:13px;object-fit:cover;background:var(--panel)}.log-initial{display:grid;place-items:center;font-size:26px;font-weight:800;color:var(--accent)}.log-main{min-width:0}.log-time{color:var(--muted);font-size:11px;margin:0 0 2px}.log-line{display:flex;flex-wrap:wrap;column-gap:12px;row-gap:3px;align-items:baseline;margin:0;padding:0;min-width:0}.log-source-tab{display:none}.log-speaker{font-size:14px;font-weight:800;letter-spacing:.01em}.log-body{flex:0 0 100%;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;padding-top:8px;border-top:1px dotted var(--line)}.log-reply{display:block;color:var(--muted);font-size:11px;line-height:1.5;margin-bottom:6px}.log-reply a{color:var(--accent);text-decoration:none}.log-body em{font-style:italic}.log-body a{color:var(--accent)}.log-body strong{font-weight:800}
-html[data-layout="novel"] .log-entry{display:block;padding:0}html[data-layout="novel"] .log-portrait{display:none}html[data-layout="novel"] .log-time{padding:12px 0 2px;font-size:10px}html[data-layout="novel"] .log-line{display:grid;grid-template-columns:minmax(105px,18%) minmax(0,1fr);gap:0;align-items:start}html[data-layout="novel"] .log-speaker{text-align:right;border-right:1px dotted var(--line);padding:7px 15px 10px 0}html[data-layout="novel"] .log-body{border:0;grid-column:2;padding:7px 0 10px 16px;flex:auto}
-.footer{margin-top:42px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:11px}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media(max-width:640px){:root{--avatar:44px}.page{padding-top:24px}.log-entry{gap:10px;padding:15px 0}.tools{gap:6px}.tools input{order:3;flex-basis:100%}.tools select{max-width:120px}.log-speaker{font-size:13px}.log-body{font-size:14px}html[data-layout="novel"] .log-line{grid-template-columns:minmax(80px,27%) minmax(0,1fr)}}
-@media print{.page{width:100%;padding:0}.tools{display:none}.log-entry{break-inside:avoid;page-break-inside:avoid}.log-list{max-width:none}html{scroll-behavior:auto}}
-</style></head>
-<body><main class="page"><header class="document-head"><div class="eyebrow">無明長夜 · 사신무기전문학교</div><h1>${safeTitle}</h1><p class="intro">사무전 대화 기록을 독립 HTML로 보관했습니다. 이 파일은 인터넷 연결 없이도 본문을 읽을 수 있습니다. 외부 주소를 사용하는 프로필 이미지는 접속 환경에 따라 보이지 않을 수 있습니다.</p><div class="summary"><small>대사 <strong>${count.toLocaleString("ko-KR")}</strong>개</small><small>화자 <strong>${names.length}</strong>명</small><small>저장 <strong>${log14Esc(madeAt)}</strong></small></div></header>
-<nav class="tools" aria-label="로그 탐색"><button type="button" id="themeBtn">☾ 다크</button><button type="button" id="layoutBtn">소설형 보기</button><select id="whoFilter" aria-label="화자 필터"><option value="">모든 화자</option>${names.map(n=>`<option value="${log14Esc(n)}">${log14Esc(n)}</option>`).join("")}</select><input id="search" type="search" placeholder="대사·화자 검색" aria-label="대사 검색"><span class="counter" id="count">${count.toLocaleString("ko-KR")}개</span></nav>
-<section class="log-list" id="logList" aria-label="저장된 대화 기록">${entries}</section><footer class="footer">無明長夜 · 개인 백업용 HTML / ${kind==="pair"||kind==="chat"?"페어끼리 나눈 사적인 대화가 포함되어 있습니다. 파일 공유에 주의해 주세요.":"RP 게시판의 공유 대화 기록입니다."}<br>‘코코포리아 로그 편집기 v1.0.0’의 로그 불러오기에서도 [탭] · 화자 · 본문 형식으로 읽을 수 있습니다.</footer></main>
-<script>
-(function(){
-const root=document.documentElement,items=Array.from(document.querySelectorAll('.log-entry'));
-const search=document.getElementById('search'),who=document.getElementById('whoFilter'),counter=document.getElementById('count');
-function filter(){const q=search.value.trim().toLocaleLowerCase();let n=0;
- for(const entry of items){const show=(!who.value||entry.dataset.author===who.value)&&(!q||(entry.textContent||'').toLocaleLowerCase().includes(q));entry.hidden=!show; if(show)n++;}
- counter.textContent=n.toLocaleString('ko-KR')+'개';}
-search.addEventListener('input',filter);who.addEventListener('change',filter);
-document.getElementById('themeBtn').addEventListener('click',function(){const dark=root.dataset.theme!=='dark';root.dataset.theme=dark?'dark':'light';this.textContent=dark?'☀ 라이트':'☾ 다크';});
-document.getElementById('layoutBtn').addEventListener('click',function(){const novel=root.dataset.layout!=='novel';root.dataset.layout=novel?'novel':'timeline';this.textContent=novel?'타임라인 보기':'소설형 보기';});
-})();
-<\/script></body></html>`;
+  const charMenu=names.map(n=>`<label class="filter-item"><input type="checkbox" data-filter-char="${log14Esc(charMap.get(n))}" checked><i style="--dot:${log14Color('',n)}"></i><span>${log14Esc(n)}</span></label>`).join('');
+  const tabMenu=tabs.map(t=>`<label class="filter-item"><input type="checkbox" data-filter-tab="${log14Esc(tabMap.get(t))}" checked><i style="--dot:#6EAFE8"></i><span>${log14Esc(t)}</span></label>`).join('');
+  const exportedAt=log14When(Date.now());
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle} · 無明長夜</title>
+  <style>${LOG14_EDITOR_EXPORT_CSS}</style></head>
+  <body data-theme="light"><header class="log-header"><div class="header-inner">
+    <button id="menuToggle" class="menu-toggle" type="button" aria-label="필터 메뉴 열기"><span class="menu-icon"></span></button>
+    <div class="title-block"><h1>${safeTitle}</h1><span id="visibleCount" class="count">${count}개 항목</span></div>
+    <button id="layoutToggle" class="layout-toggle" type="button">소설형</button>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="라이트·다크 모드 전환">☾ 다크</button>
+  </div></header>
+  <div id="drawerShade" class="drawer-shade"></div>
+  <aside id="drawer" class="drawer" aria-label="로그 필터">
+    <p class="drawer-note">無明長夜 · 사무전 로그<br>대화 ${count.toLocaleString('ko-KR')}개 · ${names.length}명<br>내보낸 시각: ${log14Esc(exportedAt)}<br>메뉴에서 화자와 탭을 골라 읽을 수 있습니다.</p>
+    <input class="log-search" type="search" id="logSearch" placeholder="대사·화자 검색" aria-label="대사 검색">
+    ${tabs.length?`<h2>탭</h2><div class="filter-list">${tabMenu}</div>`:""}
+    <h2>화자</h2><div class="filter-list">${charMenu}</div>
+  </aside>
+  <main class="page"><section class="log-list">${entries}</section>
+    <div id="emptyFilter" class="empty-filter">선택한 조건에 맞는 로그가 없습니다.</div>
+  </main><footer class="footer">無明長夜 · 사무전 로그 / ${kind==='pair'||kind==='chat'?'페어끼리 나눈 사적인 대화가 포함되어 있습니다.':'RP 게시판의 공유 대화 기록입니다.'}<br>코코포리아 로그 편집기 v1.0.0의 ‘로그 불러오기’에서 읽을 수 있습니다.</footer>
+  <script>
+  (()=>{
+    const body=document.body,themeBtn=document.getElementById('themeToggle'),layoutBtn=document.getElementById('layoutToggle');
+    const menuBtn=document.getElementById('menuToggle'),shade=document.getElementById('drawerShade');
+    const count=document.getElementById('visibleCount'),empty=document.getElementById('emptyFilter'),search=document.getElementById('logSearch');
+    let saved='';try{saved=localStorage.getItem('samu-export-log-theme')||''}catch(_){}
+    const applyTheme=mode=>{body.dataset.theme=mode;themeBtn.textContent=mode==='dark'?'☀ 라이트':'☾ 다크';
+      themeBtn.setAttribute('aria-label',mode==='dark'?'라이트 모드로 전환':'다크 모드로 전환');
+      try{localStorage.setItem('samu-export-log-theme',mode)}catch(_){}};
+    applyTheme(['light','dark'].includes(saved)?saved:body.dataset.theme);
+    themeBtn.addEventListener('click',()=>applyTheme(body.dataset.theme==='dark'?'light':'dark'));
+    layoutBtn.addEventListener('click',()=>{body.classList.toggle('novel');layoutBtn.textContent=body.classList.contains('novel')?'타임라인':'소설형'});
+    const closeDrawer=()=>body.classList.remove('drawer-open');
+    menuBtn.addEventListener('click',()=>body.classList.toggle('drawer-open'));
+    shade.addEventListener('click',closeDrawer);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
+    const entries=[...document.querySelectorAll('[data-entry]')];
+    function update(){
+      const chars=new Set([...document.querySelectorAll('[data-filter-char]:checked')].map(x=>x.dataset.filterChar));
+      const tabs=new Set([...document.querySelectorAll('[data-filter-tab]:checked')].map(x=>x.dataset.filterTab));
+      const q=search.value.trim().toLocaleLowerCase();let visible=0;
+      for(const el of entries){const charOK=chars.has(el.dataset.char),tabOK=tabs.has(el.dataset.tab);
+        const searchOK=!q||(el.textContent||'').toLocaleLowerCase().includes(q);
+        el.hidden=!(charOK&&tabOK&&searchOK);if(!el.hidden)visible++;}
+      count.textContent=visible.toLocaleString('ko-KR')+'개 항목';empty.classList.toggle('show',visible===0);
+    }
+    document.querySelectorAll('[data-filter-char],[data-filter-tab]').forEach(x=>x.addEventListener('change',update));
+    search.addEventListener('input',update);update();
+  })();
+  <\/script></body></html>`;
 }
 async function log14Export(kind,rootId){
   if(LOG14_BUSY){toast("이미 기록을 불러오는 중입니다. 내보내기가 끝난 뒤 다시 시도해 주세요.");return;}
