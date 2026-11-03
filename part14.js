@@ -161,6 +161,18 @@ const LOG14_EDITOR_EXPORT_CSS=`:root{--avatar:76px;--font:15px;--lh:1.75}
 .log-header button:focus-visible,.drawer input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:700px){.layout-toggle{font-size:11px;padding:7px 9px}.header-inner{gap:7px}.log-time{font-size:10px}.log-extra{display:none}}
 @media print{.log-header,.drawer,.drawer-shade{display:none!important}.page{padding-top:16px}.entry{break-inside:avoid;page-break-inside:avoid}.log-reply a{text-decoration:none}body{color-adjust:exact;print-color-adjust:exact}}
+
+/* 소설형 정렬: 편집기의 novel-mode처럼 아바타 숨김 + 화자/본문 2열 정렬 */
+.meta{flex-wrap:wrap}.meta .log-time{flex:0 0 100%;margin:-3px 0 0;line-height:1.45}
+.novel .avatar-col{display:none!important}
+.novel .entry{display:block;padding:0;min-width:0}
+.novel .content{display:grid;grid-template-columns:minmax(120px,18%) minmax(0,1fr);align-items:stretch;min-width:0}
+.novel .meta{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:4px;margin:0;padding:11px 14px 10px 0;text-align:right;border-right:1px dotted color-mix(in srgb,var(--text) 28%,transparent);border-bottom:0;min-width:0}
+.novel .meta b{max-width:100%;overflow-wrap:anywhere}
+.novel .meta span{max-width:100%;width:auto;margin:0;white-space:normal;overflow-wrap:anywhere}
+.novel .meta .log-time{flex:initial;margin:4px 0 0;max-width:100%;font-size:10px;white-space:normal}
+.novel .message{grid-column:2;grid-row:1;min-width:0;margin:0;padding:11px 0 12px 16px;overflow-wrap:anywhere}
+@media(max-width:700px){.novel .content{grid-template-columns:minmax(88px,28%) minmax(0,1fr)}.novel .meta{padding:10px 10px 10px 0}.novel .message{padding:10px 0 11px 11px}.novel .meta .log-time{font-size:9px}}
 `;
 function log14Build(records,title,kind){
   const names=[...new Set(records.map(x=>x.name))];
@@ -182,8 +194,7 @@ function log14Build(records,title,kind){
     const importer=`<p class="ccfolia-import-row" style="color:${speakerColor}"><span>[${tab}]</span><span>${label}</span><span>${replyImport}${rec.body}</span></p>`;
     return `<article class="entry" id="log-${id}" data-entry data-char="${log14Esc(personId)}" data-tab="${log14Esc(tabId)}" data-author="${label}">
       <div class="avatar-col">${portrait}</div>
-      <div class="content"><div class="meta"><b class="speaker" style="color:${speakerColor}">${label}</b><span>${tab}</span></div>
-        <div class="log-time">${log14Esc(rec.when)}</div>
+      <div class="content"><div class="meta"><b class="speaker" style="color:${speakerColor}">${label}</b><span>${tab}</span><time class="log-time">${log14Esc(rec.when)}</time></div>
         <div class="message">${reply}<div class="message-segment"><span class="segment-content">${rec.body}</span></div></div>
       </div>${importer}</article>`;
   }).join("\n");

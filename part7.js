@@ -70,6 +70,18 @@ function acctCfg(){
   const CF=window.MMJY_CONFIG||{};
   let url=String(CF.supabaseUrl||""), key=String(CF.supabaseKey||"");
   if((!url||!key) && typeof S!=="undefined" && S && S.sb){ url=url||S.sb.url||""; key=key||S.sb.key||""; }
+  /* 배포 중 config.js가 덮여도 이 기기의 마지막 공유 설정으로 로그인 복구.
+     공개 anon 키와 URL만 사용하며 계정 토큰이나 비밀번호는 이 경로로 노출하지 않음. */
+  if(!url||!key){
+    try{
+      const previous=JSON.parse(localStorage.getItem(SAVEKEY)||"null");
+      const sb=previous&&previous.sb;
+      if(sb && /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(String(sb.url||""))){
+        url=url||String(sb.url||"");
+        key=key||String(sb.key||"");
+      }
+    }catch(_){}
+  }
   return {url:url.replace(/\/+$/,""), key};
 }
 function acctOn(){ const c=acctCfg(); return !!(c.url && c.key); }
@@ -234,8 +246,27 @@ function acctLogout(){
 /* ── 들어오는 길 ─────────────────────────────────── */
 /* index.html 의 init() 이 맨 먼저 이 함수를 부릅니다.
    true 를 돌려주면 게임 대신 로그인 화면을 띄웁니다. */
+function gateConfigMissing(){
+  /* 운영 서버에서 설정 파일이 사라졌을 때 로그인 없이 다른 기록을 시작하지 않게 차단합니다. */
+  document.querySelector("#topbar").innerHTML=`<div class="tb1"><div class="logo logo-top" title="無明長夜"></div><div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
+  document.querySelector("#navcol").innerHTML="";
+  document.querySelector("#chatcol").innerHTML="";
+  document.querySelector("#main").innerHTML=`<div class="card pad" style="max-width:520px;margin:26px auto;padding:28px 24px">
+    <div class="page-kicker">사무전 로그인 연결</div>
+    <h2 style="margin:8px 0 14px">서버 설정을 불러오지 못했습니다</h2>
+    <p class="muted" style="line-height:1.8">공유 서버 주소나 공개 연결 키가 비어 있습니다. GitHub Pages의 <code>config.js</code>를 운영 설정본으로 복구해 주세요.<br>기존 러너 기록은 삭제되지 않았습니다.</p>
+    <div class="tiny muted">운영진: GitHub 저장소의 이전 버전에서 config.js를 복원하거나 Supabase Project URL과 Publishable/anon key를 다시 입력하세요. <b>service_role/secret 키는 올리지 마세요.</b></div>
+    <button class="btn pri" style="margin-top:16px" onclick="location.reload()">설정 복구 후 새로고침</button>
+  </div>`;
+}
 function gateIntercept(){
-  if(!acctOn()) return false;                    // 공유 기록 없으면 예전처럼 혼자 모드
+  if(!acctOn()){
+    /* 공개 사이트에서는 구성 누락을 조용한 1인 모드로 처리하지 않습니다. */
+    if(["ignorance.site","www.ignorance.site"].includes(location.hostname.toLowerCase())){
+      gateConfigMissing(); return true;
+    }
+    return false; // 로컬 오프라인 테스트는 기존처럼 1인 모드 허용
+  }
   if(!acctIn()){ gateShow("login"); return true; }
   // 자동 로그인 — 저장해 둔 표식을 서버와 맞춰 봅니다
   acctRpc('login',{p_id:ACCT.id,p_token:ACCT.tok})
