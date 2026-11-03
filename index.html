@@ -1706,6 +1706,7 @@ function quickLesson(id){
 }
 function stopLesson(){ S.lesson=null; renderMain(); renderTop(); }
 function finishPeriod(){
+  if(typeof notifySound==="function") notifySound("activity");
   const L=S.lesson; const id=L.plan[L.idx]; const s=SUBJECTS.find(x=>x.id===id); const d=S.sub[id];
   const next=subjectNext(d);
   const reward=lessonReward(id);
@@ -1965,6 +1966,7 @@ function questCheck(stage){
 }
 function questRecordClear(stage){
   if(!questCanEnter(stage)) return false;
+  if(typeof notifySound==="function") notifySound("activity");
   const gate=questGate();
   S.quests.cleared=Math.max(Number(S.quests.cleared)||0,stage);
   if(stage===gate+10){
@@ -3047,7 +3049,7 @@ function saveMe(){
   closeModal(); renderTop(); renderNav(); renderMain(); save(); toast("저장했습니다.","good");
 }
 function openSettings(){
-  modal("설정",`
+  modal("설정",`${typeof soundSettingsHTML==="function"?soundSettingsHTML():""}
     <div class="sect-t">시간 흐름</div>
     <div class="tiny muted">현실 1분이 흐르면 명계도 1분 흐릅니다. 창을 닫아 두어도 시계는 그대로 가고,
       모든 러너가 같은 날짜와 같은 시각을 봅니다. 자리를 비운 동안의 진행은 최대 24시간까지 반영됩니다.</div>
@@ -3346,6 +3348,7 @@ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded"
 else setTimeout(()=>init(),0);
 </script>
 <script src="config.js"></script>
+<script src="notifications.js"></script>
 <script src="part2.js"></script>
 <script src="part3.js"></script>
 <script src="part4.js"></script>

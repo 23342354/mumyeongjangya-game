@@ -598,7 +598,8 @@ chatVisible = function(m){
 
 const CHATMS_ON=3000, CHATMS_OFF=15000;
 let CHATTICK=null, CHATBUSY=false;
-function chatRows(rows){
+function chatRows(rows, silent=true){
+  let sound=null;
   if(!rows||!rows.length) return 0;
   let added=0;
   rows.forEach(r=>{
@@ -612,20 +613,23 @@ function chatRows(rows){
     S.msgs.push({sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
       c:r.color||"var(--violetL)", title:r.title||"", mode:chatModeOf(r.mode),
       ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`});
+    if(!silent && typeof incomingSoundKind==="function") sound=incomingSoundKind(r)||sound;
     added++;
   });
   if(S.msgs.length>400) S.msgs=S.msgs.slice(-400);
+  if(sound && typeof notifySound==="function") notifySound(sound);
   return added;
 }
 function chatPull(first){
   if(!sbOn() || CHATBUSY) return Promise.resolve(0);
+  const silent=!!first || !S.sb.chatId;
   CHATBUSY=true;
   const q = first || !S.sb.chatId
     ? "messages?select=*&order=id.desc&limit=100"
     : "messages?select=*&id=gt."+S.sb.chatId+"&order=id.asc&limit=200";
   return sbGet(q)
     .then(rows=>{ if(first||!S.sb.chatId) rows=(rows||[]).slice().reverse();
-                  const n=chatRows(rows); if(n) renderChat(); return n; })
+                  const n=chatRows(rows,silent); if(n) renderChat(); return n; })
     .catch(()=>0)
     .then(n=>{ CHATBUSY=false; return n; });
 }
