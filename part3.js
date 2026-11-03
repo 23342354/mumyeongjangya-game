@@ -312,7 +312,7 @@ function startRun(stage,party){
   pushRun(`<b>${stage}단계 ${q.ward.n}로 ${allies.length?allies.map(a=>a.n).join(" · ")+"과 함께 ":""}출발했다.</b>`);
   if(party) S.quests.room=null;
   go("quest");
-  toast("출동했습니다. 창을 닫아 두어도 의뢰는 그대로 진행됩니다.");
+  toast(`출동했습니다. <b>${hhmm(q.dur)}</b>짜리 의뢰입니다. 처치할 때마다 륜과 경험치가 바로 들어오고, 창을 닫아 두어도 시계대로 진행됩니다.`);
 }
 function pushRun(t){
   if(!S.run) return;
@@ -348,9 +348,12 @@ function runStep(){
   pushRun(log[0]||"");
   if(foe.hp<=0){
     R.kills++; ct("mon");
-    const gain=Math.round((40+R.stage*14)*R.q.rank.mul);
-    R.rin+=gain;
-    pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(gain)}</span>`);
+    /* 한 체 쓰러뜨릴 때마다 그 자리에서 바로 들어옵니다 — 끝날 때 몰아 주지 않습니다 */
+    const got=gainRin(Math.round((40+R.stage*14)*R.q.rank.mul));
+    const exg=gainExp(Math.round((60+R.stage*22)*0.6));
+    const kng=gainKnow(Math.round((10+R.stage*4)*0.5));
+    R.rin+=got; R.exp=(R.exp||0)+exg; R.know=(R.know||0)+kng;
+    pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(got)} · 경험치 +${nf(exg)} · 지식 +${nf(kng)}</span>`);
     if(foe.boss){ ct("boss"); }
     if(Math.random()<(0.14+mod("loot"))){
       const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); S.bag.push(it);
@@ -373,9 +376,10 @@ function endRun(ok){
   if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
   if(!ok){ hpL=Math.round(hpL*1.7); snL=Math.round(snL*1.6); }
   damageHP(hpL); snL=damageSN(snL);
-  const rin=gainRin(R.rin+ (cleared?Math.round(120+R.stage*48):0));
-  const ex=gainExp(Math.round((60+R.stage*22)*R.kills*0.6+ (cleared?90+R.stage*34:0)));
-  const kn=gainKnow(Math.round((10+R.stage*4)*Math.max(1,R.kills*0.5)));
+  /* 처치 보상은 그때그때 이미 들어갔습니다. 여기서는 해결 보너스만 더합니다. */
+  const rin=cleared?gainRin(Math.round(120+R.stage*48)):0;
+  const ex =cleared?gainExp(Math.round(90+R.stage*34)):0;
+  const kn =0;
   if(cleared){
     questRecordClear(R.stage);
     ct("quest");
@@ -384,7 +388,7 @@ function endRun(ok){
     addMark(Math.round(6*q.rank.mul));
     pushNews(`[의뢰] ${S.name} 학생이 사건 ${q.no}(${q.rank.r}등급)을 해결했습니다.`);
   }
-  pushRun(`<span class="turn">정산 · 처치 ${R.kills}체 · 륜 +${nf(rin)} · 경험치 +${nf(ex)} · 지식 +${nf(kn)} · 체력 −${hpL} · 이성 −${snL}</span>`);
+  pushRun(`<span class="turn">정산 · 처치 ${R.kills}체 · 륜 ${nf(R.rin||0)}${rin?` +해결 ${nf(rin)}`:""} · 경험치 ${nf(R.exp||0)}${ex?` +해결 ${nf(ex)}`:""} · 지식 ${nf(R.know||0)} · 체력 −${hpL} · 이성 −${snL}</span>`);
   pushRun(cleared?`<span class="s">■ 의뢰를 해결하고 사무전으로 돌아왔다.</span>`
     :ok?`<span class="turn">■ 관문 도중 귀환했다. 모은 몫만 정산되며 다음 구간은 열리지 않는다.</span>`
     :`<span class="h">■ 더 버티지 못하고 현장에서 철수했다.</span>`);
@@ -875,12 +879,14 @@ VIEWS.quest=()=>{
     head1=`<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
       <div class="spread">
         <div><div class="sect-t" style="margin:0">의뢰 일지 <span class="muted">${q.stage}단계 · ${q.ward.n}</span></div>
-          <div class="tiny muted">처치 ${R.kills}체 · 륜 약 ${nf(R.rin)}</div></div>
-        <div class="tiny muted">${R.done?"종료됨":hhmm(R.left)+" 남음"}</div></div>
+          <div class="tiny muted" id="runkills">처치 ${R.kills}체 · 받은 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}</div></div>
+        <div class="tiny muted" id="runclock">${R.done?"종료됨":hhmm(R.left)+" 남음"}</div></div>
+      <div class="bar" style="margin:8px 0 2px"><i id="runprog" style="width:${clamp((1-R.left/Math.max(1,R.total))*100,0,100)}%"></i></div>
+      <div class="tiny muted" id="runpace">${R.done?"":`전체 ${hhmm(R.total)} 가운데 ${hhmm(Math.max(0,R.total-R.left))} 지났습니다. 시계와 같은 속도로 흐릅니다.`}</div>
       <div class="log" id="runlog" style="margin:10px 0;max-height:250px">
         ${R.logs.map(l=>`<div><span class="muted" style="font-size:10.5px">${l.time}</span> ${l.t}</div>`).join("")}
       </div>
-      <div class="tiny muted" style="margin-bottom:6px">출동하면 이곳에 의뢰 일지가 몇십 초마다 한 줄씩 적힙니다. 창을 닫아 두어도 의뢰는 그대로 진행됩니다.</div>
+      <div class="tiny muted" style="margin-bottom:6px">일지는 <b>30초에 한 줄</b>씩 적힙니다. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.</div>
       ${bar(R.me)}
       ${R.allies.map(a=>bar(a)).join("")}
       ${R.foes.filter(f=>f.hp>0).map(f=>`<div class="spread" style="padding:4px 0">
@@ -894,7 +900,8 @@ VIEWS.quest=()=>{
         ${!R.done&&R.stage%10===0?'<span class="tiny muted">관문은 도중에 귀환하면 통과로 인정되지 않습니다.</span>':""}
       </div></div>`;
   }
-  return head1+_quest();
+  /* 아래 표시는 「함께 가기」를 끼워 넣을 자리를 알려 줍니다 (진행 중인 일지 바로 다음) */
+  return head1+"<!--QSPLIT-->"+_quest();
 };
 const _runQuest2=runQuest;
 runQuest=function(stage,party){
@@ -978,7 +985,8 @@ const _boot3=boot;
 boot=function(){ ensureV3(); _boot3(); ensureV3(); achCheck(); renderNav(); renderMain(); };
 
 /* ═══════════ 실시간 의뢰 전용 시계 ═══════════ */
-const RUNPACE = 3;            // 현실 1초 = 의뢰 진행 3분
+const RUNPACE = 1/60;         // 현실 1초 = 의뢰 1초. 「50분」이라 적힌 의뢰는 정말 50분 걸립니다.
+const RUNSTEPMIN = 0.5;       // 일지 한 줄 = 의뢰 30초
 let RUNTICK = null;
 function runRealTick(){
   if(RUNTICK) clearInterval(RUNTICK);
@@ -993,12 +1001,13 @@ function runRealTick(){
     S.run.left -= m;
     S.run.acc  += m;
     let guard = 0;
-    while(S.run.acc >= 2 && S.run && !S.run.done && guard++ < 400){ S.run.acc -= 2; runStep(); }
+    while(S.run.acc >= RUNSTEPMIN && S.run && !S.run.done && guard++ < 600){ S.run.acc -= RUNSTEPMIN; runStep(); }
     if(S.run && !S.run.done && S.run.left <= 0) endRun(true);
   }, 1000);
 }
 const _bootRun = boot;
-boot = function(){ _bootRun(); if(S && S.run && !S.run.done) S.run.lastTick = Date.now(); runRealTick(); };
+/* 창을 닫아 두어도 의뢰는 흐릅니다. 돌아온 순간 비운 시간만큼 한 번에 따라잡습니다. */
+boot = function(){ _bootRun(); if(S && S.run && !S.run.done && !S.run.lastTick) S.run.lastTick = Date.now(); runRealTick(); };
 const _startRunPace = startRun;
 startRun = function(stage, party){ _startRunPace(stage, party);
   if(S.run) S.run.lastTick = Date.now(); runRealTick(); };

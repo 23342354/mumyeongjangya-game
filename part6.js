@@ -1057,11 +1057,15 @@ VIEWS.quest=()=>{
   let h=_questTogether();
   if(!sbOn()) return h;
   const rooms=(S.sb.rooms||[]).filter(r=>r.status!=="done");
-  return h + pairRunHTML() + `
-  <div class="card pad" style="margin:14px 0 0;border-color:var(--line2)">
+  /* 페어 현황과 함께 가기를 의뢰 화면 위쪽으로 — 진행 중인 일지가 있으면 그 바로 아래 */
+  const block = pairRunHTML() + `
+  <div class="card pad" style="margin:0 0 12px;border-color:var(--line2)">
     <div class="spread"><div class="sect-t" style="margin:0">
       ${ic("handshake",15)} 함께 가기 <span class="muted">· 열린 방 ${rooms.length}개</span></div>
       <span class="tiny muted">${sbStateChip()}</span></div>
-    <div class="tiny muted" style="margin:4px 0 10px">석탑·결계의 탑·의뢰를 다른 러너와 함께 갑니다.</div>
-  </div>` + togetherBody();
+    <div class="tiny muted" style="margin:4px 0 0">석탑·결계의 탑·의뢰를 다른 러너와 함께 갑니다.</div>
+  </div>` + togetherBody() + `<div style="height:14px"></div>`;
+  const cut=h.indexOf("<!--QSPLIT-->");
+  return cut<0 ? block+h
+    : h.slice(0,cut) + block + h.slice(cut+13);
 };

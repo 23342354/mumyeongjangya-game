@@ -308,7 +308,10 @@ textarea.inp{min-height:76px;resize:vertical}
   font-size:27px;background:var(--s0);flex:none}
 
 /* 토스트 */
-#toasts{position:fixed;right:16px;bottom:16px;z-index:400;display:flex;flex-direction:column;gap:8px;max-width:330px}
+/* 말풍선은 채팅 입력칸 위로 띄우고, 밑에 있는 것을 누르는 것을 막지 않습니다 */
+#toasts{position:fixed;right:16px;bottom:72px;z-index:400;display:flex;flex-direction:column;gap:8px;
+  max-width:330px;pointer-events:none}
+#toasts>*{pointer-events:auto}
 .toast{background:var(--s2);border:1px solid var(--line2);border-left:3px solid var(--gold);
   border-radius:8px;padding:9px 13px;font-size:12.5px;box-shadow:0 10px 30px #000a;animation:tin .25s}
 .toast.bad{border-left-color:var(--red)} .toast.good{border-left-color:var(--ok)}
@@ -3072,7 +3075,7 @@ function openSettings(){
     </span></div>
     <hr class="hr">
     <div class="sect-t">기록</div>
-    <div class="tiny muted">진행 상황은 이 브라우저에 자동 저장됩니다. 자리를 비운 동안에도 최대 8시간까지 시간이 흐릅니다.</div>
+    <div class="tiny muted">진행 상황은 이 브라우저에 자동 저장됩니다. 자리를 비운 동안에도 최대 24시간까지 시간이 흐릅니다.</div>
     <div class="row" style="margin-top:8px">
       <button class="btn" onclick="save();toast('저장했습니다.','good')">지금 저장</button>
       <button class="btn" onclick="exportSave()">기록 복사</button>
@@ -3365,5 +3368,6 @@ else setTimeout(()=>init(),0);
 <script src="part6.js"></script>
 <script src="part7.js"></script>
 <script src="social.js"></script>
+<script src="part8.js"></script>
 </body>
 </html>
