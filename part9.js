@@ -7,7 +7,7 @@ const FARM_CROP_BY_ID=Object.fromEntries(CROPS.map(c=>[c.id,c]));
 const FARM_CROP_BY_NAME=Object.fromEntries(CROPS.map(c=>[c.n,c]));
 const FARM_NORMALS=CROPS.filter(c=>c.tier==="normal");
 function farmGrade(c){ return `<span class="farm-tier farm-tier-${c.tier}">${FARM_TIERS[c.tier]}</span>`; }
-function farmCount(c){ return c.tier==="normal"?"기본 종자 무제한":`씨앗 ${S.farm.seeds[c.id]||0}개`; }
+function farmCount(c){ return `씨앗 ${S.farm.seeds[c.id]||0}개`; }
 function farmAdjacent(i){const r=Math.floor(i/3),col=i%3;return [[r-1,col],[r+1,col],[r,col-1],[r,col+1]].filter(([a,b])=>a>=0&&a<3&&b>=0&&b<3).map(([a,b])=>a*3+b);}
 function farmEnsure(){
  if(!S||!S.made)return;
@@ -36,14 +36,14 @@ rollFarmOrder=function(){
 };
 function farmPlantCore(i,cid){
  farmEnsure();const c=FARM_CROP_BY_ID[cid]; if(!c||i<0||i>=9||S.farm.plots[i])return false;
- if(c.tier!=="normal"&&!(S.farm.seeds[c.id]>0))return false;
- if(c.tier!=="normal")S.farm.seeds[c.id]--;
+ if(!(S.farm.seeds[c.id]>0))return false;
+ S.farm.seeds[c.id]--;
  S.farm.plots[i]={id:c.id,left:c.t,total:c.t,watered:false,fert:false,farmResolved:false,farmNotified:false};
  return true;
 }
 plant=function(i,cid){
  farmEnsure();if(S.farm.plots[i]){toast("이미 심어져 있습니다.","bad");return;}
- if(!farmPlantCore(i,cid)){toast("아직 이 작물의 씨앗이 없어요. 교배나 날씨 변이를 노려 보세요.","bad");return;}
+ if(!farmPlantCore(i,cid)){toast("씨앗이 없습니다. 기본 씨앗은 종묘점에서 구매하고 희귀 씨앗은 교배·변이로 얻어 보세요.","bad");return;}
  renderMain();save();
 };
 plantAll=function(cid){
@@ -112,19 +112,20 @@ harvest=function(i){
  }
 };
 function farmSeedButton(c,i=null){
- const has=c.tier==="normal"||S.farm.seeds[c.id]>0;
- return `<button class="btn sm ${has?"":"ghost"}" ${has?"":"disabled"} onclick="${i===null?`plantAll('${c.id}')`:`plant(${i},'${c.id}');closeModal()`}">${c.e} ${esc(c.n)} ${c.tier==="normal"?'':`(${S.farm.seeds[c.id]||0})`}</button>`;
+ const has=(S.farm.seeds[c.id]||0)>0;
+ return `<button class="btn sm ${has?"":"ghost"}" ${has?"":"disabled"} onclick="${i===null?`plantAll('${c.id}')`:`plant(${i},'${c.id}');closeModal()`}">${c.e} ${esc(c.n)} ${`(${S.farm.seeds[c.id]||0})`}</button>`;
 }
 function farmGuide(c){
- if(c.parents){const [a,b]=c.parents.map(id=>FARM_CROP_BY_ID[id].n);return `상하좌우 교배 · ${a} + ${b}`;}
- if(c.from)return `날씨 변이 · ${FARM_CROP_BY_ID[c.from].n} + ${WEATHERS[c.weather].n}`;
- return "기본 씨앗 · 자유롭게 재배 가능";
+ // 미발견 교배식·변이식은 화면에 공개하지 않습니다.
+ if(c.tier==="normal")return "일반 씨앗 · 종묘점에서 구매";
+ if(S.dex?.plant?.includes(c.n))return c.parents?"교배로 발견한 희귀 품종":c.from?"날씨 변이로 발견한 희귀 품종":"발견한 희귀 품종";
+ return "획득 방법 미발견 · 교배 또는 변이 연구";
 }
 function farmCatalogRows(){
- return CROPS.map(c=>{const has=c.tier==="normal"||S.farm.seeds[c.id]>0;const found=S.dex?.plant?.includes(c.n);
+ return CROPS.map(c=>{const has=(S.farm.seeds[c.id]||0)>0;const found=S.dex?.plant?.includes(c.n);
   return `<div class="farm-crop-row"><div>
     <b>${c.e} ${esc(c.n)}</b> · ${farmGrade(c)} ${found?'<span class="tag g">도감 등록</span>':''}
-    <div class="farm-detail">${esc(farmGuide(c))} · ${esc(hhmm(c.t))} · 수확 ${c.y} +${c.s}</div>
+    <div class="farm-detail">${esc(farmGuide(c))} · ${esc(hhmm(c.t))} · 수확 ${c.n} +${c.s}</div>
     <div class="farm-detail">${esc(c.d)}</div></div>
     <div>${farmSeedButton(c)}<div class="farm-detail" style="text-align:right">${farmCount(c)}</div></div></div>`;
  }).join('');
@@ -138,7 +139,7 @@ VIEWS.farm=()=>{
   <div class="row" style="margin-bottom:10px"><button class="btn sm" onclick="waterAll()">모두 물 주기</button>
     <button class="btn sm ${ready?'pri':''}" ${ready?'':'disabled'} onclick="harvestAll()">모두 수확 (${ready})</button></div>
   <div class="grid g3" style="gap:7px">${f.plots.map((p,i)=>{
-    if(!p)return `<div class="sub farm-plot" style="border-style:dashed;display:grid;place-items:center"><button class="btn sm" onclick="pickCrop(${i})">+ 심기</button></div>`;
+    if(!p)return `<div class="sub farm-plot farm-empty-center" style="border-style:dashed;display:flex;align-items:center;justify-content:center;min-height:154px"><button class="btn sm" onclick="pickCrop(${i})">+ 심기</button></div>`;
     const c=FARM_CROP_BY_ID[p.id];const done=p.left<=0;
     return `<div class="sub farm-plot" style="border-color:${done?'var(--gold2)':'var(--line)'}">
       <div style="text-align:center;font-size:20px">${c.e}</div><div class="farm-species" style="text-align:center">${esc(c.n)}</div>
@@ -147,22 +148,22 @@ VIEWS.farm=()=>{
       <div class="row" style="justify-content:center;gap:4px">${done?`<button class="btn sm pri" onclick="harvest(${i})">수확</button>`:
        `<button class="btn sm ghost" ${p.watered?'disabled':''} onclick="water(${i})">물</button><button class="btn sm ghost" ${p.fert?'disabled':''} onclick="fertilize(${i})">비료</button>`}</div>
     </div>`;}).join('')}</div>
-  <div class="farm-help tiny" style="margin-top:11px">서로 다른 작물을 상하좌우에 붙여 기르고, 하나가 다 자랄 때 교배를 시도합니다. 씨앗이 나올 확률은 레어 13% · 에픽 7% · 전설 3.5%. 특정 날씨에서 작물이 익으면 변이할 수도 있습니다(2.5~10%). 대각선은 교배하지 않습니다.</div>
-  <div class="farm-seedbar"><span class="tiny muted">기본 작물 일괄 심기</span>${FARM_NORMALS.map(c=>farmSeedButton(c)).join('')}</div>
+  <div class="farm-help tiny" style="margin-top:11px">작물을 상하좌우에 붙여 기르면 새로운 씨앗을 발견할 수도 있습니다. 날씨가 바뀌면 품종에 미묘한 변화가 생기기도 합니다. 조합과 확률은 공개되지 않습니다.</div>
+  <div class="farm-seedbar"><span class="tiny muted">보유 씨앗 일괄 심기</span>${FARM_NORMALS.map(c=>farmSeedButton(c)).join('')}</div>
  </div>
  <div class="grid g2" style="gap:12px">
-   <div class="card pad"><div class="spread"><div class="sect-t">오늘의 주문</div><span class="tiny muted">기본 작물만 납품 대상으로 선정됩니다</span></div>
+   <div class="card pad"><div class="spread"><div class="sect-t">오늘의 주문</div><span class="tiny muted">오늘의 지정 납품</span></div>
     ${oc?`<b>${oc.e} ${esc(oc.n)} ${o.need}개</b><div class="tiny muted">납품 진행 ${o.have}/${o.need} · 연등 1 · 비료 3 · 지식 80 · 경험치 300</div>
      <button class="btn sm ${!o.done&&o.have>=o.need?'pri':''}" style="margin-top:8px" ${o.done||o.have<o.need?'disabled':''} onclick="deliverOrder()">${o.done?'완료':'납품'}</button>`:''}</div>
    <div class="card pad"><div class="sect-t">날씨 · 변이 환경</div><div class="farm-discovery">${WEATHERS.map((v,i)=>`<span class="buffchip" style="${i===S.weather?'border-color:var(--gold2);color:var(--gold)':''}">${v.i} ${v.n}</span>`).join('')}</div>
       <div class="tiny muted">다음 변화까지 ${hhmm(S.wNext)} · ${w.d}</div>
-      <div class="tiny muted" style="margin-top:8px">보유한 고급 종자는 희귀 품종을 수확하면 1개 돌아옵니다. 교배로 생성되는 새 씨앗도 약초밭 종자 보관함에 저장됩니다.</div></div>
+      <div class="tiny muted" style="margin-top:8px">희귀 품종 수확 시 씨앗 하나를 회수합니다. 새로운 조합과 날씨 조건은 실험을 통해 발견해 보세요.</div></div>
  </div>
  <div class="card pad" style="margin-top:12px"><div class="spread"><div class="sect-t">재배 · 교배 · 변이 도감 (${S.dex?.plant?.length||0}/${CROPS.length})</div><span class="tiny muted">노멀 · 레어 · 에픽 · 전설</span></div>
   <div class="tiny muted" style="margin-bottom:8px">작물을 수확한 후 도감에 등록됩니다. 씨앗만 얻은 품종은 미등록 상태입니다.</div>${farmCatalogRows()}</div>`;
 };
 pickCrop=function(i){
- farmEnsure();modal(`무엇을 심을까요? · ${i+1}번 밭`, `<div class="tiny muted" style="margin-bottom:10px">기본 종자는 무제한입니다. 상하좌우 교배와 날씨 변이로 얻은 씨앗은 1개씩 소비합니다.</div>
+ farmEnsure();modal(`무엇을 심을까요? · ${i+1}번 밭`, `<div class="tiny muted" style="margin-bottom:10px">모든 씨앗은 심을 때 1개 소비합니다. 일반 씨앗은 종묘점에서 구매할 수 있습니다.</div>
   <div style="max-height:55vh;overflow:auto">${CROPS.map(c=>`<div class="farm-crop-row"><div><b>${c.e} ${esc(c.n)}</b> · ${farmGrade(c)}
   <div class="farm-detail">${esc(farmGuide(c))}</div></div>${farmSeedButton(c,i)}</div>`).join('')}</div>`);
 };
