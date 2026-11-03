@@ -304,6 +304,30 @@ function sbStateChip(){
   if(S.sb.state==="err") return `<span class="tag r">연결 실패</span>`;
   return `<span class="tag j">연결됨</span>`;
 }
+/* 학생 명부는 수락된 페어 두 사람을 한 묶음으로 정렬합니다.
+   페어가 먼저 나오고, 페어 없는 학생들은 기존 전투력 순서를 유지합니다.
+   계정 ID로만 비교하며 아직 명부에 오르지 않은 상대는 임의로 만들지 않습니다. */
+function rosterGroupedByPair(rows){
+  const list=Array.isArray(rows)?rows:[];
+  const byId=new Map(list.map(r=>[String(r.id),r]));
+  const used=new Set(), groups=[];
+  const accepted=(typeof SOCIAL!=="undefined" && SOCIAL.ready && Array.isArray(SOCIAL.pairs))?SOCIAL.pairs:[];
+  const mine=(typeof pairEnsure==="function")?pairEnsure().mine:null;
+  const pairs=[...accepted];
+  if(mine && mine.status==="accepted")pairs.push(mine);
+  for(const pair of pairs){
+    if(!pair || pair.status!=="accepted")continue;
+    const a=String(pair.from_id??""),b=String(pair.to_id??"");
+    if(!a || !b || a===b || used.has(a) || used.has(b))continue;
+    const first=byId.get(a),second=byId.get(b);
+    if(!first || !second)continue;
+    used.add(a);used.add(b);
+    const two=[first,second].sort((x,y)=>list.indexOf(x)-list.indexOf(y));
+    groups.push({order:Math.min(list.indexOf(first),list.indexOf(second)),two});
+  }
+  groups.sort((a,b)=>a.order-b.order);
+  return [...groups.flatMap(g=>g.two),...list.filter(r=>!used.has(String(r.id)))];
+}
 VIEWS.roster=()=>{
   if(!sbOn()) return head("사무전 학생 명부",ic("users")+" 학생 명부","공유 기록이 연결되지 않았습니다")+`
     <div class="card pad" style="border-color:var(--gold2)">
@@ -311,6 +335,7 @@ VIEWS.roster=()=>{
       지금은 교류 화면에 보이는 학생들이 모두 NPC입니다.</div>
       <button class="btn pri" style="margin-top:12px" onclick="sbConnect()">공유 기록 연결</button></div>`;
   const rows=S.sb.roster||[];
+  const orderedRows=rosterGroupedByPair(rows);
   const ago=t=>{ const d=(Date.now()-new Date(t).getTime())/60000;
     return d<2?"방금":d<60?Math.floor(d)+"분 전":d<1440?Math.floor(d/60)+"시간 전":Math.floor(d/1440)+"일 전"; };
   return head("사무전 학생 명부",ic("users")+" 학생 명부", `${sbStateChip()} · ${rows.length}명`)+`
@@ -318,29 +343,29 @@ VIEWS.roster=()=>{
     <div class="tiny muted">같은 건의함·명부를 쓰는 러너들입니다. 내 기록은 몇 분마다 자동으로 올라갑니다.</div>
     <button class="btn sm" style="margin-top:8px" onclick="syncRoster(true);syncUp(true)">지금 올리고 새로 고침</button>
   </div>
-  ${rows.length?`<div class="grid g3">
-    ${rows.map(r=>{
+  ${rows.length?`<div class="roster-viewport"><div class="grid roster-grid">
+    ${orderedRows.map(r=>{
       const hall=homeOf(r.hall);
       const me=r.id===S.sb.id;
-      return `<div class="sub" style="${me?"border-color:var(--gold2)":""}">
-        <div class="row" style="align-items:flex-start;gap:10px">
-          ${r.av_img?`<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid ${hall?hall.c:"var(--gold)"};flex:none">
-            <img src="${r.av_img}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
-            :`<div style="width:44px;height:44px;border-radius:50%;border:2px solid ${hall?hall.c:"var(--gold)"};display:grid;place-items:center;background:var(--s0);flex:none">${ic(r.av||"lantern",22)}</div>`}
-          <div style="flex:1;min-width:0">
-            <div class="tiny" style="color:var(--gold)">${esc(r.title||"")}</div>
-            <b>${esc(r.name)}</b> ${me?'<span class="tag g">나</span>':""}
+      const paired=typeof SOCIAL!=="undefined" && SOCIAL.ready && SOCIAL.pairs.some(p=>p.status==="accepted"&&[String(p.from_id),String(p.to_id)].includes(String(r.id)));
+      return `<div class="sub roster-card ${paired?"roster-card-paired":""}" style="${me?"border-color:var(--gold2)":""}">
+        <div class="roster-card-top">
+          ${r.av_img?`<div class="roster-avatar" style="border-color:${hall?hall.c:"var(--gold)"}">
+            <img src="${r.av_img}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
+            :`<div class="roster-avatar" style="border-color:${hall?hall.c:"var(--gold)"};display:grid;place-items:center;background:var(--s0)">${ic(r.av||"lantern",22)}</div>`}
+          <div class="roster-identity">
+            <div class="tiny roster-title" style="color:var(--gold)">${esc(r.title||"")}</div>
+            <b class="roster-name">${esc(r.name)}</b> ${me?'<span class="tag g">나</span>':""}
             <div class="tiny muted">${hall?hall.n:""} · ${r.course}과정 · Lv ${r.lvl} · ${esc(r.line||"")}</div>
           </div>
-          <div style="text-align:right"><div class="tiny muted">전투력</div>
-            <b style="color:var(--gold)">${nf(r.power)}</b></div>
         </div>
-        ${r.intro?`<div class="tiny muted" style="margin-top:6px">${esc(r.intro)}</div>`:""}
-        <div class="tiny muted" style="margin-top:6px">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
-        <div class="tiny muted" style="margin-top:3px;color:var(--s6)">${ago(r.updated_at)}</div>
+        ${r.intro?`<div class="tiny muted roster-intro">${esc(r.intro)}</div>`:""}
+        <div class="roster-power"><span class="tiny muted">전투력</span><b style="color:var(--gold)">${nf(r.power)}</b></div>
+        <div class="tiny muted roster-progress">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
+        <div class="tiny muted" style="color:var(--s6)">${ago(r.updated_at)}</div>
         ${pairBtn(r)}
       </div>`}).join("")}
-  </div>`:`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
+  </div></div>`:`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
     아직 올라온 학생이 없습니다. 「지금 올리고 새로 고침」을 눌러 보세요.</div></div>`}`;
 };
 
@@ -608,48 +633,88 @@ chatVisible = function(m){
 
 const CHATMS_ON=3000, CHATMS_OFF=15000;
 let CHATTICK=null, CHATBUSY=false;
-function chatRows(rows, silent=true){
+/* 서버에 저장된 메시지를 표시합니다. 본인 글도 예외 없이 가져옵니다.
+   과거 판본은 본인 글을 서버에서 재조회할 때 건너뛰어, 기기나 로그인 시점에 따라
+   상대 글만 보이는 문제가 있었습니다. 낙관적으로 먼저 그린 전송 글은 서버 행과 병합합니다. */
+function chatRows(rows, silent=true, advanceCursor=true){
   let sound=null;
   if(!rows||!rows.length) return 0;
-  let added=0;
+  let added=0, changed=false;
   rows.forEach(r=>{
-    if(r.id>(S.sb.chatId||0)) S.sb.chatId=r.id;
-    /* 기록을 비운 시점보다 먼저 올라온 글은 서버에 남아 있어도 가져오지 않습니다 */
-    if(S.chatFrom && new Date(r.created_at||0).getTime() < S.chatFrom) return;
-    if(String(r.from_id)===String(S.sb.id)) return;          // 내가 보낸 건 이미 화면에 있습니다
-    if(S.msgs.some(m=>m.sid===r.id)) return;
+    if(advanceCursor && Number(r.id)>Number(S.sb.chatId||0)) S.sb.chatId=Number(r.id);
+    /* 이전 기록을 지우도록 명시한 이용자의 초기화 시점은 유지합니다. */
+    const when=new Date(r.created_at||Date.now()).getTime();
+    if(S.chatFrom && when < S.chatFrom) return;
+    if(S.msgs.some(m=>String(m.sid)===String(r.id) && m.sid!==undefined && m.sid!==null)) return;
+    const own=String(r.from_id)===String(S.sb.id);
+    const isNPC=String(r.from_id||"").startsWith("mmjy-npc:");
     const d=new Date(r.created_at||Date.now());
     const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
-    const isNPC=String(r.from_id||"").startsWith("mmjy-npc:");
-    S.msgs.push({sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
-      npc:isNPC, c:r.color||"var(--violetL)", title:r.title||"", mode:chatModeOf(r.mode),
-      ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`});
-    if(!silent && typeof incomingSoundKind==="function") sound=incomingSoundKind(r)||sound;
-    added++;
+    const fields={sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
+      npc:isNPC, mine:own, c:r.color||"var(--violetL)", title:r.title||"",
+      mode:chatModeOf(r.mode), ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`, pending:false, failed:false};
+    /* 메시지를 보낸 직후 임시 로컬 행과 서버에 확정된 행을 결합합니다.
+       같은 대사를 연속해서 보냈을 때도 각 메시지마다 하나씩만 결합됩니다. */
+    const optimistic=own ? S.msgs.find(m=>m.mine===true && !m.sid &&
+       m.tab===r.tab && String(m.scope||"")===String(r.scope||"") &&
+       m.body===r.body && chatModeOf(m.mode)===chatModeOf(r.mode) &&
+       Math.abs(Number(m.ts||0)-when)<120000) : null;
+    if(optimistic){ Object.assign(optimistic,fields); changed=true; }
+    else { S.msgs.push(fields); added++; changed=true;
+      if(!own && !silent && typeof incomingSoundKind==="function") sound=incomingSoundKind(r)||sound;
+    }
   });
   if(S.msgs.length>400) S.msgs=S.msgs.slice(-400);
   if(sound && typeof notifySound==="function") notifySound(sound);
+  if(changed) save();
   return added;
 }
 function chatPull(first){
   if(!sbOn() || CHATBUSY) return Promise.resolve(0);
+  const state=S;
   const silent=!!first || !S.sb.chatId;
   CHATBUSY=true;
   const q = first || !S.sb.chatId
     ? "messages?select=*&order=id.desc&limit=100"
     : "messages?select=*&id=gt."+S.sb.chatId+"&order=id.asc&limit=200";
   return sbGet(q)
-    .then(rows=>{ if(first||!S.sb.chatId) rows=(rows||[]).slice().reverse();
-                  const n=chatRows(rows,silent); if(n) renderChat(); return n; })
+    .then(rows=>{ if(S!==state) return 0;
+       if(first||!S.sb.chatId) rows=(rows||[]).slice().reverse();
+       const n=chatRows(rows,silent); if(n) renderChat(); return n; })
     .catch(()=>0)
-    .then(n=>{ CHATBUSY=false; return n; });
+    .finally(()=>{ CHATBUSY=false; });
 }
-function chatPush(tab, body, mode){
-  if(!sbOn()) return Promise.resolve();
+/* 공용 새 글 100개만 불러오면 오래된 페어 글이 누락되므로,
+   페어 탭에서는 두 사람의 대화 기록을 직접 조회합니다. */
+const PAIR_CHAT_HISTORY_MS=60000;
+let PAIR_CHAT_HISTORY_KEY="", PAIR_CHAT_HISTORY_AT=0, PAIR_CHAT_HISTORY_BUSY=null;
+function pairChatHistory(force){
+  if(!sbOn() || !S.sb || !S.sb.id) return Promise.resolve(0);
+  const P=typeof pairEnsure==="function" ? pairEnsure() : null;
+  const scope=P && P.mine ? pairIdKey(P.mine.from_id,P.mine.to_id) : "";
+  if(!scope) return Promise.resolve(0);
+  const now=Date.now();
+  if(PAIR_CHAT_HISTORY_BUSY && PAIR_CHAT_HISTORY_KEY===scope) return PAIR_CHAT_HISTORY_BUSY;
+  if(!force && PAIR_CHAT_HISTORY_KEY===scope && now-PAIR_CHAT_HISTORY_AT<PAIR_CHAT_HISTORY_MS) return Promise.resolve(0);
+  PAIR_CHAT_HISTORY_KEY=scope; PAIR_CHAT_HISTORY_AT=now;
+  const state=S;
+  PAIR_CHAT_HISTORY_BUSY=sbGet("messages?select=*&tab=eq."+encodeURIComponent("페어")+
+      "&scope=eq."+encodeURIComponent(scope)+"&order=id.desc&limit=150")
+    .then(rows=>{
+      if(S!==state) return 0;
+      const n=chatRows((rows||[]).slice().reverse(),true,false);
+      if(S.chatTab==="페어") renderChat();
+      return n;
+    }).catch(()=>0)
+    .finally(()=>{PAIR_CHAT_HISTORY_BUSY=null;});
+  return PAIR_CHAT_HISTORY_BUSY;
+}
+function chatPush(tab, body, mode, scope){
+  if(!sbOn()) return Promise.resolve([]);
   return sbSend("POST","messages",[{
-    tab, scope:chatScope(tab), from_id:S.sb.id, who:S.name,
+    tab, scope:scope===undefined?chatScope(tab):scope, from_id:S.sb.id, who:S.name,
     body, color:S.color, title:(S.course||1)+"과정", mode:chatModeOf(mode)
-  }],"return=minimal").catch(sbErr);
+  }],"return=representation");
 }
 function chatTick(){
   if(CHATTICK) clearInterval(CHATTICK);
@@ -662,14 +727,43 @@ document.addEventListener("visibilitychange",()=>{ chatTick(); if(!document.hidd
 const _sendChatSb = sendChat;
 sendChat = function(){
   const i=document.getElementById("chatinput");
-  const raw = i ? i.value.trim() : "";
+  const raw=i ? i.value.trim() : "";
   if(!raw) return;
   if(sbOn() && S.chatTab==="1:1" && !S.dmWith){
     toast("먼저 대화할 사람을 고르세요.","bad"); return;
   }
-  const tab=S.chatTab;
+  if(sbOn() && S.chatTab==="페어" && !chatScope("페어")){
+    toast("페어 정보를 불러오는 중입니다. 잠시 후 다시 보내 주세요.","bad");
+    pairFetch(true); return;
+  }
+  const tab=S.chatTab, state=S;
   const mine=_sendChatSb();
-  if(mine && sbOn()) chatPush(tab, mine.body, mine.mode);
+  if(mine && sbOn()){
+    mine.pending=true;
+    chatPush(tab,mine.body,mine.mode,mine.scope)
+      .then(rows=>{
+        if(S!==state) return;
+        if(rows&&rows.length){
+          chatRows(rows,true,false);
+          /* 폴링이 먼저 동일한 서버 글을 받았을 경우에도 임시 행을 남기지 않습니다. */
+          const row=rows[0];
+          if(mine && !mine.sid){
+            const actual=S.msgs.find(m=>String(m.sid)===String(row.id));
+            if(actual && actual!==mine){
+              const at=S.msgs.indexOf(mine); if(at>=0) S.msgs.splice(at,1);
+            }
+          }
+        }
+        if(mine){mine.pending=false;mine.failed=false;}
+        renderChat(); save();
+      })
+      .catch(e=>{
+        if(S!==state) return;
+        if(mine){mine.pending=false;mine.failed=true;}
+        toast("채팅이 서버에 저장되지 않았습니다. 연결 상태를 확인해 주세요.","bad");
+        renderChat(); save();
+      });
+  }
   return mine;
 };
 /* NPC 발언은 브라우저가 생성하지 않습니다. 서버에 한 번만 기록되어 모두에게 전달됩니다. */
@@ -777,6 +871,7 @@ function pairFetch(force){
       if(VIEW==="rel" || VIEW==="hallv" || VIEW==="pairhub") renderMain(true);
       save();
       renderChat();
+      if(P.mine && S.chatTab==="페어") pairChatHistory();
       return true;
     })
     .catch(()=>false)
@@ -934,6 +1029,16 @@ const _chatScopePair=chatScope;
 chatScope=function(tab){
   if(tab==="페어"){ const P=pairEnsure(); return P.mine ? pairIdKey(P.mine.from_id, P.mine.to_id) : ""; }
   return _chatScopePair(tab);
+};
+
+/* 페어 채팅 탭을 열 때 서버의 두 사람 기록을 다시 확인합니다. */
+const _setChatTabPair=setChatTab;
+setChatTab=function(tab){
+  _setChatTabPair(tab);
+  if(tab==="페어"){
+    if(pairEnsure().mine) pairChatHistory(true);
+    else pairFetch(true).then(()=>pairChatHistory(true));
+  }
 };
 
 /* 명부·채팅과 함께 주기적으로 받아 옵니다 */
