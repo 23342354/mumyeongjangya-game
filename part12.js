@@ -24,10 +24,13 @@ async function push12Request(action,opts={}){
   if(!push12Account()||!ACCT.tok)throw new Error('로그인 후 알림을 켜 주세요.');
   payload.actor=push12Account();payload.token=ACCT.tok;
  }
- const res=await fetch(push12Url(),{
-  method:'POST',headers:{'content-type':'application/json',apikey:cfg.key,authorization:'Bearer '+cfg.key},
+ let res;
+ try{res=await fetch(push12Url(),{
+  method:'POST',headers:{'content-type':'application/json',apikey:cfg.key},
   body:JSON.stringify(payload),cache:'no-store',
- });
+ });}catch(e){
+  throw new Error('푸시 서버 호출 차단 · Supabase samu-push의 Verify JWT를 끄고 OPTIONS/CORS 응답을 확인해 주세요.');
+ }
  let out={};try{out=await res.json();}catch(e){}
  if(!res.ok||out.ok===false)throw new Error(String(out.error||('알림 서버 응답 '+res.status)).slice(0,180));
  return out;

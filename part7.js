@@ -271,7 +271,7 @@ if(typeof openSettings==="function"){
          <div class="tiny muted">아이디 <b style="color:var(--gold)">${esc(ACCT.id)}</b> 로 들어와 있습니다.
            다른 기기에서도 같은 아이디로 들어오면 이 캐릭터가 따라옵니다.</div>
          <div class="row" style="margin-top:8px">
-           <button class="btn sm" onclick="acctPush(true);toast('계정에 저장했습니다.','good')">지금 저장</button>
+           <button class="btn sm" onclick="acctPush(true).then(ok=>toast(ok?'계정 서버 저장 완료':'서버 저장 실패 · 기록 복사로 따로 백업해 주세요.',ok?'good':'bad'))">지금 저장</button>
            <button class="btn sm" onclick="closeModal();acctLogout()">로그아웃</button></div>`
       : `<hr class="hr"><div class="sect-t">계정</div>
          <div class="tiny muted">로그인하지 않고 이 브라우저에만 저장하는 중입니다.</div>`;
