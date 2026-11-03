@@ -6,6 +6,7 @@
 <title>無明長夜 · 사무전</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="var(--s0)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1196,7 +1197,7 @@ function toast(msg,kind=""){
    운영진이 게임 파일을 새로 올리면, 열어 둔 창은 예전 코드를 그대로 쓰고 있습니다.
    파일의 서버 표식(ETag / 수정 시각)을 5분마다 확인해, 바뀌었으면 띠를 띄웁니다.
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
-const UPDFILES=["index.html","part2.js","part3.js","part4.js","part5.js","part6.js","part7.js","part10.js","market.js","config.js"];
+const UPDFILES=["index.html","part2.js","part3.js","part4.js","part5.js","part6.js","part7.js","part10.js","part11.js","part12.js","notification-worker.js","manifest.webmanifest","market.js","config.js"];
 let UPDSTAMP=null, UPDSHOWN=false;
 function updStamps(){
   if(location.protocol==="file:") return Promise.resolve(null);   // 로컬 파일은 확인 불가
@@ -3663,6 +3664,7 @@ else setTimeout(()=>init(),0);
 <script src="part9.js"></script>
 <script src="part10.js?v=20261103-yowa-shop1"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>
+<script src="part12.js?v=20261103-webpush1"></script>
 <script src="market.js?v=20261103-runner-market1"></script>
 <script src="pvp.js"></script>
 </body>

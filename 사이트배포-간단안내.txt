@@ -1,0 +1,7 @@
+無明長夜 Web Push 사이트 배포본
+
+1. 이 ZIP에는 운영용 config.js가 포함되지 않았습니다. 기존 GitHub Pages의 config.js는 유지하세요.
+2. ZIP의 index.html, part12.js, notification-worker.js, manifest.webmanifest 및 나머지 사이트 파일을 루트에 업로드합니다.
+3. 운영진 서버 설치 ZIP에 있는 README-WebPush-설치순서.md를 따라 Supabase SQL / Edge Function / Webhook / Cron을 구성합니다.
+4. 로그인 → 상단 알림함 → '푸시 알림 켜기' → 허용 → '서버 시험 발송'을 확인합니다.
+5. 로그인 비밀번호나 VAPID 개인키 / Webhook 비밀값을 GitHub에 업로드하지 마세요.

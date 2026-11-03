@@ -221,45 +221,6 @@ VIEWS.farm=function(){
  return insert>=0?html.slice(0,insert)+section+html.slice(insert):html+section;
 };
 
-/* 브라우저 알림은 보안 컨텍스트(HTTPS 또는 localhost)에서만 가능.
-   탭이 열린 동안 배경 새 소식에 한하여 표시. */
-let BROWSER_NOTIFY11=false;
-try{BROWSER_NOTIFY11=localStorage.getItem('samu-notify-browser-v1')==='yes';}catch(e){}
-function browserNotifyStatus11(){
- const url=String((window.MMJY_CONFIG||{}).supabaseUrl||'');
- if(url&&url.startsWith('http://'))return 'Supabase 연결 주소가 HTTP입니다. config.js에서 HTTPS 연결 주소를 사용하세요.';
- if(!window.isSecureContext)return 'HTTPS 보안 연결이 아니어서 브라우저 알림을 사용할 수 없습니다.';
- if(!('Notification' in window))return '이 브라우저는 데스크톱 알림을 지원하지 않습니다.';
- return Notification.permission==='granted'?'브라우저 알림 사용 가능':Notification.permission==='denied'?'브라우저에서 알림 권한이 차단되어 있습니다. 사이트 권한에서 변경해 주세요.':'알림 권한을 요청할 수 있습니다.';
-}
-async function browserNotifyEnable11(){
- if(!window.isSecureContext){toast('HTTPS 주소로 접속해야 브라우저 알림을 켤 수 있습니다.','bad');return;}
- if(!('Notification' in window)){toast('지원하지 않는 브라우저입니다.','bad');return;}
- const permission=await Notification.requestPermission();
- BROWSER_NOTIFY11=permission==='granted';
- try{localStorage.setItem('samu-notify-browser-v1',BROWSER_NOTIFY11?'yes':'no');}catch(e){}
- toast(BROWSER_NOTIFY11?'브라우저 알림을 켰습니다.':'알림 권한이 허용되지 않았습니다.',BROWSER_NOTIFY11?'good':'bad');
- drawAlerts();
-}
-function browserNotifyDisable11(){BROWSER_NOTIFY11=false;try{localStorage.setItem('samu-notify-browser-v1','no');}catch(e){}drawAlerts();}
-const _alertPush11=alertPush;
-alertPush=function(cat,t,view){
- _alertPush11(cat,t,view);
- if(!BROWSER_NOTIFY11||!document.hidden||!window.isSecureContext||!('Notification' in window)||Notification.permission!=='granted')return;
- try{
-  const n=new Notification('無明長夜 · '+(ALERTCATS.find(c=>c.k===cat)?.n||'소식'),{body:String(t).slice(0,160),icon:'favicon.png',tag:'samu-'+(cat||'etc')});
-  n.onclick=()=>{window.focus();try{n.close();}catch(e){} if(view&&VIEWS[view])go(view);};
- }catch(e){}
-};
-const _drawAlerts11=drawAlerts;
-drawAlerts=function(){
- _drawAlerts11();
- const target=document.querySelector('.modal .mbody');
- if(!target)return;
- const div=document.createElement('div');div.className='sub';div.style.marginTop='12px';
- div.innerHTML=`<div class="spread"><div><b>브라우저 알림</b><div class="tiny muted">${browserNotifyStatus11()}<br>사이트 탭이 열려 있을 때 배경에서 들어오는 새 소식을 알려 줍니다.</div></div>
- <button class="btn sm ${BROWSER_NOTIFY11?'':'pri'}" onclick="${BROWSER_NOTIFY11?'browserNotifyDisable11()':'browserNotifyEnable11()'}">${BROWSER_NOTIFY11?'끄기':'알림 허용'}</button></div>`;
- target.appendChild(div);
-};
+/* 브라우저 알림 기능은 part12.js의 Web Push로 교체합니다. */
 const _boot11=boot;
 boot=function(){_boot11();ensureFarmItems11();};

@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "無明長夜 · 사무전",
+  "short_name": "무명장야",
+  "description": "사신무기전문학교 명계지부",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0616",
+  "theme_color": "#140a24",
+  "icons": [
+    {"src":"favicon-180.png","sizes":"180x180","type":"image/png","purpose":"any maskable"}
+  ]
+}
