@@ -13,6 +13,6 @@ window.MMJY_CONFIG = {
 
   // ── 건의함을 구글 시트로 쓸 때만 ──────────────────────
   // Supabase를 쓰신다면 건의함도 함께 동작하므로 비워 두세요.
-  boardUrl: ""
+  boardUrl: "https://script.google.com/macros/s/AKfycbxqITXkqK7Z-YN7xMmX4jmGsR5bRCLNsVQz23mqJKGrONI3TtW8oVFvGkG6YYpFqjFVyg/exec"
 
 };
