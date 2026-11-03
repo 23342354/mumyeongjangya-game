@@ -767,7 +767,7 @@ function pairFetch(force){
         if(r && String(r.pair_id)===String(P.mine&&P.mine.id)) P.mine.rent_due=Number(r.due)||0;
       }
       syncHall(); renderTop(); renderNav();
-      if(VIEW==="rel" || VIEW==="hallv") renderMain(true);
+      if(VIEW==="rel" || VIEW==="hallv" || VIEW==="pairhub") renderMain(true);
       save();
       renderChat();
       return true;
