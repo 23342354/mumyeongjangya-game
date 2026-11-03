@@ -1490,36 +1490,84 @@ function rpThreadRows(root){
   };
   visit(root.id,1);return result;
 }
+/* The direct replies to the root start distinct branches. Descendants remain
+   in their own branch; show explicit reply-to parent to handle forks inside it. */
+function rpConversationBranches(rows){
+  const branches=[];
+  for(const item of rows.slice(1)){
+    if(item.depth===1||!branches.length)branches.push([]);
+    branches[branches.length-1].push(item);
+  }
+  return branches;
+}
+function rpCleanExcerpt(value,max=68){
+  const oneLine=String(value||'').replace(/<[^>]*>/g,' ').replace(/[\r\n\t]+/g,' ').replace(/\s{2,}/g,' ').trim();
+  return oneLine.length>max?oneLine.slice(0,max).trimEnd()+'…':oneLine;
+}
 function rpThreadHTML(root,marks){
   const items=rpThreadRows(root);
+  const branches=rpConversationBranches(items);
+  const people=[...new Set(items.map(x=>String(x.p.author_id)))];
+  const peopleText=people.slice(0,4).map(id=>socialName(id)).join(' · ')+(people.length>4?` 외 ${people.length-4}명`:'');
   return `<section class="rp-thread" data-root="${Number(root.id)}">
-    ${rpEntryHTML(root,0,marks,items.length-1)}
-    ${items.length>1?`<details class="rp-thread-tail" open><summary>답글 ${items.length-1}개 · 펼치기 / 접기</summary>
-      ${items.slice(1).map(item=>rpEntryHTML(item.p,item.depth,marks,0)).join("")}
-    </details>`:""}
+    <div class="rp-topic"><span class="rp-topic-badge">대화 시작</span>
+      <strong>${esc(socialName(root.author_id))} 님의 이야기</strong>
+      <span class="rp-participants">참여자 · ${esc(peopleText)}${items.length>1?` · 답글 ${items.length-1}개`:''}</span>
+    </div>
+    ${rpEntryHTML(root,0,marks,items.length-1,root)}
+    ${items.length>1?`<details class="rp-thread-tail" open><summary>답글 ${items.length-1}개 · 대화 흐름 펼치기 / 접기</summary>
+      <div class="rp-branches">${branches.map((branch,i)=>{
+        const first=branch[0].p;
+        const starters=[...new Set(branch.map(x=>String(x.p.author_id)))];
+        const startLabel=`${socialName(first.author_id)} → ${socialName(root.author_id)}`;
+        return `<section class="rp-branch" aria-label="대화 갈래 ${i+1}">
+          <div class="rp-branch-heading"><span class="rp-branch-number">대화 갈래 ${i+1}</span>
+            <strong>${esc(startLabel)}</strong><span class="rp-branch-count">답글 ${branch.length}개${starters.length>2?` · 참여 ${starters.length}명`:''}</span></div>
+          ${branch.map(item=>rpEntryHTML(item.p,item.depth,marks,0,root)).join('')}
+        </section>`;
+      }).join('')}</div>
+    </details>`:''}
   </section>`;
 }
-function rpEntryHTML(p,depth,marks,count){
+function rpEntryHTML(p,depth,marks,count,rootPost){
   const mine=String(p.author_id)===socialId();
-  const who=socialStudent(p.author_id)||{id:p.author_id,name:socialName(p.author_id),av:"lantern",color:"var(--violet)"};
+  const who=socialStudent(p.author_id)||{id:p.author_id,name:socialName(p.author_id),av:'lantern',color:'var(--violet)'};
   const parent=p.parent_id?(SOCIAL.posts||[]).find(x=>String(x.id)===String(p.parent_id)):null;
   const starred=marks.includes(Number(p.id));
   const root=depth===0;
-  return `<article class="rp-entry" id="rp-post-${Number(p.id)}" data-depth="${depth}" data-parent="${esc(p.parent_id||"")}">
+  const isStarter=String(p.author_id)===String(rootPost.author_id);
+  const parentName=parent?socialName(parent.author_id):'';
+  const quote=parent?rpCleanExcerpt(parent.body):'';
+  return `<article class="rp-entry ${root?'rp-entry-root':isStarter?'rp-entry-starter':'rp-entry-guest'}" id="rp-post-${Number(p.id)}" data-depth="${depth}" data-parent="${esc(p.parent_id||'')}">
     <div class="rp-avatar">${faceHTML(who,42)}</div>
     <div class="rp-main">
       <div class="rp-byline"><b>${esc(socialName(p.author_id))}</b>
         <span class="rp-handle">${esc(pairHandle(who))}</span>
         <span class="rp-time">· ${esc(pairPostWhen(p.created_at))}</span></div>
-      ${parent?`<div class="rp-context">↳ ${esc(socialName(parent.author_id))} 님에게 답글${depth>1?` · ${depth}단계 대화`:""}</div>`:""}
+      ${parent?`<div class="rp-address" aria-label="${esc(socialName(p.author_id))} 님이 ${esc(parentName)} 님에게 답글">
+        <span class="rp-address-label">답글</span><strong>${esc(socialName(p.author_id))}</strong>
+        <span class="rp-address-arrow" aria-hidden="true">→</span>
+        <button type="button" class="rp-address-recipient" onclick="rpJumpTo(${Number(parent.id)})" title="답글 대상 글로 이동">${esc(parentName)}</button>
+      </div><button type="button" class="rp-parent-preview" onclick="rpJumpTo(${Number(parent.id)})" title="답글의 원문 보기">
+        <span class="rp-parent-preview-label">↳ 받은 글</span><span class="rp-parent-preview-text">${esc(quote||'(내용 없음)')}</span>
+      </button>`:''}
       <div class="rp-body">${fmtChat(p.body)}</div>
       <div class="rp-actions" role="group" aria-label="${esc(socialName(p.author_id))}의 글 동작">
-        <button type="button" class="rp-act" title="답글 달기" aria-label="답글 달기" onclick="rpReply(${Number(p.id)})">${pairPostIcon("reply")}${count?`<span>${count}</span>`:""}</button>
-        ${root?`<button type="button" class="rp-act" title="북마크" aria-label="북마크" aria-pressed="${starred}" onclick="rpBookmark(${Number(p.id)})">${pairPostIcon("bookmark")}</button>`:""}
-        ${mine?`<button type="button" class="rp-act" title="이 글 삭제" aria-label="이 글 삭제" onclick="rpDelete(${Number(p.id)})">${pairPostIcon("more")}</button>`:""}
+        <button type="button" class="rp-act" title="답글 달기" aria-label="답글 달기" onclick="rpReply(${Number(p.id)})">${pairPostIcon('reply')}${count?`<span>${count}</span>`:''}</button>
+        ${root?`<button type="button" class="rp-act" title="북마크" aria-label="북마크" aria-pressed="${starred}" onclick="rpBookmark(${Number(p.id)})">${pairPostIcon('bookmark')}</button>`:''}
+        ${mine?`<button type="button" class="rp-act" title="이 글 삭제" aria-label="이 글 삭제" onclick="rpDelete(${Number(p.id)})">${pairPostIcon('more')}</button>`:''}
       </div>
     </div>
   </article>`;
+}
+/* Reply target buttons scroll to the exact parent, even if the branch was folded. */
+function rpJumpTo(id){
+  const el=document.getElementById('rp-post-'+Number(id));
+  if(!el){toast('원문을 찾을 수 없습니다.');return;}
+  const details=el.closest('details');if(details)details.open=true;
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  el.classList.remove('rp-focus');void el.offsetWidth;el.classList.add('rp-focus');
+  setTimeout(()=>el.classList.remove('rp-focus'),2400);
 }
 VIEWS.rpboard=()=>{
   const marks=rpBookmarks().map(Number),mine=socialId();
@@ -1538,7 +1586,7 @@ VIEWS.rpboard=()=>{
   }
   const pages=Math.max(1,Math.ceil(roots.length/10)); RP_PAGE=Math.max(0,Math.min(RP_PAGE,pages-1));
   const profile=socialStudent(mine)||{id:mine,name:S.name,av:S.av,av_img:S.avImg,color:S.color};
-  return head("함께 써 내려가는 이야기","RP 게시판","답글이 여러 번 이어져도 카드가 오른쪽으로 밀리지 않습니다")
+  return head("함께 써 내려가는 이야기","RP 게시판","답글 대상과 대화 갈래를 구분해 한눈에 읽을 수 있습니다")
     +socialStatus()+`<div class="rp-board">
       <div class="rp-compose"><div class="rp-compose-row">${faceHTML(profile,42)}
         <div class="rp-compose-main"><label class="tiny muted" for="rp-compose">새 RP 작성 · 최대 500자</label>

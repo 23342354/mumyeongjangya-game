@@ -493,6 +493,48 @@ textarea.inp{min-height:76px;resize:vertical}
  .rp-byline b{font-size:12.5px}.rp-handle,.rp-time{font-size:11px}
  .rp-body{font-size:13px}.rp-actions{gap:5px;justify-content:space-between}
 }
+
+/* ─── RP 대화 흐름: 갈래별 묶음 + 답글 수신자 및 원문 인용 ─── */
+.rp-topic{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px 17px 10px;border-bottom:1px solid var(--line);background:rgba(133,84,166,.10)}
+.rp-topic-badge{font-size:10px;letter-spacing:.04em;color:var(--violetL);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;white-space:nowrap}
+.rp-topic strong{font-size:13px;color:var(--tx)}
+.rp-participants{font-size:11px;color:var(--dim);margin-left:auto;max-width:100%;line-height:1.5;overflow-wrap:anywhere}
+.rp-thread-tail{padding:5px 15px 15px 15px}
+.rp-thread-tail>summary{padding:7px 1px 10px}
+.rp-branches{display:flex;flex-direction:column;gap:11px}
+.rp-branch{border:1px solid rgba(171,115,224,.28);border-radius:11px;overflow:hidden;background:rgba(123,85,168,.045);min-width:0}
+.rp-branch-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:rgba(149,91,198,.13);padding:9px 13px;border-bottom:1px solid rgba(171,115,224,.22);line-height:1.45}
+.rp-branch-number{font-size:10px;white-space:nowrap;color:var(--violetL);border:1px solid var(--line2);border-radius:5px;padding:3px 6px}
+.rp-branch-heading strong{font-size:12px;color:var(--tx);font-weight:650}
+.rp-branch-count{font-size:11px;color:var(--dim);margin-left:auto}
+.rp-thread-tail .rp-entry{margin:0;padding:12px 12px 6px}
+.rp-entry-root{padding-bottom:10px}
+.rp-entry-guest{background:rgba(152,100,192,.035)}
+.rp-entry-starter{background:rgba(110,166,211,.045)}
+.rp-branch .rp-entry+.rp-entry{border-top:1px solid rgba(153,109,192,.16)}
+.rp-branch .rp-entry:not(:last-child) .rp-avatar::after{bottom:-21px}
+.rp-branch .rp-entry:last-child .rp-avatar::after{display:none}
+.rp-address{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);margin:7px 0 0;line-height:1.65}
+.rp-address-label{font-size:10px;color:var(--violetL);border:1px solid rgba(173,110,214,.42);background:rgba(164,107,200,.12);border-radius:5px;padding:0px 6px}
+.rp-address strong{color:var(--tx);font-weight:600}
+.rp-address-arrow{color:var(--violetL);font-weight:bold}
+.rp-address-recipient{cursor:pointer;border:1px solid rgba(174,110,214,.46);background:rgba(164,107,200,.16);color:var(--violetL);border-radius:5px;font:inherit;font-weight:700;padding:1px 8px;min-height:25px;max-width:100%;overflow-wrap:anywhere}
+.rp-address-recipient:hover,.rp-address-recipient:focus-visible,.rp-parent-preview:hover,.rp-parent-preview:focus-visible{outline:1px solid var(--violetL);color:var(--tx)}
+.rp-parent-preview{cursor:pointer;display:flex;gap:8px;align-items:baseline;text-align:left;width:100%;min-width:0;background:rgba(145,112,173,.075);border:0;border-left:2px solid var(--line2);border-radius:0 5px 5px 0;margin-top:6px;padding:5px 8px;color:var(--dim);font:inherit;line-height:1.55}
+.rp-parent-preview-label{font-size:10px;white-space:nowrap;color:var(--violetL)}
+.rp-parent-preview-text{font-size:11px;min-width:0;overflow-wrap:anywhere}
+.rp-branch .rp-entry .rp-body{margin-top:7px}
+@media(max-width:540px){
+ .rp-topic{gap:6px;padding:10px 11px}
+ .rp-participants{flex-basis:100%;margin-left:0}
+ .rp-thread-tail{padding:5px 8px 10px}
+ .rp-branch-heading{padding:8px 9px;gap:6px}
+ .rp-thread-tail .rp-entry{margin:0;padding:10px 8px 4px}
+ .rp-address{gap:4px;font-size:11px}
+ .rp-parent-preview{gap:5px;padding:5px 6px;flex-wrap:wrap}
+ .rp-parent-preview-text{font-size:10.5px}
+}
+
 </style>
 </head>
 <body>
