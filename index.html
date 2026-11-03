@@ -1155,7 +1155,9 @@ function step(mins){
   if(Math.random()<0.004*mins) npcChat();   // 교사만 말하므로 더 드물게
 
   renderTop(); renderNav();
-  if(["plaza","class","research","exam","quest"].includes(VIEW)) renderMain(true);
+  // 의뢰 제목 선택창은 자동 갱신으로 DOM을 교체하지 않습니다.
+  // 덕분에 구간 선택을 열어 둔 상태에서 1초마다 접히지 않습니다.
+  if(["plaza","class","research","exam"].includes(VIEW)) renderMain(true);
   if(Math.random()<0.02) save();
 }
 function onNewDay(){
@@ -1263,7 +1265,7 @@ function renderNav(){
     <div class="row" style="gap:9px;margin-bottom:7px">
       ${avatarHTML(40)}
       <div><div style="font-weight:600;font-size:14px">${esc(S.name)}</div>
-        <div class="tiny muted">${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.line==="마무기"&&S.weapon?`(${esc(S.weapon)})`:""}</div></div>
+        <div class="tiny muted">${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div></div>
     </div>
     <div class="tiny muted">수행 ${nf(S.exp)} / ${nf(expNeed())}</div>
     <div class="bar" style="margin:3px 0 8px"><i style="width:${(S.exp/expNeed()*100).toFixed(1)}%"></i></div>
@@ -1437,8 +1439,11 @@ function renderMain(soft){
   const ae=document.activeElement;
   if(soft && ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
   const sc=window.scrollY;
+  // '고르기', 시간 변경 등의 수동 갱신 때도 열린 의뢰 목록 유지.
+  const questListOpen=VIEW==="quest" && !!document.getElementById("quest-stage-picker")?.open;
   const f=VIEWS[VIEW]||VIEWS.plaza;
   $("#main").innerHTML=f();
+  if(questListOpen){ const picker=document.getElementById("quest-stage-picker"); if(picker) picker.open=true; }
   if(soft) window.scrollTo(0,sc);
 }
 function head(kicker,title,right){
@@ -2148,7 +2153,7 @@ VIEWS.quest=()=>{
     </div>
   </div>
 
-  <details class="card pad" style="margin-bottom:14px">
+  <details class="card pad" id="quest-stage-picker" style="margin-bottom:14px">
     <summary style="cursor:pointer"><b>${band+1}~${band+9}단계 · ${band+10}단계 관문</b>
       <span class="tiny muted"> — 제목 보고 고르기</span></summary>
     <div class="row" style="margin:10px 0">
@@ -3066,7 +3071,7 @@ function drawMe(){
         <div style="flex:1">
           <div class="tiny" style="color:var(--gold)">${esc(S.title)}</div>
           <div style="font-size:21px;font-weight:600;color:${S.color}">${esc(S.name)}</div>
-          <div class="tiny muted">${ic("lantern",12)} ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.line==="마무기"&&S.weapon?`(${esc(S.weapon)})`:""}</div>
+          <div class="tiny muted">${ic("lantern",12)} ${hall.n} · ${S.course}과정 · Lv ${S.lvl} · ${S.line}${S.weapon?`(${esc(S.weapon)})`:""}</div>
           <div class="tiny muted">${ic("beads",12)} ${typeof pairName==="function"&&pairName()?`페어 ${esc(pairName())}`:"페어 미정"}</div>
           <div class="tiny muted">${esc(S.intro||"한 줄 소개가 없습니다")}</div>
         </div>
@@ -3133,8 +3138,7 @@ function drawMe(){
       <div class="row"><span class="seg">
         <button class="${S.line==="장인"?"on":""}" onclick="setLine('장인')">장인</button>
         <button class="${S.line==="마무기"?"on":""}" onclick="setLine('마무기')">마무기</button></span>
-        ${S.line==="마무기"?`<input class="inp" id="e_wep" style="flex:1" maxlength="14" placeholder="무기화 형태 (예: 장검 / 권총 / 거울)" value="${esc(S.weapon)}">`:
-          `<span class="tiny muted">장인의 무기는 페어인 마무기 캐릭터입니다.</span>`}
+        <input class="inp" id="e_wep" style="flex:1" maxlength="14" placeholder="무기 종류 (예: 장검 / 권총 / 거울)" value="${esc(S.weapon)}">
       </div>
       <label class="f">전투 거리 · 수업 성장</label>
       <select id="e_style" class="inp">${["근거리","원거리"].map(t=>`<option ${combatStyle()===t?"selected":""}>${t}</option>`).join("")}</select>
@@ -3198,7 +3202,7 @@ function setTitle(t){ S.title=t; drawMe(); save(); }
 function saveMe(){
   const n=$("#e_name").value.trim(); if(n) S.name=n;
   const src=$("#e_avsrc"); if(src) S.avSrc=src.value.trim();
-  S.weapon=S.line==="마무기" && $("#e_wep") ? $("#e_wep").value.trim() : "";
+  S.weapon=$("#e_wep").value.trim();
   const style=$("#e_style"); if(style&&["근거리","원거리"].includes(style.value)) S.combatStyle=style.value;
   S.intro=$("#e_intro").value.trim();
   S.bio=$("#e_bio").value;
@@ -3244,7 +3248,7 @@ function showSaveText(txt){
 /* ═══════════════ 입학 (캐릭터 생성) ═══════════════ */
 let MK=null;
 function openCreate(){
-  MK={name:"", line:"장인", weapon:"", combatStyle:"근거리", hall:"dorm", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
+  MK={name:"", line:"장인", weapon:"장검", combatStyle:"근거리", hall:"dorm", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
       st:{atk:3,def:3,agi:3,men:2,res:2}};
   drawCreate();
 }
@@ -3270,10 +3274,9 @@ function drawCreate(){
           <div class="row"><span class="seg">
             <button class="${MK.line==="장인"?"on":""}" onclick="MK.line='장인';drawCreate()">장인</button>
             <button class="${MK.line==="마무기"?"on":""}" onclick="MK.line='마무기';drawCreate()">마무기</button></span></div>
-          ${MK.line==="마무기"?`<label class="f">무기화 형태</label>
+          <label class="f">무기 종류 ${MK.line==="장인"?"(다루는 무기)":"(변형하는 형태)"}</label>
           <input class="inp" id="c_wep" value="${esc(MK.weapon)}" maxlength="14" oninput="MK.weapon=this.value"
-            placeholder="장검 / 권총 / 거울 / 석장 …">`:
-            `<div class="tiny muted" style="margin-top:8px">장인의 무기는 페어인 마무기 캐릭터입니다. 별도의 무기를 설정하거나 장착하지 않습니다.</div>`}
+            placeholder="장검 / 권총 / 거울 / 석장 …">
           <label class="f">전투 거리</label>
           <div class="seg">${["근거리","원거리"].map(t=>`<button class="${MK.combatStyle===t?"on":""}" onclick="MK.combatStyle='${t}';drawCreate()">${t}</button>`).join("")}</div>
           <div class="tiny muted" style="margin-top:6px">수업에서 오르는 능력치가 달라집니다. 입학 후에도 변경할 수 있습니다.</div>
@@ -3326,7 +3329,7 @@ function mkSt(k,d){
 }
 function finishCreate(){
   S=newState();
-  S.made=true; S.name=MK.name.trim(); S.line=MK.line; S.weapon=MK.line==="마무기"?MK.weapon.trim():"";
+  S.made=true; S.name=MK.name.trim(); S.line=MK.line; S.weapon=MK.weapon.trim();
   S.combatStyle=MK.combatStyle||"근거리";
   S.hall=MK.hall; S.color=MK.color; S.av=MK.av; S.avImg=MK.avImg||null; S.intro=MK.intro.trim();
   S.base={...MK.st};
