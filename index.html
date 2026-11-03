@@ -385,6 +385,59 @@ textarea.inp{min-height:76px;resize:vertical}
   body.mobile-game.mobile-chat-open #mobile-chat-toggle{bottom:calc(64px + env(safe-area-inset-bottom) + min(65dvh,560px))}
   body.mobile-game #toasts{bottom:calc(112px + env(safe-area-inset-bottom));right:12px;max-width:calc(100vw - 24px)}
 }
+
+/* ═══ 둘의 기록 · 마스토돈형 대화 타임라인 ═══ */
+.mm-compose,.mm-timeline{
+  background:linear-gradient(180deg,var(--cardA),var(--cardB));
+  border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;backdrop-filter:blur(4px)
+}
+.mm-compose{padding:17px 18px;margin-bottom:14px}
+.mm-compose-line{display:flex;align-items:flex-start;gap:14px}
+.mm-compose-area{flex:1;min-width:0}
+.mm-compose-to{font-size:12px;color:var(--dim);margin-bottom:8px;font-weight:500}
+.mm-compose textarea{background:var(--s1);border:1px solid var(--line);border-radius:9px;resize:vertical;min-height:88px}
+.mm-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px}
+.mm-privacy{font-size:11px;color:var(--dim2);margin:12px 0 0;line-height:1.6}
+.mm-thread{padding:4px 0 8px;border-bottom:1px solid var(--line);position:relative}
+.mm-thread:last-child{border-bottom:none}
+.mm-post{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;padding:12px 18px 2px;position:relative;
+  transition:background .15s ease}
+.mm-post:hover{background:rgba(155,110,215,.045)}
+.mm-avatar{position:relative;min-height:48px;z-index:1}
+.mm-post:not(:last-child)>.mm-avatar:after{content:"";position:absolute;left:22px;top:51px;bottom:-24px;
+  border-left:2px solid var(--line2);opacity:.82;z-index:-1;pointer-events:none}
+.mm-post-main{min-width:0}
+.mm-byline{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;line-height:1.4}
+.mm-byline b{font-size:13.5px;color:var(--tx);font-weight:700}
+.mm-handle,.mm-time{font-size:12px;color:var(--dim)}
+.mm-context{color:var(--dim);font-size:11px;margin:3px 0 0}
+.mm-message{color:var(--tx);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
+  font-size:13.5px;line-height:1.65;margin-top:8px}
+.mm-message em{font-style:italic}
+.mm-actions{display:flex;align-items:center;justify-content:space-between;gap:6px;
+  max-width:500px;margin:7px -9px 2px 0}
+.mm-action{background:none;border:0;color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;gap:5px;min-width:34px;min-height:32px;padding:6px 9px;border-radius:24px;
+  font:inherit;font-size:11px;transition:background .15s,color .15s}
+.mm-action:hover,.mm-action:focus-visible{color:var(--violetL);background:var(--wash1);outline:none}
+.mm-action.on{color:var(--pink)}
+.mm-action.on svg{fill:currentColor;fill-opacity:.22}
+.mm-action[data-kind="bookmark"].on svg{fill:currentColor;fill-opacity:.15}
+.mm-empty{text-align:center;padding:45px 14px;color:var(--dim);font-size:14px}
+.mm-empty div{font-size:12px;margin-top:5px;color:var(--dim2)}
+.mm-reply-parent{background:var(--subBg);border-left:3px solid var(--s6);padding:12px 13px;
+  border-radius:7px;margin-bottom:14px;max-height:220px;overflow:auto}
+.mm-reply-snippet{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px;line-height:1.65}
+@media(max-width:540px){
+ .mm-compose{padding:12px 11px}.mm-compose-line{gap:9px}
+ .mm-post{grid-template-columns:40px minmax(0,1fr);gap:9px;padding:11px 11px 0}
+ .mm-post .mm-avatar>div{transform:scale(.9);transform-origin:top left}
+ .mm-post:not(:last-child)>.mm-avatar:after{left:20px;top:46px}
+ .mm-byline b{font-size:12.5px}.mm-handle,.mm-time{font-size:11px}
+ .mm-message{font-size:13px}.mm-action{padding:6px 4px}
+}
+
 </style>
 </head>
 <body>

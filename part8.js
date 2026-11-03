@@ -1156,108 +1156,196 @@ function pairPostFetch(force){
       if(VIEW==="pairboard") renderMain(true); return false; })
     .finally(()=>{ PAIRBOARDBUSY=false; });
 }
-function pairPostSend(parent){
-  const P=pairEnsure(); if(!P.mine) return;
-  const el=document.getElementById(parent?("pb-reply-"+parent):"pb-write");
-  const body=(el&&el.value||"").trim();
-  if(!body){ toast("쓸 말을 적어 주세요."); return; }
-  if(body.length>1000){ toast("1000자까지 쓸 수 있습니다.","bad"); return; }
-  sbSend("POST","pair_posts",[{pair_id:P.mine.id, author_id:String(S.sb.id),
-    author_name:S.name, body, parent_id:parent||null}],"return=minimal")
-    .then(()=>{ if(el) el.value=""; closeModal(); return pairPostFetch(true); })
-    .then(()=>{ renderMain(true); })
-    .catch(()=>toast("남기지 못했습니다. 연결과 SQL 적용을 확인해 주세요.","bad"));
+/* 페어 기록 · 마스토돈형 타임라인과 답글 연쇄 */
+let PAIRPOSTSUBMIT=false;
+document.addEventListener("keydown",e=>{if(VIEW==="pairboard"&&e.target?.id==="pb-write"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();pairPostSend(null);}});
+function pairPostFind(id){
+  return (pairPostState().rows||[]).find(p=>String(p.id)===String(id));
 }
-function pairPostReply(id){
-  const B=pairPostState();
-  const p=B.rows.find(x=>x.id===id); if(!p) return;
-  modal("답하기", `<div class="sub" style="margin-bottom:10px">
-      <b>${esc(p.author_name||"")}</b>
-      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px">${fmtChat(p.body)}</div></div>
-    <textarea class="inp" id="pb-reply-${id}" rows="5" maxlength="1000" placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
-    <button class="btn pri" style="margin-top:10px" onclick="pairPostSend(${id})">남기기</button>`);
+function pairPostMarks(type){
+  const key="mm-pair-"+type+"-"+String(S.sb&&S.sb.id||"")+"-"+String(pairEnsure().mine?.id||"");
+  try{ return {key, values:JSON.parse(localStorage.getItem(key)||"[]")}; }
+  catch(e){return {key,values:[]};}
 }
-function pairPostDelete(id){
-  if(!confirm("이 글을 지울까요? 답글도 함께 사라집니다.")) return;
-  sbSend("DELETE",`pair_posts?id=eq.${id}&author_id=eq.${encodeURIComponent(String(S.sb.id))}`,undefined,"return=minimal")
-    .then(()=>pairPostFetch(true)).then(()=>renderMain(true))
-    .catch(()=>toast("지우지 못했습니다.","bad"));
+function pairPostToggle(type,id){
+  if(type!=="heart" && type!=="bookmark")return;
+  const {key,values}=pairPostMarks(type), sid=String(id);
+  const next=values.map(String).includes(sid)?values.map(String).filter(x=>x!==sid):[...values.map(String),sid];
+  try{localStorage.setItem(key,JSON.stringify(next));}catch(e){toast("기기에 보관할 공간이 부족합니다.","bad");return;}
+  // 전체 화면을 새로 그리지 않아 작성 중이던 글을 지우지 않습니다.
+  document.querySelectorAll(`.mm-action[data-kind="${type}"][data-post="${sid}"]`).forEach(btn=>{
+    btn.classList.toggle("on",next.includes(sid));
+    btn.setAttribute("aria-pressed",String(next.includes(sid)));
+  });
+}
+function pairPostIcon(name){
+  const paths={
+    reply:'<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.45 0-2.9-.35-4.15-1l-5.3 1 1.1-4.85A8.5 8.5 0 1 1 21 11.5Z"/>',
+    quote:'<path d="M4 7h12.5a3.5 3.5 0 0 1 0 7H7"/><path d="m9.5 11.5-3 2.5 3 2.5"/><path d="M20 17H9"/>',
+    heart:'<path d="M20.8 9.1c0 4.6-8.8 10.1-8.8 10.1S3.2 13.7 3.2 9.1a4.8 4.8 0 0 1 8.8-2.6 4.8 4.8 0 0 1 8.8 2.6Z"/>',
+    bookmark:'<path d="M6 3.5h12v17l-6-4-6 4z"/>',
+    more:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+    copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+  };
+  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${paths[name]||""}</svg>`;
 }
 function pairPostWhen(t){
-  const ms=new Date(t).getTime(), gap=(Date.now()-ms)/60000;
-  if(gap<1) return "방금";
-  if(gap<60) return Math.floor(gap)+"분 전";
-  if(gap<1440) return Math.floor(gap/60)+"시간 전";
-  if(gap<43200) return Math.floor(gap/1440)+"일 전";
+  const ms=new Date(t).getTime(), gap=Math.max(0,(Date.now()-ms)/60000);
+  if(!Number.isFinite(ms))return "기록";
+  if(gap<1)return "방금";
+  if(gap<60)return Math.floor(gap)+"분 전";
+  if(gap<1440)return Math.floor(gap/60)+"시간 전";
+  if(gap<43200)return Math.floor(gap/1440)+"일 전";
   return new Date(ms).toLocaleDateString("ko-KR");
 }
-function pairHandle(p){
-  return "@"+String(p.id||"").replace(/^ACC_/,"").slice(0,14);
+function pairHandle(p){return "@"+String(p.id||"").replace(/^ACC_/,"").slice(0,14);}
+function pairPostReply(id,quote=false){
+  const p=pairPostFind(id);if(!p){toast("답할 글을 찾지 못했습니다. 새로 고침 후 다시 시도해 주세요.","bad");return;}
+  const youName=String(p.author_name||"상대");
+  modal(esc(youName)+" 님에게 답하기",`
+    <div class="mm-reply-parent"><div class="mm-context">${esc(youName)} · ${esc(pairPostWhen(p.created_at))}</div>
+      <div class="mm-reply-snippet">${fmtChat(p.body)}</div></div>
+    <label for="pb-reply-${p.id}" class="tiny muted">답글은 선택한 글에 직접 연결됩니다.</label>
+    <textarea class="inp" id="pb-reply-${p.id}" rows="5" maxlength="1000" style="width:100%;margin-top:8px"
+      placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
+    <div class="spread" style="margin-top:10px">
+      <span class="tiny muted">1000자까지 · Ctrl + Enter 등록</span>
+      <button class="btn pri" id="pb-submit-${p.id}" onclick="pairPostSend(${p.id})">답글 등록</button>
+    </div>`);
+  const field=document.getElementById("pb-reply-"+p.id);
+  if(field){
+    if(quote)field.value="> "+String(p.body||"").replace(/\n/g,"\n> ").slice(0,450)+"\n\n";
+    field.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();pairPostSend(p.id);}});
+    field.focus(); field.setSelectionRange(field.value.length,field.value.length);
+  }
 }
-function pairPostRow(p, depth){
-  const me=pairMe(), you=pairPeer();
-  const who = String(p.author_id)===me.id ? me : (you&&String(p.author_id)===you.id ? you : {name:p.author_name||"", av:"lantern", color:"var(--s5)", id:p.author_id});
-  const mine = String(p.author_id)===me.id;
-  const B=pairPostState();
-  const kids=B.rows.filter(x=>x.parent_id===p.id).sort((a,b)=>a.id-b.id);
-  return `<div style="display:flex;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line);
-      ${depth?"margin-left:22px;border-left:2px solid var(--line2);padding-left:13px":""}">
-    ${faceHTML(who,depth?34:42)}
-    <div style="flex:1;min-width:0">
-      <div class="row" style="gap:7px;align-items:baseline;flex-wrap:wrap">
-        <b>${esc(who.name||"")}</b>
-        <span class="tiny muted">${esc(pairHandle(who))}</span>
-        <span class="tiny muted">· ${esc(pairPostWhen(p.created_at))}</span>
+async function pairPostSend(parent){
+  const P=pairEnsure();if(!P.mine || !sbOn()){toast("공유 기록에 연결되어야 글을 남길 수 있습니다.","bad");return false;}
+  if(PAIRPOSTSUBMIT)return false;
+  const el=document.getElementById(parent!==null&&parent!==undefined?"pb-reply-"+parent:"pb-write");
+  const body=(el&&el.value||"").trim();
+  if(!body){toast("쓸 말을 적어 주세요.","bad");el?.focus();return false;}
+  if(body.length>1000){toast("1000자까지 쓸 수 있습니다.","bad");return false;}
+  if(parent!==null&&parent!==undefined&&!pairPostFind(parent)){
+    toast("답할 글이 목록에 없습니다. 새로 고침을 해 주세요.","bad");return false;
+  }
+  const postPairId=String(P.mine.id), actionButton=document.getElementById(parent!==null&&parent!==undefined?"pb-submit-"+parent:"pb-compose-submit");
+  PAIRPOSTSUBMIT=true;if(actionButton)actionButton.disabled=true;
+  try{
+    // PostgREST returns the actual inserted row. Show it immediately even if refresh is in flight.
+    const inserted=await sbSend("POST","pair_posts",[{pair_id:P.mine.id,
+      author_id:String(S.sb.id),author_name:S.name,body,
+      parent_id:parent!==null&&parent!==undefined?parent:null}],"return=representation");
+    if(!Array.isArray(inserted)||!inserted.length)throw new Error("글 등록 응답이 비어 있습니다.");
+    if(String(pairEnsure().mine?.id)===postPairId){
+      const B=pairPostState();for(const row of inserted){
+        if(!B.rows.some(p=>String(p.id)===String(row.id)))B.rows.unshift(row);
+      }
+      B.at=0;B.forId=postPairId;
+      if(el)el.value="";
+      if(parent!==null&&parent!==undefined)closeModal();
+      if(VIEW==="pairboard")renderMain();
+      toast("기록을 남겼습니다.","good");
+      // Poll refresh afterward; the new post has already been added to the UI.
+      pairPostFetch(true);
+    }
+    return true;
+  }catch(e){
+    const detail=String(e&&e.message||"");
+    toast(/foreign key|parent_id/.test(detail)?"답할 원글이 삭제되었습니다. 새로 고침해 주세요.":
+      "기록 등록에 실패했습니다. 공유 기록 연결과 페어 게시판 SQL을 확인해 주세요.","bad");
+    console.warn("pair_posts insert failed:",detail);
+    return false;
+  }finally{ PAIRPOSTSUBMIT=false; if(actionButton?.isConnected)actionButton.disabled=false; }
+}
+function pairPostDelete(id){
+  const p=pairPostFind(id);
+  if(!p||String(p.author_id)!==String(S.sb.id)){toast("자신이 쓴 기록만 삭제할 수 있습니다.","bad");return;}
+  if(!confirm("이 글을 지울까요? 이 글에 달린 답글도 함께 사라집니다."))return;
+  sbSend("DELETE",`pair_posts?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(String(S.sb.id))}`,undefined,"return=minimal")
+    .then(()=>{closeModal();return pairPostFetch(true);})
+    .then(()=>{if(VIEW==="pairboard")renderMain(true);})
+    .catch(()=>toast("지우지 못했습니다.","bad"));
+}
+async function pairPostCopy(id){
+  const p=pairPostFind(id);if(!p)return;
+  try{await navigator.clipboard.writeText(String(p.body||""));toast("본문을 복사했습니다.","good");}
+  catch(e){
+    // Clipboard permissions are unavailable for many self-hosted HTTP deployments.
+    modal("본문 복사",`<textarea class="inp" id="pb-copy" style="width:100%" rows="5" readonly>${esc(p.body||"")}</textarea>
+      <p class="tiny muted">내용을 선택해 복사해 주세요.</p>`);
+    document.getElementById("pb-copy")?.select();
+  }
+}
+function pairPostMore(id){
+  const p=pairPostFind(id);if(!p)return;
+  const mine=String(p.author_id)===String(S.sb.id);
+  modal("기록 메뉴",`<div class="row" style="gap:8px;flex-wrap:wrap">
+    <button class="btn" onclick="pairPostCopy(${p.id})">${pairPostIcon("copy")} 본문 복사</button>
+    ${mine?`<button class="btn red" onclick="pairPostDelete(${p.id})">기록 삭제</button>`:""}</div>`);
+}
+function pairPostRow(p,depth,seen){
+  seen=seen||new Set();
+  const sid=String(p.id);if(seen.has(sid)||depth>40)return ""; seen.add(sid);
+  const me=pairMe(),you=pairPeer();
+  const who=String(p.author_id)===String(me.id)?me:
+    (you&&String(p.author_id)===String(you.id)?you:{name:p.author_name||"학생",av:"lantern",color:"var(--s5)",id:p.author_id});
+  const mine=String(p.author_id)===String(me.id);
+  const B=pairPostState(),children=B.rows.filter(x=>String(x.parent_id||"")===sid&&String(x.id)!==sid)
+    .sort((a,b)=>Number(a.id)-Number(b.id));
+  const hearts=pairPostMarks("heart").values.map(String).includes(sid);
+  const marks=pairPostMarks("bookmark").values.map(String).includes(sid);
+  const parent=p.parent_id?pairPostFind(p.parent_id):null;
+  const parentName=parent?.author_name||"";
+  return `<article class="mm-post ${depth?"mm-post-reply":""}" id="pair-post-${p.id}" data-parent="${esc(p.parent_id||"")}">
+      <div class="mm-avatar">${faceHTML(who,44)}</div>
+      <div class="mm-post-main">
+        <div class="mm-byline"><b>${esc(who.name||"")}</b><span class="mm-handle">${esc(pairHandle(who))}</span>
+          <span class="mm-time">· ${esc(pairPostWhen(p.created_at))}</span></div>
+        ${parentName?`<div class="mm-context">${esc(parentName)} 님에게 답글</div>`:""}
+        <div class="mm-message">${fmtChat(p.body)}</div>
+        <div class="mm-actions" role="group" aria-label="${esc(who.name||"")} 님의 기록 동작">
+          <button class="mm-action" onclick="pairPostReply(${p.id})" title="답글 달기" aria-label="답글 달기">${pairPostIcon("reply")}${children.length?`<span>${children.length}</span>`:""}</button>
+          <button class="mm-action" onclick="pairPostReply(${p.id},true)" title="인용하여 답글 달기" aria-label="인용하여 답글 달기">${pairPostIcon("quote")}</button>
+          <button class="mm-action ${hearts?"on":""}" data-kind="heart" data-post="${sid}" aria-pressed="${hearts}"
+            onclick="pairPostToggle('heart',${p.id})" title="마음에 들어요 (이 브라우저에만 저장)" aria-label="마음에 들어요">${pairPostIcon("heart")}</button>
+          <button class="mm-action ${marks?"on":""}" data-kind="bookmark" data-post="${sid}" aria-pressed="${marks}"
+            onclick="pairPostToggle('bookmark',${p.id})" title="북마크 (이 브라우저에만 저장)" aria-label="북마크">${pairPostIcon("bookmark")}</button>
+          <button class="mm-action" onclick="pairPostMore(${p.id})" title="더 보기" aria-label="더 보기">${pairPostIcon("more")}</button>
+        </div>
       </div>
-      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0 2px">${fmtChat(p.body)}</div>
-      <div class="row" style="gap:4px;margin-top:6px">
-        ${depth?"":`<button class="btn sm ghost" onclick="pairPostReply(${p.id})">${ic("bubble",12)} 답하기${kids.length?" "+kids.length:""}</button>`}
-        ${mine?`<button class="btn sm ghost" onclick="pairPostDelete(${p.id})">지우기</button>`:""}
-      </div>
-    </div></div>
-    ${depth?"":kids.map(k=>pairPostRow(k,1)).join("")}`;
+    </article>${children.map(c=>pairPostRow(c,depth+1,seen)).join("")}`;
 }
 VIEWS.pairboard=()=>{
   const P=pairEnsure();
-  const head1=head("둘만 보는 자리", ic("memo")+" 둘의 기록",
-    "페어 두 사람 말고는 화면에 뜨지 않습니다");
-  if(!sbOn()) return head1+`<div class="card pad">
-    <div class="tiny muted">공유 기록을 연결해야 둘의 기록을 쓸 수 있습니다.</div>
-    <button class="btn pri" style="margin-top:10px" onclick="sbConnect()">공유 기록 연결</button></div>`;
-  if(!P.mine) return head1+`<div class="card pad">
-    <div class="tiny muted" style="margin-bottom:10px">아직 페어가 없습니다. 페어를 맺으면 둘만의 기록이 열립니다.</div>
+  const head1=head("둘만 보는 자리",ic("memo")+" 둘의 기록","페어 두 사람의 타임라인 · 답글을 계속 이어 쓸 수 있습니다");
+  if(!sbOn())return head1+`<div class="card pad">공유 기록 연결 후 이용할 수 있습니다.
+    <button class="btn pri" onclick="sbConnect()">공유 기록 연결</button></div>`;
+  if(!P.mine)return head1+`<div class="card pad">아직 페어가 없습니다.
     <button class="btn" onclick="go('roster')">학생 명부</button></div>`;
-  const B=pairPostState();
-  const roots=B.rows.filter(p=>!p.parent_id).sort((a,b)=>b.id-a.id);
+  const B=pairPostState(), idset=new Set(B.rows.map(p=>String(p.id)));
+  const roots=B.rows.filter(p=>!p.parent_id||!idset.has(String(p.parent_id)))
+    .sort((a,b)=>Number(b.id)-Number(a.id));
   const you=pairPeer();
   return head1
-   + (B.err?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD)">
-        <span class="tiny">${esc(B.err)}</span></div>`:"")
-   + `<div class="card pad" style="margin-bottom:14px">
-      <div style="display:flex;gap:11px">
-        ${faceHTML(pairMe(),42)}
-        <div style="flex:1;min-width:0">
+   +(B.err?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD)">${esc(B.err)}</div>`:"")
+   +`<div class="mm-compose">
+      <div class="mm-compose-line">${faceHTML(pairMe(),44)}
+        <div class="mm-compose-area"><div class="mm-compose-to">${esc((you&&you.name)||"페어")} 님과 나누는 기록</div>
           <textarea class="inp" id="pb-write" rows="3" maxlength="1000" style="width:100%"
-            placeholder="${esc((you&&you.name)||"페어")} 님만 볼 수 있습니다. 대사와 *행동*을 남겨 보세요."></textarea>
-          <div class="spread" style="margin-top:8px">
-            <span class="tiny muted">1000자까지 · 최근 300개를 보여 줍니다</span>
-            <div class="row">
-              <button class="btn sm ghost" onclick="pairPostFetch(true)">새로 고침</button>
-              <button class="btn pri" onclick="pairPostSend(null)">남기기</button></div>
-          </div>
+            placeholder="무슨 일이 있었나요? 대사와 *행동*을 남겨 보세요."></textarea>
+          <div class="mm-compose-actions"><span class="tiny muted">1000자까지 · Ctrl + Enter 등록</span>
+            <div class="row"><button class="btn sm ghost" onclick="pairPostFetch(true)">새로 고침</button>
+              <button class="btn pri" id="pb-compose-submit" onclick="pairPostSend(null)">게시</button></div></div>
         </div>
       </div>
-      <div class="tiny muted" style="margin-top:10px;line-height:1.8">
-        화면에는 페어 두 사람에게만 보입니다. 다만 이 게임은 공개된 열쇠 하나로 돌아가므로,
-        채팅과 마찬가지로 <b>정말 남이 보면 안 되는 이야기는 적지 않는 편이 좋습니다.</b></div>
+      <p class="mm-privacy">페어 두 사람에게만 표시됩니다. 서버 키로 기록을 조회할 수 있으므로 민감한 정보는 적지 마세요. 하트와 북마크는 이 브라우저에만 보관됩니다.</p>
     </div>`
-   + `<div class="card pad">
-      ${roots.length?roots.map(p=>pairPostRow(p,0)).join("")
-        :`<div class="tiny muted" style="padding:28px 2px;text-align:center">
-           아직 아무것도 적히지 않았습니다. 첫 줄을 남겨 보세요.</div>`}
-    </div>`;
+   +`<section class="mm-timeline" aria-label="둘의 기록 타임라인">
+      ${roots.length?roots.map(p=>`<div class="mm-thread">${pairPostRow(p,0,new Set())}</div>`).join(""):
+        `<div class="mm-empty">아직 남겨진 기록이 없습니다.<div>첫 번째 이야기를 적어 보세요.</div></div>`}
+    </section>`;
 };
-
 /* 페어 화면 — 헤더를 맨 위에, 둘의 기록으로 가는 길 */
 const _pairhub8 = VIEWS.pairhub;
 VIEWS.pairhub = () => {
