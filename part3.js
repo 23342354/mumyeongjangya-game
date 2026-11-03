@@ -157,7 +157,6 @@ function ensureV3(){
   d("mart",{});
   d("crest",null);
   d("run",null);
-  d("dmTab","RP");
   if(!S.auc.lots.length && S.auc.phase==="idle") S.auc.next=aucNextIn();
 }
 function ct(k,v){ if(!S.ct) return; S.ct[k]=(S.ct[k]||0)+(v===undefined?1:v); }
@@ -901,42 +900,6 @@ const _runQuest2=runQuest;
 runQuest=function(stage,party){
   if(S.run&&!S.run.done){ toast("이미 의뢰를 나가 있습니다.","bad"); return; }
   startRun(stage,party);
-};
-
-/* ═══════════════════════════════════════════════════
-   1:1 — RP / 오너 분리
-   ═══════════════════════════════════════════════════ */
-const _addMsg=addMsg;
-addMsg=function(tab,who,body,c,title){
-  _addMsg(tab,who,body,c,title);
-  const m=S.msgs[S.msgs.length-1];
-  if(m) m.mode=(S.chatMode==="RP"?"RP":"오너");
-};
-const _renderChat=renderChat;
-renderChat=function(){
-  _renderChat();
-  if(S.chatTab!=="1:1") return;
-  const row=document.querySelector("#chatcol .row");
-  if(row){
-    const seg=document.createElement("span");
-    seg.className="seg"; seg.style.marginLeft="6px";
-    seg.innerHTML=["전체","RP","오너"].map(t=>
-      `<button class="${(S.dmTab||"전체")===t?"on":""}" onclick="S.dmTab='${t}';renderChat()">${t}</button>`).join("");
-    row.insertBefore(seg, row.children[1]||null);
-  }
-  const log=document.getElementById("chatlog");
-  if(!log) return;
-  const dm=S.dmTab||"전체";
-  const list=S.msgs.filter(chatVisible).filter(m=>dm==="전체"||(m.mode||"RP")===dm).sort(chatSort).slice(-120);
-  log.innerHTML=list.map(m=>{
-    const owner=(m.mode==="오너");
-    return `<div class="cmsg" style="${owner?"justify-content:flex-end":""}">
-      ${owner?"":`<span class="ctime">${m.time}</span>`}
-      <span class="cbody" style="${owner?"background:var(--s4);border-radius:12px;padding:5px 11px;max-width:80%":"flex:1"}">
-        ${owner?"":`<b style="color:${m.c||"var(--violetL)"}">${esc(m.who)}</b> `}${m.body}</span>
-      ${owner?`<span class="ctime" style="text-align:right">${m.time}</span>`:""}</div>`;
-  }).join("")||`<div class="tiny muted" style="padding:14px 2px">주고받은 말이 없습니다.</div>`;
-  log.scrollTop=log.scrollHeight;
 };
 
 /* ═══════════════════════════════════════════════════

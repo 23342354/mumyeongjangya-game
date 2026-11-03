@@ -146,12 +146,11 @@ a:hover{text-decoration:underline}
 .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 
 /* ── 레이아웃 ─────────────────────── */
-#app{display:grid;grid-template-columns:208px minmax(0,1fr) 300px;gap:16px;
-  max-width:1560px;margin:0 auto;padding:16px;align-items:start}
+#app{display:grid;grid-template-columns:208px minmax(0,1fr) clamp(320px,25vw,360px);gap:16px;
+  max-width:1680px;margin:0 auto;padding:16px;align-items:start}
 @media(max-width:1180px){
   #app{grid-template-columns:184px minmax(0,1fr)}
-  #chatcol{grid-column:1/-1;position:static;order:3}
-  #chatcol .chat-log{height:300px}
+  #chatcol{grid-column:1/-1;order:3}
 }
 @media(max-width:780px){#app{grid-template-columns:1fr;padding:10px} #navcol{order:2} #chatcol{order:3}}
 
@@ -247,20 +246,37 @@ table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--s3);text-ali
 table.t th{color:var(--dim2);font-weight:600;font-size:11px;letter-spacing:.08em}
 
 /* 채팅 */
-#chatcol{position:sticky;top:96px}
+#chatcol{position:sticky;top:var(--chat-top,112px);min-width:0;
+  height:calc(100vh - var(--chat-top,112px) - 16px);
+  height:calc(100dvh - var(--chat-top,112px) - 16px)}
+.chat-panel{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.chat-panel> :not(.chat-log){flex-shrink:0}
 .chat-tabs{display:flex;gap:2px;padding:7px 8px 0;flex-wrap:wrap}
-.ctab{font-size:12px;padding:4px 9px;border-radius:6px 6px 0 0;color:var(--dim);cursor:pointer}
+.ctab{font-size:12px;padding:4px 9px;border:0;background:transparent;border-radius:6px 6px 0 0;color:var(--dim);cursor:pointer}
 .ctab.on{background:var(--s3);color:var(--gold)}
-.chat-log{height:430px;overflow-y:auto;padding:8px 10px;font-size:12px;line-height:1.55;border-top:1px solid var(--line)}
-.cmsg{display:flex;gap:6px;padding:3px 0;align-items:flex-start}
-.ctime{color:var(--s6);font-size:10.5px;flex:none;width:34px;padding-top:1px}
-.cname{font-weight:600;flex:none}
+.chat-toolbar,.chat-compose-mode{display:flex;align-items:center;gap:8px;padding:6px 10px}
+.chat-scope{margin-left:auto;text-align:right;overflow-wrap:anywhere}
+.chat-context:empty{display:none}
+.chat-context{padding:0 10px 7px;font-size:11px;color:var(--dim)}
+.chat-context select{width:100%;min-width:0;font-size:12px;padding:5px 8px}
+.chat-log{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;
+  padding:8px 10px;font-size:12.5px;line-height:1.7;border-top:1px solid var(--line)}
+.cmsg{display:flex;gap:7px;padding:5px 0;align-items:flex-start}
+.ctime{color:var(--dim2);font-size:10.5px;flex:none;width:34px;padding-top:2px}
+.cbody{min-width:0;flex:1;overflow-wrap:anywhere}
+.cname{font-weight:600}
 .cbody em{color:var(--violetL);font-style:italic}
-.ctitle{font-size:9.5px;border:1px solid var(--s5);border-radius:4px;padding:0 4px;color:var(--violet);flex:none}
-.chat-in{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
-.chat-in input{flex:1;background:var(--s1);border:1px solid var(--line);border-radius:6px;
+.ctitle{font-size:9.5px;border:1px solid var(--s5);border-radius:4px;padding:0 4px;color:var(--violet);white-space:nowrap}
+.cmode{display:inline-block;font-size:10px;font-weight:600;line-height:1.5;border:1px solid var(--line2);
+  border-radius:4px;padding:0 4px;margin-right:4px;color:var(--violetL);background:var(--s3);vertical-align:1px}
+.cmode.owner{color:var(--jade);border-color:var(--jadeD)}
+.chat-compose{border-top:1px solid var(--line);background:var(--subBg)}
+.chat-compose-mode{padding-bottom:0}
+.chat-in{display:flex;gap:6px;padding:8px}
+.chat-in input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:6px;
   color:var(--tx);padding:7px 9px;font-size:12px;outline:none}
 .chat-in input:focus{border-color:var(--line2)}
+@media(max-width:1180px){#chatcol{position:static;max-height:760px;min-height:320px}}
 
 /* 모달 */
 .mask{position:fixed;inset:0;background:var(--glass0);z-index:200;display:flex;align-items:center;
@@ -743,7 +759,7 @@ function newState(){
     pass:3, passNext:720, outing:{done:{}, souv:[]},
     fest:{marks:0, todayMarks:0, basket:0, visits:0, stamps:[], souv:null, total:265000},
     rel:[], friends:[],
-    msgs:[], chatReset:2, chatFrom:0, chatTab:"전체", chatMode:"RP",
+    msgs:[], chatReset:2, chatFrom:0, chatTab:"전체", chatMode:"RP", chatFilter:"모두",
     news:[], notes:[],
     place:"plaza", examHist:{},
     dayStamp:0, playFrom:Date.now(),
@@ -759,6 +775,7 @@ function load(){
        if((o.chatReset||0) < 2){ o.msgs=[]; o.chatReset=2; o.chatFrom=Date.now(); }
        if(o.av && ICLEGACY[o.av]) o.av=ICLEGACY[o.av];
        if(o.av && !ICONS[o.av]) o.av="lantern";
+       if(o.chatFilter===undefined) o.chatFilter=o.chatTab==="1:1"&&["RP","오너"].includes(o.dmTab)?o.dmTab:"모두";
        return Object.assign(base,o, {sub:Object.assign(base.sub,o.sub||{}), res:Object.assign(base.res,o.res||{})});
   }catch(e){ return null; }
 }
@@ -1127,39 +1144,87 @@ function go(v){
 
 /* ── 채팅 ── */
 const CHATTABS=["전체","이웃","계통","페어","1:1"];
-function renderChat(){
-  const list=S.msgs.filter(chatVisible).sort(chatSort).slice(-120);
-  $("#chatcol").innerHTML=`
-  <div class="card">
-    <div class="chat-tabs">
-      ${CHATTABS.map(t=>`<div class="ctab ${S.chatTab===t?"on":""}" onclick="setChatTab('${t}')">${t}</div>`).join("")}
-    </div>
-    <div class="row" style="padding:4px 10px 6px">
-      <span class="seg">
-        <button class="${S.chatMode==="RP"?"on":""}" onclick="setChatMode('RP')">RP</button>
-        <button class="${S.chatMode==="사담"?"on":""}" onclick="setChatMode('사담')">사담</button>
-      </span>
-      <span class="tiny muted" style="margin-left:auto">${S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="이웃"?homeOf(S.hall).n:"전원"}</span>
-    </div>
-    <div class="chat-log" id="chatlog">
-      ${list.map(m=>`<div class="cmsg">
-        <span class="ctime">${m.time}</span>
-        ${m.title?`<span class="ctitle">${esc(m.title)}</span>`:""}
-        <span class="cname" style="color:${m.c||"var(--violetL)"}">${esc(m.who)}</span>
-        <span class="cbody">${m.body}</span></div>`).join("")||`<div class="tiny muted" style="padding:14px 2px">아직 오간 말이 없습니다.</div>`}
-    </div>
-    <div class="chat-in">
-      <input id="chatinput" placeholder="대사를 입력하고 *행동*은 별표 사이에" onkeydown="if(event.key==='Enter')sendChat()">
-      <button class="btn pri sm" onclick="sendChat()">보내기</button>
-    </div>
-  </div>`;
-  const l=$("#chatlog"); if(l) l.scrollTop=l.scrollHeight;
+function chatModeOf(mode){ return mode==="오너"||mode==="사담"?"오너":"RP"; }
+function chatMessages(){
+  return S.msgs.filter(chatVisible)
+    .filter(m=>!["RP","오너"].includes(S.chatFilter)||chatModeOf(m.mode)===S.chatFilter)
+    .sort(chatSort).slice(-120);
 }
-function setChatTab(t){ S.chatTab=t; renderChat(); }
-function setChatMode(m){ S.chatMode=m; renderChat(); }
+function chatMessageHTML(m){
+  const mode=chatModeOf(m.mode);
+  return `<div class="cmsg"><span class="ctime">${esc(m.time||"")}</span>
+    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.body}</div></div>`;
+}
+let CHATRESIZE=null;
+function chatLayout(){
+  const top=document.getElementById("topbar");
+  if(!top) return;
+  const fit=()=>document.documentElement.style.setProperty("--chat-top",Math.ceil(top.getBoundingClientRect().height+16)+"px");
+  fit();
+  if(!CHATRESIZE&&typeof ResizeObserver!=="undefined"){
+    CHATRESIZE=new ResizeObserver(fit); CHATRESIZE.observe(top);
+  }
+}
+function renderChat(bottom=false){
+  const host=$("#chatcol"); if(!host) return;
+  S.chatMode=chatModeOf(S.chatMode);
+  if(!["모두","RP","오너"].includes(S.chatFilter)) S.chatFilter="모두";
+  /* 입력칸은 다시 만들지 않습니다. 새 글을 받아도 초안·커서·한글 조합이 유지됩니다. */
+  if(!host.querySelector(".chat-panel")) host.innerHTML=`
+  <section class="card chat-panel" aria-label="채팅">
+    <div class="chat-tabs" id="chattabs" aria-label="채팅 채널"></div>
+    <div class="chat-toolbar">
+      <span class="tiny muted">보기</span><span class="seg" id="chatfilters" aria-label="대화 필터"></span>
+      <span class="tiny muted chat-scope" id="chatscope"></span>
+    </div>
+    <div class="chat-context" id="chatcontext"></div>
+    <div class="chat-log" id="chatlog" role="log" aria-label="채팅 기록" aria-live="polite" tabindex="0"></div>
+    <div class="chat-compose">
+      <div class="chat-compose-mode"><span class="tiny muted">보내기</span><span class="seg" id="chatmodes" aria-label="전송 모드"></span></div>
+      <div class="chat-in">
+        <input id="chatinput" aria-label="채팅 메시지" autocomplete="off" onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();sendChat()}">
+        <button class="btn pri sm" onclick="sendChat()">보내기</button>
+      </div>
+    </div>
+  </section>`;
+  const update=(id,html)=>{ const el=document.getElementById(id); if(el._chatHTML!==html){el.innerHTML=html;el._chatHTML=html;} };
+  update("chattabs",CHATTABS.map(t=>`<button class="ctab ${S.chatTab===t?"on":""}" aria-pressed="${S.chatTab===t}" onclick="setChatTab('${t}')">${t}</button>`).join(""));
+  update("chatfilters",["모두","RP","오너"].map(t=>`<button class="${S.chatFilter===t?"on":""}" aria-pressed="${S.chatFilter===t}" onclick="setChatFilter('${t}')">${t}</button>`).join(""));
+  update("chatmodes",["RP","오너"].map(t=>`<button class="${S.chatMode===t?"on":""}" aria-pressed="${S.chatMode===t}" onclick="setChatMode('${t}')">${t}</button>`).join(""));
+  $("#chatscope").textContent=S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="이웃"?homeOf(S.hall).n:S.chatTab==="페어"?"페어끼리":S.chatTab==="1:1"?(S.dmWith?.name||"상대 선택"):"전원";
+  update("chatcontext",typeof chatContextHTML==="function"?chatContextHTML():"");
+  $("#chatinput").placeholder=S.chatMode==="RP"?"대사를 입력하고 *행동*은 별표 사이에":"오너 대화를 입력하세요";
+  chatLayout();
+  const list=chatMessages(), log=$("#chatlog");
+  const view=JSON.stringify([S.chatTab,typeof chatScope==="function"?chatScope(S.chatTab):"",S.chatFilter]);
+  const follow=bottom||host._chatView!==view||log.scrollHeight-log.clientHeight-log.scrollTop<48;
+  const html=list.map(chatMessageHTML).join("")||`<div class="tiny muted" style="padding:14px 2px">${S.chatFilter==="모두"?"아직 오간 말이 없습니다.":S.chatFilter+" 대화가 아직 없습니다."}</div>`;
+  if(log._chatHTML!==html){
+    const oldTop=log.scrollTop, bounds=log.getBoundingClientRect();
+    const anchor=follow?-1:[...log.children].findIndex(el=>el.getBoundingClientRect().bottom>bounds.top);
+    const msg=host._chatMessages?.[anchor], offset=anchor<0?0:log.children[anchor].getBoundingClientRect().top-bounds.top;
+    log.innerHTML=html; log._chatHTML=html;
+    const next=list.indexOf(msg);
+    if(!follow) log.scrollTop=next<0?oldTop:log.scrollTop+log.children[next].getBoundingClientRect().top-log.getBoundingClientRect().top-offset;
+  }
+  if(follow) log.scrollTop=log.scrollHeight;
+  host._chatView=view; host._chatMessages=list;
+}
+function setChatTab(t){ if(!CHATTABS.includes(t)) return; S.chatTab=t; renderChat(); save(); }
+function setChatFilter(m){
+  if(!["모두","RP","오너"].includes(m)) return;
+  S.chatFilter=m;
+  if(m!=="모두") S.chatMode=m;
+  renderChat(); save();
+}
+function setChatMode(m){
+  S.chatMode=chatModeOf(m);
+  if(["RP","오너"].includes(S.chatFilter)) S.chatFilter=S.chatMode;
+  renderChat(); save();
+}
 function fmtChat(s){ return esc(s).replace(/\*([^*]+)\*/g,"<em>$1</em>"); }
 function addMsg(tab,who,body,c,title,extra){
-  const m=Object.assign({tab,who,body,c,title,ts:Date.now(),
+  const m=Object.assign({tab,who,body,c,title,mode:chatModeOf(S.chatMode),ts:Date.now(),
     time:cal().str.replace(/^(오전|오후) /,"")}, extra||{});
   S.msgs.push(m);
   if(S.msgs.length>400) S.msgs.shift();
@@ -1170,9 +1235,11 @@ function chatVisible(m){ return m.tab===S.chatTab; }
 function chatSort(a,b){ return (a.ts||0)-(b.ts||0); }
 function sendChat(){
   const i=$("#chatinput"); if(!i||!i.value.trim()) return;
-  addMsg(S.chatTab, S.name, fmtChat(i.value.trim()), S.color, S.course+"과정");
-  i.value=""; renderChat();
+  const m=addMsg(S.chatTab, S.name, fmtChat(i.value.trim()), S.color, S.course+"과정",
+    {scope:typeof chatScope==="function"?chatScope(S.chatTab):"",mine:true});
+  i.value=""; renderChat(true); save();
   setTimeout(()=>{ if(S.chatTab==="전체" && Math.random()<.22){ npcChat("전체"); renderChat(); } }, rnd(1400,3600));
+  return m;
 }
 const CHATPOOL={
  RP:["*창밖을 본다.* 오늘도 해가 없네.","의뢰 다녀온 사람? 3구역 쪽 어땠어.","*부적을 접다 말고 고개를 든다.*","다친 데 있으면 보건실 가. 삼장 선생 계셔.","공명 조율이 영 안 맞아. 손실이 너무 커.","*동전을 세어 본다.* 이번 주 륜이 벌써 바닥이야.","야시장 갈 사람. 혼자는 좀 그래서.","어제 꿈에 모르는 골목이 나왔어. 또.","석탑 종 울린 거 들었어? 몇 구역이래?","*가볍게 목을 돌린다.* 몸이 무겁다.","페어 어디 갔는지 본 사람 있어?","수업 하나 더 들을까 하다가 그냥 왔어."],
@@ -1187,7 +1254,7 @@ function npcChat(tab){
   /* 모브 학생은 말하지 않습니다. 교사·직원만 가끔 한마디 합니다. */
   tab="전체";   /* 교사·직원은 전체 채팅에서만 말합니다 */
   const k=pick(Object.keys(NPC)), n=NPC[k];
-  addMsg(tab, n.n, fmtChat(freshLine(n.line)), n.c, n.role);
+  addMsg(tab, n.n, fmtChat(freshLine(n.line)), n.c, n.role,{mode:"RP"});
 }
 
 /* ═══════════════════════════════════════════════════

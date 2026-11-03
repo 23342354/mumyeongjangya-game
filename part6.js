@@ -610,7 +610,7 @@ function chatRows(rows){
     const d=new Date(r.created_at||Date.now());
     const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
     S.msgs.push({sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
-      c:r.color||"var(--violetL)", title:r.title||"", mode:r.mode||"RP",
+      c:r.color||"var(--violetL)", title:r.title||"", mode:chatModeOf(r.mode),
       ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`});
     added++;
   });
@@ -633,7 +633,7 @@ function chatPush(tab, body, mode){
   if(!sbOn()) return Promise.resolve();
   return sbSend("POST","messages",[{
     tab, scope:chatScope(tab), from_id:S.sb.id, who:S.name,
-    body, color:S.color, title:(S.course||1)+"과정", mode:mode||"RP"
+    body, color:S.color, title:(S.course||1)+"과정", mode:chatModeOf(mode)
   }],"return=minimal").catch(sbErr);
 }
 function chatTick(){
@@ -653,14 +653,9 @@ sendChat = function(){
     toast("먼저 대화할 사람을 고르세요.","bad"); return;
   }
   const tab=S.chatTab;
-  _sendChatSb();
-  /* 내가 쓴 글에도 채널 표식을 붙입니다.
-     이게 없으면 숙사·계통·페어·1:1 처럼 범위가 있는 탭에서 내 말이 걸러져
-     상대 말만 보이고 핑퐁이 되지 않습니다. */
-  const mine=S.msgs[S.msgs.length-1];
-  if(mine && mine.tab===tab && mine.who===S.name){ mine.scope=chatScope(tab); mine.mine=true; }
-  renderChat();
-  if(sbOn()) chatPush(tab, fmtChat(raw), S.chatMode==="RP"?"RP":"오너");
+  const mine=_sendChatSb();
+  if(mine && sbOn()) chatPush(tab, mine.body, mine.mode);
+  return mine;
 };
 /* 교사 한마디는 내 화면에만 */
 const _npcChatSb = npcChat;
@@ -675,39 +670,20 @@ function dmPick(id){
   S.dmWith = r ? {id:r.id, name:r.name} : null;
   S.chatTab="1:1"; renderChat();
 }
-const _renderChatSb = renderChat;
-renderChat = function(){
-  _renderChatSb();
-  const row=document.querySelector("#chatcol .row");
-  if(!row) return;
-  // 연결 안 됐으면 혼자 쓰는 중이라고 알려 줍니다
-  if(!sbOn()){
-    const w=document.createElement("span");
-    w.className="tiny"; w.style.cssText="margin-left:auto;color:var(--warn)";
-    w.textContent="혼자 보는 중 · 공유 기록을 연결하면 함께 이야기합니다";
-    const old=row.querySelector(".tiny.muted"); if(old) old.remove();
-    row.appendChild(w);
-    return;
-  }
+function chatContextHTML(){
+  if(!sbOn()) return `<span style="color:var(--warn)" title="공유 기록을 연결하면 함께 이야기합니다">혼자 보는 중</span>`;
   if(S.chatTab==="1:1"){
     const list=(S.sb.roster||[]).filter(r=>r.id!==S.sb.id);
-    const bar=document.createElement("div");
-    bar.className="row"; bar.style.cssText="padding:0 10px 6px;gap:6px";
-    bar.innerHTML = list.length
-      ? `<select onchange="dmPick(this.value)" style="flex:1;min-width:0">
+    return list.length
+      ? `<select aria-label="1:1 대화 상대" onchange="dmPick(this.value)">
            <option value="">— 대화할 사람 —</option>
-           ${list.map(r=>`<option value="${r.id}" ${S.dmWith&&S.dmWith.id===r.id?"selected":""}>${esc(r.name||"이름 없음")}</option>`).join("")}
+           ${list.map(r=>`<option value="${esc(r.id)}" ${S.dmWith&&S.dmWith.id===r.id?"selected":""}>${esc(r.name||"이름 없음")}</option>`).join("")}
          </select>`
       : `<span class="tiny muted">명부에 다른 러너가 없습니다.</span>`;
-    row.parentNode.insertBefore(bar, row.nextSibling);
   }
-  if(S.chatTab==="페어" && !chatScope("페어")){
-    const n=document.createElement("div");
-    n.className="tiny muted"; n.style.cssText="padding:0 10px 6px";
-    n.textContent="페어를 맺으면 둘만의 자리가 열립니다.";
-    row.parentNode.insertBefore(n, row.nextSibling);
-  }
-};
+  if(S.chatTab==="페어" && !chatScope("페어")) return "페어를 맺으면 둘만의 자리가 열립니다.";
+  return "";
+}
 /* 명부에서 이름을 누르면 1:1 로 */
 dmTo = function(n){
   const r=(S.sb.roster||[]).find(x=>x.name===n);
