@@ -47,7 +47,7 @@ function myRecord(){
   return {
     id:S.sb.id, name:S.name, course:S.course, lvl:S.lvl,
     power:power(), dps:c.dps, hpv:c.hp,
-    line:S.line, weapon:S.weapon||"", hall:S.hall, title:S.title,
+    line:S.line, weapon:S.line==="마무기"?(S.weapon||""):"", hall:S.hall, title:S.title,
     intro:S.intro||"", av:S.av, av_img:(S.avImg||"").slice(0,120000),
     tower:S.tower||0, guard:S.tower2||0, arena_best:S.arena.best||0,
     quest:S.quests.cleared||0, dexp:(typeof dexScore==="function"?dexScore():0),
