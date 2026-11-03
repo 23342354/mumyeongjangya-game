@@ -428,6 +428,17 @@ textarea.inp{min-height:76px;resize:vertical}
 .mm-privacy{font-size:11px;color:var(--dim2);margin:12px 0 0;line-height:1.6}
 .mm-thread{padding:4px 0 8px;border-bottom:1px solid var(--line);position:relative}
 .mm-thread:last-child{border-bottom:none}
+/* 수십 단계 이상 이어지는 페어 타래를 한 폭의 타임라인으로 표시합니다. */
+.mm-board-status{padding:9px 17px;border-bottom:1px solid var(--line);background:rgba(141,80,185,.07)}
+.mm-thread-guide{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:29px;padding:6px 16px 4px;font-size:11px;color:var(--dim2);background:rgba(141,80,185,.07)}
+.mm-thread-guide button{font-size:11px;padding:4px 9px}
+.mm-post-reply{border-top:1px solid rgba(153,109,192,.11)}
+.mm-post-reply>.mm-avatar:after{content:"";position:absolute;left:22px;top:50px;bottom:-18px;border-left:2px solid var(--line2);z-index:-1;pointer-events:none}
+.mm-context-jump{display:inline-block;font:inherit;font-size:11px;text-align:left;border:0;border-radius:4px;background:transparent;padding:3px 5px;margin-left:-5px;cursor:pointer}
+.mm-context-jump:hover,.mm-context-jump:focus-visible{color:var(--violetL);background:var(--wash1);outline:none}
+.mm-post-focus{background:var(--wash1)!important;outline:1px solid var(--violetL);outline-offset:-1px}
+@media(max-width:540px){.mm-thread-guide{padding:6px 10px}.mm-board-status{padding:8px 10px}.mm-post-reply>.mm-avatar:after{left:20px;top:46px}}
+
 .mm-post{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;padding:12px 18px 2px;position:relative;
   transition:background .15s ease}
 .mm-post:hover{background:rgba(155,110,215,.045)}
@@ -3660,7 +3671,7 @@ else setTimeout(()=>init(),0);
 <script src="part6.js?v=20261103-pair-chat-recovery1"></script>
 <script src="part7.js?v=20261103-account-save-status1"></script>
 <script src="social.js"></script>
-<script src="part8.js?v=20261103-restore-rp"></script>
+<script src="part8.js?v=20261103-pairthread-unlimited1"></script>
 <script src="part9.js"></script>
 <script src="part10.js?v=20261103-yowa-shop1"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>

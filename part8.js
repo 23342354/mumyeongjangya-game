@@ -1123,26 +1123,78 @@ function pairHeadHTML(){
 }
 
 /* ───────── ③ 페어 전용 게시판 ───────── */
-const PAIRBOARD={rows:[], at:0, forId:null, err:""};
+const PAIRBOARD={rows:[], at:0, forId:null, err:"", loaded:false, loading:false};
 function pairPostState(){ return PAIRBOARD; }
 let PAIRBOARDBUSY=false;
-function pairPostFetch(force){
+const PAIRPOST_PAGE=300;
+/* 서버 기본 300개 제한 때문에 긴 타래의 이전 글이 사라지던 문제를 해결합니다.
+   첫 방문/수동 새로고침은 모든 페이지를 읽고, 이후 자동 갱신은 새 글만 읽습니다. */
+async function pairPostFetch(force){
   const P=pairEnsure();
-  if(!sbOn() || !P.mine) return Promise.resolve(false);
-  const B=pairPostState();
-  if(PAIRBOARDBUSY) return Promise.resolve(false);
-  if(!force && B.forId===String(P.mine.id) && Date.now()-B.at<12000) return Promise.resolve(false);
-  PAIRBOARDBUSY=true; B.at=Date.now();
-  const id=encodeURIComponent(P.mine.id);
-  return sbGet(`pair_posts?select=*&pair_id=eq.${id}&order=id.desc&limit=300`)
-    .then(rows=>{
-      B.rows=rows||[]; B.forId=String(P.mine.id); B.err="";
-      if(VIEW==="pairboard") renderMain(true);
-      return true;
-    })
-    .catch(()=>{ B.err="둘의 기록을 불러오지 못했습니다. 「페어-헤더-게시판.sql」을 실행했는지 확인해 주세요."; 
-      if(VIEW==="pairboard") renderMain(true); return false; })
-    .finally(()=>{ PAIRBOARDBUSY=false; });
+  if(!sbOn() || !P.mine) return false;
+  const B=pairPostState(), pairId=String(P.mine.id);
+  if(PAIRBOARDBUSY) return false;
+  if(!force && B.loaded && B.forId===pairId && Date.now()-B.at<12000)return false;
+  PAIRBOARDBUSY=true;
+  const changed=B.forId!==pairId;
+  if(changed){B.rows=[]; B.forId=pairId; B.loaded=false; B.err="";}
+  const full=!!force||!B.loaded;
+  B.loading=true;
+  if(VIEW==="pairboard" && !B.rows.length)renderMain(true);
+  const base=`pair_posts?select=*&pair_id=eq.${encodeURIComponent(pairId)}`;
+  const initialRows=B.rows.slice();
+  const fetched=[];
+  let cursor="";
+  try{
+    if(!full && initialRows.length){
+      // 새 글을 오름차순으로 페이지 순회: 새 글이 한 번에 300개를 넘더라도 누락 없음.
+      const lastId=initialRows.reduce((a,p)=>!a || Number(p.id)>Number(a)?String(p.id):a,"");
+      cursor=lastId;
+      while(true){
+        const page=await sbGet(`${base}&id=gt.${encodeURIComponent(cursor)}&order=id.asc&limit=${PAIRPOST_PAGE}`);
+        if(!Array.isArray(page))throw new Error("페어 게시판 서버 응답이 올바르지 않습니다.");
+        fetched.push(...page);
+        if(page.length<PAIRPOST_PAGE)break;
+        const next=String(page[page.length-1].id);
+        if(next===cursor)throw new Error("페어 기록 페이지 이동이 멈췄습니다.");
+        cursor=next;
+      }
+    }else{
+      // 예전 글까지 보존한 전체 기록을 최신 페이지부터 차례로 요청합니다.
+      while(true){
+        const before=cursor?`&id=lt.${encodeURIComponent(cursor)}`:"";
+        const page=await sbGet(`${base}${before}&order=id.desc&limit=${PAIRPOST_PAGE}`);
+        if(!Array.isArray(page))throw new Error("페어 게시판 서버 응답이 올바르지 않습니다.");
+        fetched.push(...page);
+        if(page.length<PAIRPOST_PAGE)break;
+        const next=String(page[page.length-1].id);
+        if(next===cursor)throw new Error("페어 기록 페이지 이동이 멈췄습니다.");
+        cursor=next;
+      }
+    }
+    if(String(pairEnsure().mine?.id)!==pairId)return false;
+    const keep=full?[]:B.rows;
+    const map=new Map();
+    for(const row of [...keep,...fetched])map.set(String(row.id),row);
+    // 전체 동기화 중 직접 등록된 새로운 글은 보존합니다.
+    if(full){
+      const latest=fetched.length?Math.max(...fetched.map(r=>Number(r.id))):0;
+      for(const row of B.rows){if(Number(row.id)>latest)map.set(String(row.id),row);}
+    }
+    B.rows=[...map.values()].sort((a,b)=>Number(b.id)-Number(a.id));
+    B.loaded=true;B.err="";B.at=Date.now();
+    if(VIEW==="pairboard")renderMain(true);
+    return true;
+  }catch(e){
+    B.err="둘의 기록을 모두 불러오지 못했습니다. 연결과 페어 게시판 권한을 확인하고 다시 시도해 주세요.";
+    B.loaded=false;
+    console.warn("pair_posts fetch failed:",e);
+    if(VIEW==="pairboard")renderMain(true);
+    return false;
+  }finally{
+    B.loading=false;PAIRBOARDBUSY=false;
+    if(VIEW==="pairboard" && String(pairEnsure().mine?.id)===pairId)renderMain(true);
+  }
 }
 /* 페어 기록 · 마스토돈형 타임라인과 답글 연쇄 */
 let PAIRPOSTSUBMIT=false;
@@ -1251,7 +1303,7 @@ function pairPostDelete(id){
   if(!p||String(p.author_id)!==String(S.sb.id)){toast("자신이 쓴 기록만 삭제할 수 있습니다.","bad");return;}
   if(!confirm("이 글을 지울까요? 이 글에 달린 답글도 함께 사라집니다."))return;
   sbSend("DELETE",`pair_posts?id=eq.${encodeURIComponent(id)}&author_id=eq.${encodeURIComponent(String(S.sb.id))}`,undefined,"return=minimal")
-    .then(()=>{closeModal();return pairPostFetch(true);})
+    .then(()=>{closeModal(); const B=pairPostState();B.loaded=false;B.rows=[];return pairPostFetch(true);})
     .then(()=>{if(VIEW==="pairboard")renderMain(true);})
     .catch(()=>toast("지우지 못했습니다.","bad"));
 }
@@ -1272,28 +1324,26 @@ function pairPostMore(id){
     <button class="btn" onclick="pairPostCopy(${p.id})">${pairPostIcon("copy")} 본문 복사</button>
     ${mine?`<button class="btn red" onclick="pairPostDelete(${p.id})">기록 삭제</button>`:""}</div>`);
 }
-function pairPostRow(p,depth,seen){
-  seen=seen||new Set();
-  const sid=String(p.id);if(seen.has(sid)||depth>40)return ""; seen.add(sid);
+function pairPostScroll(id){
+  const el=document.getElementById("pair-post-"+String(id));
+  if(el){el.scrollIntoView({behavior:"smooth",block:"center"});
+    el.classList.add("mm-post-focus");setTimeout(()=>el.classList.remove("mm-post-focus"),1800);}
+}
+function pairPostRow(p,depth,childrenCount,parent,hearts,marks){
+  const sid=String(p.id);
   const me=pairMe(),you=pairPeer();
   const who=String(p.author_id)===String(me.id)?me:
     (you&&String(p.author_id)===String(you.id)?you:{name:p.author_name||"학생",av:"lantern",color:"var(--s5)",id:p.author_id});
-  const mine=String(p.author_id)===String(me.id);
-  const B=pairPostState(),children=B.rows.filter(x=>String(x.parent_id||"")===sid&&String(x.id)!==sid)
-    .sort((a,b)=>Number(a.id)-Number(b.id));
-  const hearts=pairPostMarks("heart").values.map(String).includes(sid);
-  const marks=pairPostMarks("bookmark").values.map(String).includes(sid);
-  const parent=p.parent_id?pairPostFind(p.parent_id):null;
-  const parentName=parent?.author_name||"";
-  return `<article class="mm-post ${depth?"mm-post-reply":""}" id="pair-post-${p.id}" data-parent="${esc(p.parent_id||"")}">
+  return `<article class="mm-post ${depth?"mm-post-reply":""}" id="pair-post-${p.id}" data-depth="${depth}" data-parent="${esc(p.parent_id||"")}">
       <div class="mm-avatar">${faceHTML(who,44)}</div>
       <div class="mm-post-main">
         <div class="mm-byline"><b>${esc(who.name||"")}</b><span class="mm-handle">${esc(pairHandle(who))}</span>
           <span class="mm-time">· ${esc(pairPostWhen(p.created_at))}</span></div>
-        ${parentName?`<div class="mm-context">${esc(parentName)} 님에게 답글</div>`:""}
+        ${parent?`<button class="mm-context mm-context-jump" onclick="pairPostScroll(${Number(parent.id)})" title="답글을 단 원글로 이동">↳ ${esc(parent.author_name||"상대")} 님에게 답글 · 원글 보기</button>`:
+          (p.parent_id?`<div class="mm-context">↳ 이전 글에 답글</div>`:"")}
         <div class="mm-message">${fmtChat(p.body)}</div>
         <div class="mm-actions" role="group" aria-label="${esc(who.name||"")} 님의 기록 동작">
-          <button class="mm-action" onclick="pairPostReply(${p.id})" title="답글 달기" aria-label="답글 달기">${pairPostIcon("reply")}${children.length?`<span>${children.length}</span>`:""}</button>
+          <button class="mm-action" onclick="pairPostReply(${p.id})" title="답글 달기" aria-label="답글 달기">${pairPostIcon("reply")}${childrenCount?`<span>${childrenCount}</span>`:""}</button>
           <button class="mm-action" onclick="pairPostReply(${p.id},true)" title="인용하여 답글 달기" aria-label="인용하여 답글 달기">${pairPostIcon("quote")}</button>
           <button class="mm-action ${hearts?"on":""}" data-kind="heart" data-post="${sid}" aria-pressed="${hearts}"
             onclick="pairPostToggle('heart',${p.id})" title="마음에 들어요 (이 브라우저에만 저장)" aria-label="마음에 들어요">${pairPostIcon("heart")}</button>
@@ -1302,7 +1352,47 @@ function pairPostRow(p,depth,seen){
           <button class="mm-action" onclick="pairPostMore(${p.id})" title="더 보기" aria-label="더 보기">${pairPostIcon("more")}</button>
         </div>
       </div>
-    </article>${children.map(c=>pairPostRow(c,depth+1,seen)).join("")}`;
+    </article>`;
+}
+/* 깊이가 수십·수백 단계가 되어도 모든 답글을 순서대로 보여 줍니다.
+   재귀 40단계 제한과 반복되는 전체 배열 검색을 모두 제거합니다. */
+function pairPostThreads(rows){
+  const byId=new Map(rows.map(r=>[String(r.id),r]));
+  const liked=new Set(pairPostMarks("heart").values.map(String));
+  const bookmarked=new Set(pairPostMarks("bookmark").values.map(String));
+  const children=new Map(),roots=[];
+  for(const p of rows){
+    const parent=p.parent_id==null?"":String(p.parent_id);
+    if(parent && parent!==String(p.id) && byId.has(parent)){
+      if(!children.has(parent))children.set(parent,[]);
+      children.get(parent).push(p);
+    }else roots.push(p);
+  }
+  for(const arr of children.values())arr.sort((a,b)=>Number(a.id)-Number(b.id));
+  roots.sort((a,b)=>Number(b.id)-Number(a.id));
+  const visited=new Set(), threads=[];
+  const walk=(root)=>{
+    const ordered=[], stack=[{p:root,depth:0}];
+    while(stack.length){
+      const {p,depth}=stack.pop(),sid=String(p.id);
+      if(visited.has(sid))continue;
+      visited.add(sid);ordered.push({p,depth});
+      const kids=children.get(sid)||[];
+      for(let i=kids.length-1;i>=0;i--)stack.push({p:kids[i],depth:depth+1});
+    }
+    if(!ordered.length)return;
+    const last=ordered[ordered.length-1].p;
+    threads.push(`<div class="mm-thread">
+      <div class="mm-thread-guide"><span>타래 ${ordered.length}개 기록</span>
+        ${ordered.length>6?`<button class="btn sm ghost" onclick="pairPostScroll(${last.id})">마지막 답글로 이동 ↓</button>`:""}
+      </div>
+      ${ordered.map(({p,depth})=>pairPostRow(p,depth,(children.get(String(p.id))||[]).length,byId.get(String(p.parent_id)),liked.has(String(p.id)),bookmarked.has(String(p.id)))).join("")}
+    </div>`);
+  };
+  for(const root of roots)walk(root);
+  // 삭제되거나 비정상적인 순환 참조로 부모를 찾지 못하는 글도 숨기지 않습니다.
+  for(const p of rows)if(!visited.has(String(p.id)))walk(p);
+  return threads.join("");
 }
 VIEWS.pairboard=()=>{
   const P=pairEnsure();
@@ -1311,9 +1401,7 @@ VIEWS.pairboard=()=>{
     <button class="btn pri" onclick="sbConnect()">공유 기록 연결</button></div>`;
   if(!P.mine)return head1+`<div class="card pad">아직 페어가 없습니다.
     <button class="btn" onclick="go('roster')">학생 명부</button></div>`;
-  const B=pairPostState(), idset=new Set(B.rows.map(p=>String(p.id)));
-  const roots=B.rows.filter(p=>!p.parent_id||!idset.has(String(p.parent_id)))
-    .sort((a,b)=>Number(b.id)-Number(a.id));
+  const B=pairPostState();
   const you=pairPeer();
   return head1
    +(B.err?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD)">${esc(B.err)}</div>`:"")
@@ -1330,8 +1418,9 @@ VIEWS.pairboard=()=>{
       <p class="mm-privacy">페어 두 사람에게만 표시됩니다. 서버 키로 기록을 조회할 수 있으므로 민감한 정보는 적지 마세요. 하트와 북마크는 이 브라우저에만 보관됩니다.</p>
     </div>`
    +`<section class="mm-timeline" aria-label="둘의 기록 타임라인">
-      ${roots.length?roots.map(p=>`<div class="mm-thread">${pairPostRow(p,0,new Set())}</div>`).join(""):
-        `<div class="mm-empty">아직 남겨진 기록이 없습니다.<div>첫 번째 이야기를 적어 보세요.</div></div>`}
+      <div class="mm-board-status tiny muted">${B.loading?"기록을 불러오는 중입니다…":B.loaded?`전체 ${B.rows.length}개 기록 · 오래된 타래까지 표시`:`${B.rows.length}개 기록 · 불러오기 대기`}</div>
+      ${B.rows.length?pairPostThreads(B.rows):
+        `<div class="mm-empty">${B.loading?"기록을 불러오는 중입니다…":"아직 남겨진 기록이 없습니다."}<div>${B.loading?"잠시 후 전체 타래가 나타납니다.":"첫 번째 이야기를 적어 보세요."}</div></div>`}
     </section>`;
 };
 /* 페어 화면 — 헤더를 맨 위에, 둘의 기록으로 가는 길 */
@@ -1352,6 +1441,10 @@ VIEWS.pairhub = () => {
 /* 페어 화면·게시판에 들어갈 때 받아 옵니다 */
 const _go8 = go;
 go = function(v){
+  if(v==="pairboard"){
+    const id=String(pairEnsure().mine?.id||"");
+    if(PAIRBOARD.forId!==id){PAIRBOARD.rows=[];PAIRBOARD.loaded=false;PAIRBOARD.forId=id;PAIRBOARD.err="";}
+  }
   _go8(v);
   if(v==="pairhub"){ pairHeadFetch(false); }
   if(v==="pairboard"){ pairHeadFetch(false); pairPostFetch(true); }
