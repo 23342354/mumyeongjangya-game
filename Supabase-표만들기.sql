@@ -137,8 +137,11 @@ create table if not exists suggestions (
 -- 운영진은 Supabase 의 Table Editor 에서 suggestions 표를 직접 열어 봅니다.
 create or replace view suggestions_public as
   select id, name, cat, title,
-         case when secret then '(비공개 글입니다. 운영진만 볼 수 있습니다.)' else body end as body,
-         secret, likes, status, reply, created_at
+         case when secret then '(비공개 글입니다. 작성자와 운영진만 볼 수 있습니다.)' else body end as body,
+         secret, likes, status,
+         case when secret then '' else coalesce(reply,'') end as reply,
+         created_at,
+         (nullif(btrim(coalesce(reply,'')), '') is not null) as has_reply
   from suggestions;
 
 -- ── 4. 접근 권한 ────────────────────────────────────────────

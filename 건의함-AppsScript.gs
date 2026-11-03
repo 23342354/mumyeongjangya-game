@@ -67,7 +67,9 @@ function doGet(e) {
           secret: secret ? 1 : 0,
           likes:  Number(v[7] || 0),
           status: String(v[8] || '접수'),
-          reply:  String(v[9] || '')
+          // 비공개 글의 운영진 답변도 목록에 보내지 않습니다.
+          reply:  secret ? '' : String(v[9] || ''),
+          has_reply: !!String(v[9] || '').trim()
         });
       }
     }
@@ -94,7 +96,7 @@ function doPost(e) {
           if (String(rec[0]) === String(p.id)
               && (rec[6] === true || rec[6] === 1 || rec[6] === '1' || rec[6] === 'Y')
               && String(rec[10] || '') === receiptHash) {
-            return json_({ok:true, body:String(rec[5] || '')});
+            return json_({ok:true, body:String(rec[5] || ''), reply:String(rec[9] || '')});
           }
         }
       }

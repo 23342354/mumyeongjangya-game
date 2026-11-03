@@ -22,6 +22,16 @@ const BSTATUS={
 
 function ensureV5(){
   if(!S.board) S.board={url:"", name:"", local:[], cache:[], liked:[], last:0, state:"idle", err:""};
+  // 이전 판본에서 다운로드해 저장된 비공개 운영진 답변도 기기 캐시에서 지웁니다.
+  if(Array.isArray(S.board.cache)){
+    let scrubbed=false;
+    S.board.cache=S.board.cache.map(r=>{
+      if(!r || !+r.secret || !r.reply) return r;
+      scrubbed=true;
+      return {...r,has_reply:true,reply:""};
+    });
+    if(scrubbed && typeof save==="function") save();
+  }
   if(!S.board.liked) S.board.liked=[];
   // 운영진이 config.js에 적어 둔 주소를 그대로 씁니다 (러너는 입력할 필요 없음)
   const CF=window.MMJY_CONFIG||{};
@@ -58,21 +68,25 @@ function boardReadPrivate(id,receipt){
   if(S.board&&S.board.url){
     return boardSend({action:"read_private",id:String(id),receipt}).then(j=>{
       if(!j||!j.ok||typeof j.body!=="string") throw Error(j&&j.error||"열람 코드를 확인할 수 없습니다.");
-      return j.body;
+      return {body:j.body, reply:typeof j.reply==="string"?j.reply:null};
     });
   }
   if(typeof sbSend==="function" && typeof sbOn==="function" && sbOn()){
-    return sbSend("POST","rpc/read_my_private_suggestion",{p_id:Number(id),p_receipt:receipt}).then(rows=>{
+    return sbSend("POST","rpc/read_my_private_suggestion_full",{p_id:Number(id),p_receipt:receipt}).then(rows=>{
       const item=Array.isArray(rows)?rows[0]:rows;
       if(!item||typeof item.body!=="string") throw Error("열람 코드가 맞지 않거나 이전 방식으로 작성한 글입니다.");
-      return item.body;
+      return {body:item.body, reply:typeof item.reply==="string"?item.reply:null};
     });
   }
   return Promise.reject(Error("건의함이 연결되지 않았습니다."));
 }
-function boardPrivateArea(id){
+function boardPrivateArea(id,hasReply){
   const token=boardReceiptFor(id);
   return `<div id="board_private_body" data-post-id="${esc(String(id))}" style="white-space:pre-wrap;line-height:1.9;font-size:14px">${token?"비공개 본문을 확인하는 중…":"비공개 글입니다. 작성자만 열람 코드로 본문을 볼 수 있습니다."}</div>
+    ${hasReply?`<div class="card pad" id="board_private_reply_panel" data-post-id="${esc(String(id))}" style="margin-top:14px;border-color:var(--gold2)">
+      <div class="sect-t" style="margin:0 0 6px">운영진 답변</div>
+      <div id="board_private_reply" style="white-space:pre-wrap;line-height:1.9;font-size:13.5px">${token?"답변을 확인하는 중…":"작성자 인증 후 답변을 볼 수 있습니다."}</div>
+    </div>`:""}
     <div id="board_private_unlock" style="margin-top:10px;${token?"display:none":""}">
       <div class="tiny muted" style="margin-bottom:6px">본인이 작성한 글이라면 글을 올릴 때 받은 열람 코드를 입력해 주세요.</div>
       <div class="row" style="gap:8px">
@@ -86,15 +100,23 @@ function boardPrivateLoad(id,code){
   const body=document.getElementById("board_private_body"), unlock=document.getElementById("board_private_unlock");
   if(!body || body.dataset.postId!==String(id)) return;
   body.textContent="비공개 본문을 확인하는 중…";
-  boardReadPrivate(id,code).then(text=>{
+  boardReadPrivate(id,code).then(data=>{
     const current=document.getElementById("board_private_body");
     if(!current || current.dataset.postId!==String(id)) return;
-    current.textContent=text;
+    current.textContent=data.body;
+    const privateReply=document.getElementById("board_private_reply");
+    const panel=document.getElementById("board_private_reply_panel");
+    if(privateReply && panel && panel.dataset.postId===String(id))
+      privateReply.textContent=data.reply===null
+        ? "답변 열람 기능을 업데이트해야 합니다. 서버의 최신 보안 SQL 또는 Apps Script를 적용해 주세요."
+        : (data.reply || "아직 답변이 없습니다.");
     const row=document.getElementById("board_private_unlock");if(row)row.style.display="none";
     boardRememberReceipt(id,code);
   }).catch(e=>{
-    const current=document.getElementById("board_private_body");if(!current)return;
+    const current=document.getElementById("board_private_body");if(!current || current.dataset.postId!==String(id))return;
     current.textContent="비공개 글입니다. "+String(e.message||e);
+    const privateReply=document.getElementById("board_private_reply");
+    if(privateReply)privateReply.textContent="작성자 인증 후 답변을 볼 수 있습니다.";
     const row=document.getElementById("board_private_unlock");if(row)row.style.display="";
   });
 }
@@ -137,7 +159,10 @@ function boardFetch(force){
     .then(r=>r.json())
     .then(j=>{
       if(!j || !j.ok) throw new Error(j&&j.error||"목록을 받지 못했습니다");
-      S.board.cache=j.rows||[]; S.board.state="ok"; S.board.err="";
+      S.board.cache=(j.rows||[]).map(r=>({
+        ...r, has_reply:!!(r.has_reply || (r.reply&&String(r.reply).trim())),
+        reply:+r.secret?"":String(r.reply||"")
+      })); S.board.state="ok"; S.board.err="";
       if(VIEW==="board") renderMain();
       save();
     })
@@ -231,8 +256,8 @@ function boardOpen(id){
       </div>
       <span class="tiny muted">${esc(r.name)} · ${boardDate(r.time)}</span>
     </div>
-    ${(+r.secret&&boardOn())?boardPrivateArea(r.id):`<div style="white-space:pre-wrap;line-height:1.9;font-size:14px">${esc(r.body)}</div>`}
-    ${r.reply?`<div class="card pad" style="margin-top:14px;border-color:var(--gold2)">
+    ${(+r.secret&&boardOn())?boardPrivateArea(r.id,!!(r.has_reply||r.reply)):`<div style="white-space:pre-wrap;line-height:1.9;font-size:14px">${esc(r.body)}</div>`}
+    ${(!(+r.secret&&boardOn())&&r.reply)?`<div class="card pad" style="margin-top:14px;border-color:var(--gold2)">
       <div class="sect-t" style="margin:0 0 6px">운영진 답변</div>
       <div style="white-space:pre-wrap;line-height:1.9;font-size:13.5px">${esc(r.reply)}</div></div>`:""}
     <div class="row" style="margin-top:14px">
@@ -319,7 +344,7 @@ VIEWS.board=()=>{
         return `<tr style="cursor:pointer" onclick="boardOpen('${esc(String(r.id))}')">
           <td><span class="tag" style="border-color:${C.c};color:${C.c}">${esc(r.cat)}</span></td>
           <td><b>${esc(r.title)}</b>${hidden?' <span class="tag">비공개</span>':""}
-            ${r.reply?' <span class="tiny" style="color:var(--gold)">· 답변 있음</span>':""}</td>
+            ${(r.has_reply||r.reply)?' <span class="tiny" style="color:var(--gold)">· 답변 있음</span>':""}</td>
           <td class="tiny muted">${esc(r.name)}</td>
           <td class="tiny" style="color:${(+r.likes)?"var(--gold)":"var(--dim2)"}">${+r.likes||0}</td>
           <td><span class="tag" style="border-color:${st.c};color:${st.c}">${esc(r.status||"접수")}</span></td>

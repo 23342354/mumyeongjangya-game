@@ -389,7 +389,9 @@ boardFetch=function(force){
   sbGet("suggestions_public?select=*&order=created_at.desc&limit=200")
     .then(rows=>{
       S.board.cache=(rows||[]).map(r=>({id:r.id, time:r.created_at, name:r.name, cat:r.cat,
-        title:r.title, body:r.body, secret:r.secret?1:0, likes:r.likes, status:r.status, reply:r.reply}));
+        title:r.title, body:r.body, secret:r.secret?1:0, likes:r.likes, status:r.status,
+        has_reply:!!(r.has_reply || (r.reply&&String(r.reply).trim())),
+        reply:r.secret?"":String(r.reply||"")}));
       S.board.state="ok"; S.board.err="";
       if(VIEW==="board") renderMain(); save();
     })

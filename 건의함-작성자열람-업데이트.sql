@@ -1,6 +1,6 @@
 -- 無明長夜 · 사무전 — 비공개 건의글 작성자 열람 (2026-11-03)
 -- 운영 중인 Supabase SQL Editor에서 1회 실행하세요. 반복 실행해도 게시글은 삭제되지 않습니다.
--- 비공개 본문은 공개 뷰에 노출하지 않고, 글마다 발급한 256비트 열람 코드로만 조회합니다.
+-- 비공개 본문과 운영진 답변은 공개 뷰에 노출하지 않고, 글마다 발급한 256비트 열람 코드로만 조회합니다.
 
 alter table public.suggestions
   add column if not exists author_receipt_hash text;
@@ -14,7 +14,10 @@ alter table public.suggestions enable row level security;
 create or replace view public.suggestions_public as
   select id, name, cat, title,
          case when secret then '(비공개 글입니다. 작성자와 운영진만 볼 수 있습니다.)' else body end as body,
-         secret, likes, status, reply, created_at
+         secret, likes, status,
+         case when secret then '' else coalesce(reply,'') end as reply,
+         created_at,
+         (nullif(btrim(coalesce(reply,'')), '') is not null) as has_reply
   from public.suggestions;
 
 -- 글을 새로 등록하고 등록된 글 번호를 반환합니다.
@@ -75,6 +78,24 @@ as $$
   limit 1;
 $$;
 
+-- 비공개 글의 본문 + 운영진 답변을 함께 읽습니다.
+-- 사용자가 글 번호만 알고 있어도 원문이나 답변은 반환하지 않습니다.
+-- 기존 본문 전용 함수를 변경하지 않아 이전에 발급한 코드도 그대로 유효합니다.
+create or replace function public.read_my_private_suggestion_full(p_id bigint, p_receipt text)
+returns table(body text, reply text)
+language sql
+security definer
+set search_path = pg_catalog, public
+as $$
+  select s.body, coalesce(s.reply,'')
+  from public.suggestions s
+  where s.id = p_id
+    and s.secret is true
+    and p_receipt ~ '^[a-f0-9]{64}$'
+    and s.author_receipt_hash = md5(p_receipt)
+  limit 1;
+$$;
+
 -- 공감 수는 원본 행의 UPDATE 권한 대신 이 함수로 변경합니다.
 -- 다른 열(비공개 본문·열람 코드·관리자 답변)은 수정할 수 없습니다.
 create or replace function public.bump_suggestion_like(p_id bigint)
@@ -95,9 +116,11 @@ $$;
 
 revoke all on function public.submit_private_readable_suggestion(text,text,text,text,boolean,text) from public;
 revoke all on function public.read_my_private_suggestion(bigint,text) from public;
+revoke all on function public.read_my_private_suggestion_full(bigint,text) from public;
 revoke all on function public.bump_suggestion_like(bigint) from public;
 grant execute on function public.submit_private_readable_suggestion(text,text,text,text,boolean,text) to anon, authenticated;
 grant execute on function public.read_my_private_suggestion(bigint,text) to anon, authenticated;
+grant execute on function public.read_my_private_suggestion_full(bigint,text) to anon, authenticated;
 grant execute on function public.bump_suggestion_like(bigint) to anon, authenticated;
 grant select on public.suggestions_public to anon, authenticated;
 
@@ -108,3 +131,6 @@ grant select on public.suggestions_public to anon, authenticated;
 -- 2) UPDATE public.suggestions SET author_receipt_hash=md5('위에서 발급한 64자리 코드')
 --    WHERE id=해당_건의글_ID AND secret=true AND author_receipt_hash IS NULL;
 -- 3) 코드를 해당 작성자에게만 전달하세요. 작성자는 건의글을 열고 코드를 입력하면 됩니다.
+
+-- Supabase REST API에서 신규 RPC 및 뷰 필드를 즉시 사용할 수 있도록 갱신합니다.
+notify pgrst, 'reload schema';
