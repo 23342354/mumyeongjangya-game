@@ -128,6 +128,8 @@ function gateShow(mode){
   $("#topbar").innerHTML=`<div class="tb1"><div class="logo logo-top" title="無明長夜"></div>
     <div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
   $("#navcol").innerHTML=""; $("#chatcol").innerHTML="";
+  document.body.classList.remove("mobile-game","mobile-chat-open");
+  MOBILE_CHAT_OPEN=false;
   $("#main").innerHTML=`<div class="card pad" style="max-width:420px;margin:0 auto;padding:30px 24px">
     <div class="logo logo-big" title="無明長夜" style="width:190px;height:112px"></div>
     <div class="page-kicker" style="text-align:center">無明長夜</div>
