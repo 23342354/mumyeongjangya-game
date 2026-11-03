@@ -1283,3 +1283,196 @@ go = function(v){
 setInterval(()=>{ if(VIEW==="pairboard") pairPostFetch(false); }, 12000);
 const _boot8b = boot;
 boot = function(){ _boot8b(); if(sbOn()) setTimeout(()=>pairHeadFetch(true), 2500); };
+
+/* ═══════════════════════════════════════════════════
+   확장 8 · 세 번째 묶음
+   ① RP 게시판·둘의 기록 알림과 알림음
+   ② 댓글에 단 답글은 그 댓글 아래로 (중첩)
+   ═══════════════════════════════════════════════════ */
+
+/* ───────── ① 게시판 알림 ───────── */
+/* 소리 파일은 채팅 소리를 같이 쓰되, 켜고 끄는 것은 따로 둡니다 */
+if(typeof SOUND_FILES!=="undefined"){
+  SOUND_FILES.board=SOUND_FILES.chat;
+  if(SOUND_PREF.board===undefined) SOUND_PREF.board=true;
+}
+if(typeof soundSettingsHTML==="function"){
+  soundSettingsHTML=function(){
+    const rows=[["pair","페어 채팅"],["board","게시판 · 둘의 기록"],
+                ["activity","수업 종료 · 의뢰 완료"],["chat","전체 · 이웃 · 계통 채팅"]];
+    return `<div class="sect-t">알림음</div>
+      <div class="tiny muted">화면을 한 번 누른 뒤 새 알림부터 재생됩니다. 지난 채팅과 오프라인 수업에는 울리지 않습니다.</div>
+      ${rows.map(([k,n])=>`<div class="spread" style="margin-top:10px">
+        <label><input type="checkbox" ${SOUND_PREF[k]?"checked":""} onchange="setSoundPreference('${k}',this.checked)"> ${n}</label>
+        <button class="btn sm" onclick="notifySound('${k}',true)">미리 듣기</button></div>`).join("")}
+      <label class="row" style="margin-top:12px">음량
+        <input aria-label="알림음 음량" type="range" min="0" max="1" step="0.05"
+          value="${SOUND_PREF.volume}" oninput="setSoundPreference('volume',Number(this.value))"></label>
+      <hr class="hr">`;
+  };
+}
+/* 글타래의 뿌리를 찾습니다 */
+function rpRootOf(p, all){
+  let cur=p, guard=0;
+  while(cur && cur.parent_id && cur.parent_id!==cur.id && guard++<30)
+    cur=all.find(x=>x.id===cur.parent_id)||null;
+  return cur||p;
+}
+function rpAlertScan(){
+  if(typeof SOCIAL==="undefined" || !SOCIAL.ready) return;
+  const all=SOCIAL.posts||[];
+  const ids=all.map(p=>Number(p.id)||0);
+  const max=ids.length?Math.max.apply(null,ids):0;
+  if(typeof S.alertRpMax!=="number"){ S.alertRpMax=max; return; }   // 처음 한 번은 조용히 기준만
+  if(max<=S.alertRpMax) return;
+  const mine=socialId();
+  const fresh=all.filter(p=>Number(p.id)>S.alertRpMax && String(p.author_id)!==mine)
+                 .sort((a,b)=>a.id-b.id);
+  S.alertRpMax=max;
+  if(!fresh.length) return;
+  fresh.slice(0,5).forEach(p=>{
+    const who=socialName(p.author_id);
+    if(!p.parent_id){
+      alertPush("soc", `[게시판] ${who} 님이 RP 게시판에 새 글을 남겼습니다.`, "rpboard");
+      return;
+    }
+    const parent=all.find(x=>x.id===p.parent_id);
+    const root=rpRootOf(p, all);
+    if(parent && String(parent.author_id)===mine)
+      alertPush("soc", `[게시판] ${who} 님이 내 글에 답글을 남겼습니다.`, "rpboard");
+    else if(root && String(root.author_id)===mine)
+      alertPush("soc", `[게시판] ${who} 님이 내 글타래에 답글을 남겼습니다.`, "rpboard");
+    else if(all.some(x=>x.id!==p.id && String(x.author_id)===mine && rpRootOf(x,all).id===root.id))
+      alertPush("soc", `[게시판] ${who} 님이 내가 쓴 글타래에 답글을 남겼습니다.`, "rpboard");
+    else
+      alertPush("soc", `[게시판] ${who} 님이 답글을 남겼습니다.`, "rpboard");
+  });
+  if(fresh.length>5)
+    alertPush("soc", `[게시판] 그 밖에 새 글과 답글 ${fresh.length-5}개가 더 있습니다.`, "rpboard");
+  if(typeof notifySound==="function") notifySound("board");
+}
+/* 둘의 기록도 같은 방식으로 */
+function pairBoardAlertScan(){
+  const B=pairPostState(), rows=B.rows||[];
+  if(!rows.length){ return; }
+  const max=Math.max.apply(null, rows.map(p=>Number(p.id)||0));
+  if(typeof S.alertPbMax!=="number"){ S.alertPbMax=max; return; }
+  if(max<=S.alertPbMax) return;
+  const mine=String(S.sb&&S.sb.id||"");
+  const fresh=rows.filter(p=>Number(p.id)>S.alertPbMax && String(p.author_id)!==mine);
+  S.alertPbMax=max;
+  if(!fresh.length) return;
+  const who=fresh[0].author_name||"페어";
+  alertPush("soc", fresh.length===1
+    ? `[게시판] ${who} 님이 둘의 기록에 글을 남겼습니다.`
+    : `[게시판] ${who} 님이 둘의 기록에 글 ${fresh.length}개를 남겼습니다.`, "pairboard");
+  if(typeof notifySound==="function") notifySound("board");
+}
+/* 교류 정보를 받을 때마다 훑습니다 */
+const _socialFetchRp = socialFetch;
+socialFetch = async function(force){
+  const r=await _socialFetchRp(force);
+  try{ rpAlertScan(); }catch(e){}
+  return r;
+};
+const _pairPostFetchA = pairPostFetch;
+pairPostFetch = function(force){
+  const p=_pairPostFetchA(force);
+  return (p&&p.then) ? p.then(v=>{ try{ pairBoardAlertScan(); }catch(e){} return v; }) : p;
+};
+/* 게시판을 보고 있지 않아도 둘의 기록 알림이 오도록 */
+setInterval(()=>{ if(sbOn() && pairEnsure().mine && VIEW!=="pairboard") pairPostFetch(false); }, 45000);
+
+/* ───────── ② 댓글에 단 답글은 그 댓글 아래로 ───────── */
+const RPINDENT=[0,22,40,54,64,70];
+/* 자기 자신을 가리키는 어긋난 기록이 섞여도 멈추지 않도록 한 번 본 글은 다시 따라가지 않습니다 */
+function rpKids(id, seen){
+  return (SOCIAL.posts||[])
+    .filter(p=>p.parent_id===id && p.id!==id && !(seen&&seen.has(p.id)))
+    .sort((a,b)=>a.id-b.id);
+}
+function rpCount(id){
+  const seen=new Set([id]); let n=0;
+  const walk=x=>{ rpKids(x,seen).forEach(k=>{ if(seen.has(k.id)) return; seen.add(k.id); n++; walk(k.id); }); };
+  walk(id); return n;
+}
+function rpNode(p, depth, seen){
+  seen=seen||new Set([p.id]);
+  const mine=String(p.author_id)===socialId();
+  const kids=depth>12?[]:rpKids(p.id,seen);
+  kids.forEach(k=>seen.add(k.id));
+  const pad=RPINDENT[Math.min(depth,RPINDENT.length-1)];
+  return `<div style="margin-left:${pad}px;${depth?"border-left:2px solid var(--line2);padding-left:11px":""}">
+    <div class="card pad" style="margin-top:8px;padding:11px 13px">
+      <div class="spread"><b>${esc(socialName(p.author_id))}</b>
+        <span class="tiny muted">${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</span></div>
+      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0">${fmtChat(p.body)}</div>
+      <div class="row" style="gap:4px">
+        <button class="btn sm ghost" onclick="rpReply(${p.id})">${ic("bubble",12)} 답글${kids.length?" "+kids.length:""}</button>
+        ${mine?`<button class="btn sm ghost" onclick="rpDelete(${p.id})">삭제</button>`:""}
+      </div>
+    </div>
+    ${kids.map(k=>rpNode(k, depth+1, seen)).join("")}
+  </div>`;
+}
+VIEWS.rpboard=()=>{
+  const marks=rpBookmarks();
+  let roots=(SOCIAL.posts||[]).filter(p=>!p.parent_id);
+  if(RP_FILTER==="mine") roots=roots.filter(p=>String(p.author_id)===socialId());
+  if(RP_FILTER==="bookmark") roots=roots.filter(p=>marks.includes(p.id));
+  if(RP_FILTER==="replies") roots=roots.filter(p=>{
+    const seen=new Set([p.id]), out=[];
+    const walk=id=>rpKids(id,seen).forEach(k=>{ if(seen.has(k.id)) return; seen.add(k.id); out.push(k); walk(k.id); });
+    walk(p.id); return out.some(c=>String(c.author_id)===socialId());
+  });
+  if(RP_QUERY) roots=roots.filter(p=>(p.body+" "+socialName(p.author_id)).toLowerCase().includes(RP_QUERY.toLowerCase()));
+  const pages=Math.max(1,Math.ceil(roots.length/10));
+  RP_PAGE=Math.min(RP_PAGE,pages-1);
+  return head("짧게 남기고 이어 쓰는 역극","RP 게시판","메모 500자 · 댓글에도 답글을 달 수 있습니다 · 대사와 *행동*")
+   + socialStatus()
+   + `<div class="card pad"><textarea id="rp-compose" class="inp" rows="4" maxlength="500" style="width:100%"
+        placeholder="다른 학생이 댓글로 이어 씁니다. 대사와 *행동*을 남겨 주세요."></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn pri" onclick="rpPost()">남기기</button></div></div>
+     <div class="card pad" style="margin:14px 0">
+      <div class="row">${[["all","전체"],["bookmark","북마크"],["mine","내 메모"],["replies","내 댓글"]]
+        .map(([k,n])=>`<button class="btn sm ${RP_FILTER===k?"pri":""}" onclick="rpFilter('${k}')">${n}</button>`).join("")}</div>
+      <div class="row" style="margin-top:10px">
+        <input class="inp" id="rp-search" value="${esc(RP_QUERY)}" placeholder="내용 · 작성자 검색"
+          onkeydown="if(event.key==='Enter')rpSearch()">
+        <button class="btn sm" onclick="rpSearch()">검색</button></div></div>
+     <div class="spread" style="margin-bottom:12px">
+      <button class="btn sm" onclick="RP_PAGE=Math.max(0,RP_PAGE-1);renderMain()">이전</button>
+      <span class="tiny muted">${RP_PAGE+1} / ${pages} · 글 ${roots.length}개</span>
+      <button class="btn sm" onclick="RP_PAGE=Math.min(${pages-1},RP_PAGE+1);renderMain()">다음</button></div>
+     ${roots.slice(RP_PAGE*10,RP_PAGE*10+10).map(p=>{
+        const total=rpCount(p.id), kids=rpKids(p.id,new Set([p.id]));
+        return `<article class="card pad" style="margin-bottom:14px">
+          <div class="spread"><b>${esc(socialName(p.author_id))}</b>
+            <span class="tiny muted">${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</span></div>
+          <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0">${fmtChat(p.body)}</div>
+          <div class="row" style="gap:4px">
+            <button class="btn sm ghost" onclick="rpBookmark(${p.id})">${marks.includes(p.id)?"★ 북마크 해제":"☆ 북마크"}</button>
+            <button class="btn sm ghost" onclick="rpReply(${p.id})">${ic("bubble",12)} 이어 쓰기</button>
+            ${String(p.author_id)===socialId()?`<button class="btn sm ghost" onclick="rpDelete(${p.id})">삭제</button>`:""}
+          </div>
+          ${total?`<details open style="margin-top:10px">
+            <summary style="cursor:pointer"><span class="tiny muted">댓글 ${total}개</span></summary>
+            ${kids.map(k=>rpNode(k,1)).join("")}
+          </details>`:""}
+        </article>`;
+      }).join("") || '<div class="card pad">아직 남겨진 메모가 없습니다.</div>'}`;
+};
+/* 답글 창에 「누구에게 답하는지」가 보이게 */
+rpReply=function(id){
+  const p=(SOCIAL.posts||[]).find(x=>x.id===id);
+  if(!p){ toast("원글을 찾지 못했습니다."); return; }
+  modal(`${esc(socialName(p.author_id))} 님에게 답하기`, `
+    <div class="sub" style="margin-bottom:10px">
+      <div class="tiny muted">${esc(socialName(p.author_id))} · ${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</div>
+      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px">${fmtChat(p.body)}</div></div>
+    <textarea class="inp" id="rp-reply-${id}" maxlength="500" rows="5"
+      placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
+    <button class="btn pri" style="margin-top:10px"
+      onclick="rpPost(${id}).then(ok=>{if(ok)closeModal()})">댓글 남기기</button>
+    <div class="tiny muted" style="margin-top:8px">이 댓글 바로 아래에 붙습니다.</div>`);
+};

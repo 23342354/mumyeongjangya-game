@@ -291,10 +291,13 @@ const RUNFLAVOR=[
  "배달 드론 한 대가 머리 위를 지나간다.",
  "향 냄새가 채 가시기 전에 납땜 연기가 끼어든다.",
 ];
-function startRun(stage,party){
+function startRun(stage,party,mins){
   if(!questCheck(stage)) return;
   if(S.run&&!S.run.done){ toast("이미 의뢰를 나가 있습니다.","bad"); return; }
   const q=questAt(stage);
+  /* 의뢰에 들일 시간은 화면에서 고릅니다. 고르지 않았으면 예전처럼 사건이 정한 시간. */
+  const dur=Math.max(5,Math.round(Number(mins)|| (typeof qDur==="function"?qDur().m:q.dur)));
+  const eff=(typeof qEffOf==="function")?qEffOf(dur):1;
   const room=party?S.quests.room:null;
   const pos=room?room.pos:"후열";
   const me=meFighter();
@@ -308,11 +311,12 @@ function startRun(stage,party){
     Math.round(1200+p.lv*260), p.teacher?"var(--gold)":"var(--blue)"));
   allies.forEach((a,i)=>{ a.pos=(room.party[i].pos)||"후열"; a.teacher=room.party[i].teacher; a.lv=room.party[i].lv; });
   S.run={stage, q, pos, me, allies, foes:[enemyFor(stage,q.rank.r==="Ⅴ")],
-         logs:[], left:q.dur, total:q.dur, kills:0, rin:0, acc:0, done:false, party:!!party};
+         logs:[], left:dur, total:dur, eff, kills:0, rin:0, exp:0, know:0,
+         acc:0, done:false, party:!!party};
   pushRun(`<b>${stage}단계 ${q.ward.n}로 ${allies.length?allies.map(a=>a.n).join(" · ")+"과 함께 ":""}출발했다.</b>`);
   if(party) S.quests.room=null;
   go("quest");
-  toast(`출동했습니다. <b>${hhmm(q.dur)}</b>짜리 의뢰입니다. 처치할 때마다 륜과 경험치가 바로 들어오고, 창을 닫아 두어도 시계대로 진행됩니다.`);
+  toast(`출동했습니다. <b>${hhmm(dur)}</b>짜리 의뢰입니다${eff<1?` · 효율 ${Math.round(eff*100)}%`:""}. 처치할 때마다 륜과 경험치가 바로 들어오고, 창을 닫아 두어도 시계대로 진행됩니다.`);
 }
 function pushRun(t){
   if(!S.run) return;
@@ -349,9 +353,10 @@ function runStep(){
   if(foe.hp<=0){
     R.kills++; ct("mon");
     /* 한 체 쓰러뜨릴 때마다 그 자리에서 바로 들어옵니다 — 끝날 때 몰아 주지 않습니다 */
-    const got=gainRin(Math.round((40+R.stage*14)*R.q.rank.mul));
-    const exg=gainExp(Math.round((60+R.stage*22)*0.6));
-    const kng=gainKnow(Math.round((10+R.stage*4)*0.5));
+    const ef=R.eff||1;
+    const got=gainRin(Math.round((40+R.stage*14)*R.q.rank.mul*ef));
+    const exg=gainExp(Math.round((60+R.stage*22)*0.6*ef));
+    const kng=gainKnow(Math.round((10+R.stage*4)*0.5*ef));
     R.rin+=got; R.exp=(R.exp||0)+exg; R.know=(R.know||0)+kng;
     pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(got)} · 경험치 +${nf(exg)} · 지식 +${nf(kng)}</span>`);
     if(foe.boss){ ct("boss"); }
@@ -377,8 +382,9 @@ function endRun(ok){
   if(!ok){ hpL=Math.round(hpL*1.7); snL=Math.round(snL*1.6); }
   damageHP(hpL); snL=damageSN(snL);
   /* 처치 보상은 그때그때 이미 들어갔습니다. 여기서는 해결 보너스만 더합니다. */
-  const rin=cleared?gainRin(Math.round(120+R.stage*48)):0;
-  const ex =cleared?gainExp(Math.round(90+R.stage*34)):0;
+  const ef=R.eff||1;
+  const rin=cleared?gainRin(Math.round((120+R.stage*48)*ef)):0;
+  const ex =cleared?gainExp(Math.round((90+R.stage*34)*ef)):0;
   const kn =0;
   if(cleared){
     questRecordClear(R.stage);
@@ -928,9 +934,9 @@ VIEWS.quest=()=>{
   return head1+"<!--QSPLIT-->"+_quest();
 };
 const _runQuest2=runQuest;
-runQuest=function(stage,party){
+runQuest=function(stage,party,mins){
   if(S.run&&!S.run.done){ toast("이미 의뢰를 나가 있습니다.","bad"); return; }
-  startRun(stage,party);
+  startRun(stage,party,mins);
 };
 
 /* ═══════════════════════════════════════════════════
@@ -1071,5 +1077,5 @@ const _bootRun = boot;
 /* 창을 닫아 두어도 의뢰는 흐릅니다. 돌아온 순간 비운 시간만큼 한 번에 따라잡습니다. */
 boot = function(){ _bootRun(); if(S && S.run && !S.run.done && !S.run.lastTick) S.run.lastTick = Date.now(); runRealTick(); };
 const _startRunPace = startRun;
-startRun = function(stage, party){ _startRunPace(stage, party);
+startRun = function(stage, party, mins){ _startRunPace(stage, party, mins);
   if(S.run) S.run.lastTick = Date.now(); runRealTick(); };

@@ -1999,21 +1999,68 @@ function questAt(stage){
   return {stage, rank, ward, t, dur, foes, no:`${1024}-${String(stage).padStart(3,"0")}`};
 }
 let QFILTER=null;
+/* ── 의뢰에 들일 시간 — 길게 잡을수록 총량은 커지고 효율은 조금 떨어집니다 ── */
+const QDUR=[{m:30,n:"30분",eff:1},{m:60,n:"1시간",eff:1},{m:120,n:"2시간",eff:.97},{m:180,n:"3시간",eff:.94}];
+function qDurIdx(){ const i=Number(S.quests.durIdx); return (Number.isInteger(i)&&QDUR[i])?i:1; }
+function qDur(){ return QDUR[qDurIdx()]; }
+function qEffOf(mins){ const d=QDUR.find(x=>x.m===Number(mins)); return d?d.eff:1; }
+function qSetDur(i){ S.quests.durIdx=clamp(i,0,QDUR.length-1); renderMain(); save(); }
+function qStage(){ const v=Number(S.quests.pick);
+  return (Number.isInteger(v)&&v>=1&&v<=QUEST_MAX_STAGE)?v:Math.max(1,questOpenLimit()); }
+function qSetStage(v){ S.quests.pick=clamp(Math.round(Number(v)||1),1,QUEST_MAX_STAGE); renderMain(); save(); }
+function qClock(mins){ return new Date(Date.now()+mins*60000).toLocaleTimeString("ko-KR",{hour:"numeric",minute:"2-digit"}); }
+/* 관문은 짧게 끊어 통과할 수 없게 합니다 */
+function qGateMin(stage){ return stage%10===0 ? 60 : 0; }
+
+/* 예상치 — 실제 전투가 쓰는 숫자로 어림잡습니다. 주사위라 실제와는 차이가 납니다. */
+function questEstimate(stage, mins){
+  const unit=(typeof RUNSTEPMIN!=="undefined")?RUNSTEPMIN:0.5;
+  const steps=Math.max(1,Math.floor(mins/unit));
+  const c=(typeof C==="function")?C():{crit:0,critD:2};
+  const atk=effStat("atk"), agi=effStat("agi");
+  const avg=(3*atk+5)*(1+clamp(c.crit||0,0,.65)*(Math.max(1,c.critD||2)-1));
+  const eDef=Math.max(1,Math.round(1.2+stage*.28));
+  const eAgi=Math.max(1,Math.round(1.4+stage*.26));
+  const eHp =Math.round(70+stage*26);
+  const hitP=clamp(.5+(agi-eAgi)/(2*Math.max(1,agi+eAgi)),.15,.95);
+  const per =.5*(avg*hitP)+.5*Math.max(0,avg-(3*eDef+5));
+  /* 마지막 일격은 남은 체력보다 세게 들어가 그만큼 흘립니다. 한 체를 넘어뜨리는 데
+     실제로 드는 피해는 체력보다 반 대 정도 더 듭니다. 처치마다 다음 적을 만나는
+     줄 하나도 쓰입니다. */
+  const eHpEff=eHp+per*0.5;
+  let kills=0;
+  for(let i=0;i<4;i++) kills=Math.max(0,Math.floor(Math.max(0,steps-kills)*0.8*0.58*per/eHpEff));
+  const q=questAt(stage), eff=qEffOf(mins), m=q.rank.mul;
+  const g=1+mod("gold"), e=1+mod("exp"), k=1+mod("know");
+  return { steps, kills, eff,
+    rin :Math.round(kills*(40+stage*14)*m*g*eff),
+    exp :Math.round(kills*(60+stage*22)*.6*e*eff),
+    know:Math.round(kills*(10+stage*4)*.5*k*eff),
+    gear:Math.round(kills*(0.14+mod("loot"))*10)/10,
+    bmat:Math.round(kills*0.7*(3+stage/12)),
+    clearRin:Math.round((120+stage*48)*eff*g),
+    clearExp:Math.round((90+stage*34)*eff*e) };
+}
+
 VIEWS.quest=()=>{
   const open=questOpenLimit(), gate=questGate();
-  const current=Math.min(19,Math.floor(gate/10));
-  const page=QFILTER===null?current:clamp(QFILTER,0,19), start=page*10+1, checkpoint=start+9;
-  const list=[]; for(let i=start;i<=checkpoint;i++) list.push(questAt(i));
+  const st=clamp(qStage(),1,QUEST_MAX_STAGE);
+  const q=questAt(st), d=qDur();
+  const locked=!questCanEnter(st), isGate=st%10===0;
+  const tooShort=d.m<qGateMin(st);
+  const est=questEstimate(st,d.m);
   const room=S.quests.room;
+  const band=Math.floor((st-1)/10)*10;
+  const list=[]; for(let i=band+1;i<=band+10;i++) if(i<=QUEST_MAX_STAGE) list.push(questAt(i));
 
   const roomBox=room?(()=>{
-    const q=questAt(room.stage);
+    const rq=questAt(room.stage);
     return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
       <div class="spread"><div class="sect-t" style="margin:0">함께 의뢰 <span class="tag">최대 4명</span></div>
         <span class="tiny muted">인원이 다 모이지 않아도 출동할 수 있습니다</span></div>
       <div class="spread" style="margin:6px 0">
-        <div><b>${q.stage}단계 · ${q.t}</b>
-          <div class="tiny muted">사건번호 ${q.no} · ${q.ward.n} · <span style="color:${q.rank.c}">${q.rank.r}등급 ${q.rank.n}</span> · 예상 ${q.dur}분</div></div>
+        <div><b>${rq.stage}단계 · ${rq.t}</b>
+          <div class="tiny muted">사건번호 ${rq.no} · ${rq.ward.n} · <span style="color:${rq.rank.c}">${rq.rank.r}등급 ${rq.rank.n}</span></div></div>
         <div class="tiny muted">방장 ${esc(S.name)}</div></div>
       <div class="row" style="margin:8px 0">
         ${[0,1,2,3].map(i=>{
@@ -2032,41 +2079,79 @@ VIEWS.quest=()=>{
         <button class="btn sm" onclick="inviteTeacher()">교사 동행 요청 · 륜 600</button>
         <div style="margin-left:auto"></div>
         <button class="btn sm" onclick="leaveRoom()">나가기</button>
-        <button class="btn pri" onclick="runQuest(${room.stage},true)">지금 출동</button>
+        <button class="btn pri" onclick="runQuest(${room.stage},true,${d.m})">${d.n} 출동</button>
       </div></div>`;
   })():"";
 
-  return head("명계 각 구역",ic("swords")+" 의뢰", `열린 단계 <b>1–${open}</b><br><span class="tiny">최고 완료 ${S.quests.cleared}단계 · ${gate?gate+"단계 관문 통과":"첫 관문 도전 전"}</span>`)+`
+  return head("명계 각 구역",ic("swords")+" 의뢰",
+    `열린 단계 <b>1–${open}</b><br><span class="tiny">최고 완료 ${S.quests.cleared}단계 · ${gate?gate+"단계 관문 통과":"첫 관문 도전 전"}</span>`)+`
   ${buffStrip()}
   ${roomBox}
-  <div class="card pad" style="margin-bottom:12px;padding:10px 14px">
-    <div class="row"><b>${start}~${checkpoint-1}단계 <span class="tiny muted">· ${checkpoint}단계 관문</span></b>
+  <div class="card pad" style="margin-bottom:14px">
+    <div class="row" style="gap:7px;flex-wrap:wrap;align-items:center">
+      <button class="btn sm" onclick="qSetStage(${st-1})" ${st<=1?"disabled":""}>${ic("chevL",13)}</button>
+      <input class="inp" id="qstage" type="number" min="1" max="${QUEST_MAX_STAGE}" value="${st}"
+        aria-label="단계" style="width:84px;text-align:center;font-weight:800;font-size:16px"
+        onchange="qSetStage(this.value)">
+      <button class="btn sm" onclick="qSetStage(${st+1})" ${st>=QUEST_MAX_STAGE?"disabled":""}>${ic("chevR",13)}</button>
+      <span class="tag" style="border-color:${q.rank.c};color:${q.rank.c}">${q.rank.r} ${q.rank.n}</span>
+      ${isGate?'<span class="tag g">관문</span>':""}
+      ${st<=gate?'<span class="tag j">통과함</span>':""}
       <div style="margin-left:auto" class="row">
-        <button class="btn sm" ${page===0?"disabled":""} onclick="QFILTER=${Math.max(page-1,0)};renderMain()">${ic("chevL",12)} 이전 구간</button>
-        <button class="btn sm" ${page===19?"disabled":""} onclick="QFILTER=${Math.min(page+1,19)};renderMain()">다음 구간 ${ic("chevR",12)}</button>
-        <button class="btn sm ghost" onclick="QFILTER=null;renderMain()">현재 구간</button>
-      </div></div>
-    <div class="tiny muted" style="margin-top:8px">각 구간의 1~9단계는 순서와 관계없이 고릅니다.
-      <b>10·20·30…단계 관문을 통과해야 다음 구간이 열립니다.</b> 관문도 해당 구간이 열리면 바로 도전할 수 있습니다.</div>
+        <button class="btn sm ghost" onclick="qSetStage(${Math.max(1,open)})">추천 단계</button>
+        <button class="btn sm ghost" onclick="qSetStage(${Math.min(QUEST_MAX_STAGE,(gate||0)+10)})">다음 관문</button>
+      </div>
+    </div>
+    <div style="margin-top:11px"><b style="font-size:15.5px">${esc(q.t)}</b></div>
+    <div class="tiny muted" style="margin-top:2px">사건번호 ${q.no} · ${q.ward.n} ${q.ward.t} · 적 ${q.foes}체
+      · 소모 체력 ${q.rank.hp[0]}~${q.rank.hp[1]} · 이성 ${q.rank.sn[0]}~${q.rank.sn[1]}</div>
+    ${locked?`<div class="tiny" style="color:var(--gold);margin-top:8px">${band}단계 관문을 통과해야 들어갈 수 있습니다.</div>`:""}
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:8px;margin:13px 0 11px">
+      ${QDUR.map((x,i)=>{
+        const no=x.m<qGateMin(st);
+        return `<button class="sub" style="text-align:left;cursor:${no?"not-allowed":"pointer"};padding:10px 12px;
+          ${i===qDurIdx()&&!no?"border-color:var(--gold2);background:var(--s1)":""}${no?";opacity:.42":""}"
+          ${no?"disabled":""} onclick="qSetDur(${i})">
+          <b>${x.n}</b>
+          <div class="tiny muted" style="margin-top:3px">효율 ${Math.round(x.eff*100)}%</div>
+          <div class="tiny ${i===qDurIdx()?"":"muted"}">${no?"관문 불가":qClock(x.m)}</div>
+        </button>`;}).join("")}
+    </div>
+
+    <div class="tiny" style="color:var(--jade)">예상 · 약 <b>${nf(est.kills)}</b>체 처치 ·
+      륜 <b>+${nf(est.rin)}</b> · 경험치 <b>+${nf(est.exp)}</b> · 지식 +${nf(est.know)}</div>
+    <div class="tiny muted" style="margin-top:3px">법구 약 ${est.gear}개 · 건축자재 약 ${nf(est.bmat)}개
+      · 끝까지 버티면 해결 보상 륜 +${nf(est.clearRin)} · 경험치 +${nf(est.clearExp)}</div>
+    <div class="tiny muted" style="margin-top:3px">처치할 때마다 그 자리에서 들어옵니다.
+      창을 닫아 두어도 시계대로 진행됩니다. 주사위 판정이라 예상과 차이가 납니다.</div>
+
+    <div class="row" style="margin-top:13px">
+      <button class="btn pri" ${locked||tooShort?"disabled":""} onclick="runQuest(${st},false,${d.m})">${d.n} 출정</button>
+      <button class="btn" ${locked?"disabled":""} onclick="makeRoom(${st})">함께 의뢰 방 열기</button>
+      ${tooShort?'<span class="tiny muted">관문은 1시간부터 고를 수 있습니다</span>':""}
+    </div>
   </div>
-  <div class="grid g2">
-    ${list.map(q=>{
-      const locked=!questCanEnter(q.stage), isGate=q.stage%10===0;
-      const rew=questReward(q);
-      return `<div class="sub" style="${isGate?"grid-column:1/-1;border-color:var(--gold2);":""}${locked?"opacity:.4":""}">
-        ${isGate?`<div class="sect-t">${q.stage}단계 관문 ${q.stage<=gate?'<span class="tag j">통과</span>':q.stage===QUEST_MAX_STAGE?'<span class="tag g">최종 관문</span>':`<span class="tag g">통과 시 ${q.stage+1}~${q.stage+9}단계 개방</span>`}</div>`:""}
-        <div class="spread"><h4 style="margin:0">${q.stage}단계 · ${q.t}</h4>
-          <span class="tag" style="border-color:${q.rank.c};color:${q.rank.c}">${q.rank.r} ${q.rank.n}</span></div>
-        <div class="tiny muted" style="margin:4px 0 6px">사건번호 ${q.no} · ${q.ward.n} ${q.ward.t} · 예상 ${q.dur}분 · 적 ${q.foes}체</div>
-        <div class="tiny" style="color:var(--jade)">보상 · 륜 ${nf(rew.rin)} · 경험치 ${nf(rew.exp)} · 지식 ${nf(rew.know)}${rew.sari?` · 사리 ${rew.sari}`:""}</div>
-        <div class="tiny muted" style="margin-top:4px">예상 소모 · 체력 ${q.rank.hp[0]}~${q.rank.hp[1]} · 이성 ${q.rank.sn[0]}~${q.rank.sn[1]}</div>
-        ${locked?`<div class="tiny" style="margin-top:6px;color:var(--gold)">${Math.floor((q.stage-1)/10)*10}단계 관문 통과 후 입장</div>`:""}
-        <div class="row" style="margin-top:9px">
-          <button class="btn pri sm" ${locked?"disabled":""} onclick="runQuest(${q.stage},false)">혼자 출동</button>
-          <button class="btn sm" ${locked?"disabled":""} onclick="makeRoom(${q.stage})">함께 의뢰 방 열기</button>
-        </div></div>`;
-    }).join("")}
-  </div>`;
+
+  <details class="card pad" style="margin-bottom:14px">
+    <summary style="cursor:pointer"><b>${band+1}~${band+9}단계 · ${band+10}단계 관문</b>
+      <span class="tiny muted"> — 제목 보고 고르기</span></summary>
+    <div class="row" style="margin:10px 0">
+      <button class="btn sm" ${band<=0?"disabled":""} onclick="qSetStage(${Math.max(1,band-9)})">${ic("chevL",12)} 이전 구간</button>
+      <button class="btn sm" ${band+11>QUEST_MAX_STAGE?"disabled":""} onclick="qSetStage(${Math.min(QUEST_MAX_STAGE,band+11)})">다음 구간 ${ic("chevR",12)}</button>
+      <span class="tiny muted" style="margin-left:auto">각 구간의 1~9단계는 순서와 관계없이 고릅니다. 10·20·30…단계 관문을 통과해야 다음 구간이 열립니다.</span>
+    </div>
+    <table class="t"><tbody>
+      ${list.map(x=>{
+        const lk=!questCanEnter(x.stage);
+        return `<tr style="${lk?"opacity:.4":""}${x.stage===st?";background:var(--s1)":""}">
+          <td style="width:86px">${x.stage%10===0?'<span class="tag g">관문</span> ':""}<b>${x.stage}</b>단계</td>
+          <td>${esc(x.t)}<div class="tiny muted">${x.ward.n} · <span style="color:${x.rank.c}">${x.rank.r}등급</span></div></td>
+          <td style="text-align:right;width:84px">${x.stage===st?'<span class="tiny muted">고름</span>'
+            :`<button class="btn sm ghost" onclick="qSetStage(${x.stage})">고르기</button>`}</td></tr>`;
+      }).join("")}
+    </tbody></table>
+  </details>`;
 };
 function questReward(q){
   const m=q.rank.mul, k=q.stage;
