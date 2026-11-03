@@ -854,22 +854,10 @@ function coopOpen(id){
   if((r.result.log||[]).length) coopPlay(r.result, true);
   else toast("이 기록에는 일지가 남아 있지 않습니다. 다음 합동부터 일지가 적힙니다.");
 }
-/* 최근 합동 기록에 「일지」 단추 */
-const _togetherBody8 = togetherBody;
-togetherBody = function(){
-  let h=_togetherBody8();
-  const done=(S.sb.rooms||[]).filter(r=>r.status==="done"&&r.result).slice(0,6);
-  done.forEach(r=>{
-    const tag=`<span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span>`;
-    const once=`<td style="text-align:right">${tag}</td>`;
-    const next=`<td style="text-align:right">${tag}
-      <button class="btn sm ghost" style="margin-left:6px" onclick="coopOpen('${String(r.id).replace(/'/g,"")}')">일지</button></td>`;
-    const at=h.indexOf(once);
-    if(at>=0) h=h.slice(0,at)+next+h.slice(at+once.length);
-  });
-  return h.replace("여럿이 나눠 맞으므로 받는 피해가 줄어듭니다.",
-    "여럿이 나눠 맞으므로 받는 피해가 줄어듭니다. 출발하면 <b>피해가 들어가는 일지</b>가 참가자 모두에게 펼쳐집니다.");
-};
+/* 예전 공용 ‘같이 가기’ 화면에 덧씌우던 동행 일지 UI는 탑별 동행 분리 이후 제거했습니다.
+   일지 확인 기능(coopOpen)은 계속 남기고 석탑·결계의 탑의 기록 카드에서 직접 호출합니다.
+   삭제된 공용 동행 화면 함수를 참조하면 이 파일 나머지 전체가 로딩되지 않기 때문에
+   호환 래퍼를 유지하지 않습니다. */
 
 /* ───────────────────────────────────────────────────
    ⑦ 의뢰 진행 표시 — 1초마다 남은 시간이 줄어듭니다

@@ -267,7 +267,8 @@ function coopRoomPanel(kind){
          `<div class="coop-empty tiny muted">모집 중인 방이 없습니다. 첫 번째 ${K.n} 방을 열어 보세요.</div>`}</div>
        ${records.length?`<details class="coop-history"><summary>최근 ${K.n} 합동 기록 ${records.length}건</summary>
            ${records.map(r=>`<div class="spread tiny"><span>${Number(r.result.stage)||1}층 · ${(r.result.members||[]).map(m=>esc(m.name)).join(" · ")}</span>
-             <span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span></div>`).join("")}</details>`:""}`}
+             <span class="row" style="align-items:center;gap:6px"><span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span>
+             <button class="btn sm ghost" onclick="coopOpen('${String(r.id).replace(/'/g,"")}')">일지</button></span></div>`).join("")}</details>`:""}`}
   </section>`;
 }
 function roomMake(kind){
