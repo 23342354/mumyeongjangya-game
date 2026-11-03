@@ -535,6 +535,23 @@ textarea.inp{min-height:76px;resize:vertical}
  .rp-parent-preview-text{font-size:10.5px}
 }
 
+
+/* Farming expansion & per-reader RP disclosure */
+.farm-plot{min-height:155px;display:flex;flex-direction:column;align-items:stretch;gap:5px;justify-content:space-between}
+.farm-plot .farm-species{line-height:1.35;overflow-wrap:anywhere;font-weight:600}
+.farm-plot .farm-tier{font-weight:700;letter-spacing:.01em}
+.farm-seedbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.farm-crop-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--s3);align-items:flex-start}
+.farm-crop-row>div{flex:1;min-width:0}
+.farm-crop-row .farm-detail{font-size:11px;color:var(--dim);line-height:1.5}
+.farm-crop-row button{flex-shrink:0}
+.farm-discovery{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.farm-discovery .buffchip{border-radius:7px}
+.farm-tier-normal{color:var(--dim)} .farm-tier-rare{color:var(--blue)}
+.farm-tier-epic{color:var(--violet)} .farm-tier-legend{color:var(--gold)}
+.farm-help{border-left:3px solid var(--violet);padding:10px 12px;background:var(--s1);border-radius:5px}
+.rp-thread-tail>summary{user-select:none}
+@media(max-width:720px){.farm-plot{min-height:145px}.farm-crop-row{gap:7px}.farm-crop-row button{padding:5px 8px}}
 </style>
 </head>
 <body>
@@ -3669,5 +3686,6 @@ else setTimeout(()=>init(),0);
 <script src="part7.js"></script>
 <script src="social.js"></script>
 <script src="part8.js"></script>
+<script src="part9.js"></script>
 </body>
 </html>
