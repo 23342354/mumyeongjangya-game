@@ -552,6 +552,33 @@ textarea.inp{min-height:76px;resize:vertical}
 .farm-help{border-left:3px solid var(--violet);padding:10px 12px;background:var(--s1);border-radius:5px}
 .rp-thread-tail>summary{user-select:none}
 @media(max-width:720px){.farm-plot{min-height:145px}.farm-crop-row{gap:7px}.farm-crop-row button{padding:5px 8px}}
+
+/* PvP 연무장 */
+.pvp-fighters{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:center;gap:10px;margin:14px 0}
+.pvp-fighter{min-width:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--cardB)}
+.pvp-fighter.myself{border-color:var(--gold2)}
+.pvp-vs{text-align:center;font-size:13px;font-weight:800;color:var(--violet)}
+.pvp-turn-box,.pvp-turn-wait,.pvp-result{padding:13px 15px;background:var(--s2);border:1px solid var(--line);border-radius:10px;line-height:1.65}
+.pvp-result{border-color:var(--gold2)}
+.pvp-result>b{color:var(--jadeD)}
+.pvp-create{display:flex;gap:8px;flex-wrap:wrap}
+.pvp-create input{flex:1;min-width:180px}
+.pvp-lobby-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.pvp-lobby-row:last-child{border-bottom:none}
+.pvp-rooms-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.pvp-log,.pvp-chat{height:300px;overflow-y:auto;overscroll-behavior:contain;margin:10px 0 0}
+.pvp-event{font-size:12px;line-height:1.7;padding:9px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.pvp-event.final{font-weight:800;color:var(--jadeD)}
+.pvp-event span{display:block}
+.pvp-chat{background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.pvp-chat-line{max-width:93%;align-self:start;background:var(--cardA);border:1px solid var(--line);padding:8px 10px;border-radius:10px;line-height:1.65;overflow-wrap:anywhere;font-size:12px}
+.pvp-chat-line.mine{align-self:end;border-color:var(--violet);background:var(--cardB)}
+.pvp-chat-line b{display:block;font-size:11px;color:var(--violet)}
+.pvp-chat-line span{white-space:normal}
+.pvp-chat-compose{display:flex;align-items:end;gap:8px;margin-top:10px}
+.pvp-chat-compose textarea{min-width:0;flex:1;resize:vertical;min-height:58px}
+@media(max-width:730px){.pvp-rooms-grid{grid-template-columns:1fr}.pvp-fighters{gap:5px;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)}.pvp-fighter{padding:10px 8px;font-size:12px}.pvp-fighter .tag{padding:2px 4px;font-size:10px}.pvp-log,.pvp-chat{height:245px}}
+
 </style>
 </head>
 <body>
@@ -2416,124 +2443,8 @@ function runQuest(stage,party){
   renderTop(); renderNav(); renderMain(); save();
 }
 
-/* ═══════════════ 대련 ═══════════════ */
-let DUEL=null;
-VIEWS.duel=()=>{
-  const opp=duelOpponents();
-  return head("연무장",ic("sword")+" 대련", `임시 체력 100 · 실제 체력에 반영되지 않습니다`)+`
-  <div class="card pad" style="margin-bottom:14px">
-    <div class="sect-t">판정 규칙</div>
-    <div class="tiny muted">선공·후공은 민첩 판정(민첩 D5)으로 정합니다. 공격 판정은 <b>공격 D5 + 5</b>,
-    방어 판정은 <b>방어 D5 + 5</b>이며 차이만큼 임시 체력이 깎입니다.
-    회피는 대항 판정으로, 공격자는 <b>(민첩+1) D5</b>, 방어자는 <b>민첩 D5</b>를 굴려 방어자 쪽이 같거나 높으면 완전히 피합니다.</div>
-  </div>
-  <div class="grid g3">
-    ${opp.map((o,i)=>`<div class="sub">
-      <div class="spread"><h4 style="margin:0">${o.n}</h4><span class="tag ${o.npc?"g":""}">${o.tag}</span></div>
-      <div class="tiny muted" style="margin:5px 0 6px">${o.d}</div>
-      <div class="tiny">공 ${o.st.atk} · 방 ${o.st.def} · 민 ${o.st.agi} · 정 ${o.st.men} · 공명 ${o.st.res}</div>
-      <button class="btn pri sm" style="margin-top:9px" onclick="startDuel(${i})">대련 신청</button>
-    </div>`).join("")}
-  </div>`;
-};
-function duelOpponents(){
-  const c=S.course, b=v=>Math.max(1,Math.round(v));
-  return [
-    {n:"강시 경비", tag:"경비", npc:true, d:"\"통금은 오전 2시다.\" 물러서지 않고 버티는 방식. 맞혀도 좀처럼 흔들리지 않는다.",
-     st:{atk:b(2+c*.9),def:b(4+c*1.1),agi:b(1+c*.5),men:4,res:3}},
-    {n:"양귀비 교사", tag:"담임 교사", npc:true, d:"\"오늘은 무얼 할 거니.\" 파장을 읽어 먼저 자리를 잡는다.",
-     st:{atk:b(3+c*1.1),def:b(3+c*1.0),agi:b(4+c*1.2),men:6,res:5}},
-    {n:"항아 교관", tag:"전투 교관", npc:true, d:"\"허접~♡ 한 바퀴 더 돌까?\" 가속과 급정지를 섞는 고속 근접전.",
-     st:{atk:b(6+c*1.6),def:b(4+c*1.2),agi:b(7+c*1.5),men:6,res:6}},
-  ];
-}
-function startDuel(i){
-  const o=duelOpponents()[i];
-  DUEL={me:mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},100,S.color),
-        foe:mkFighter(o.n,o.st,100,"var(--red)"), log:[], turn:0, first:null, phase:"start", npcName:o.n};
-  const a=d5(DUEL.me.agi), b=d5(DUEL.foe.agi);
-  DUEL.first = a>=b ? "me":"foe";
-  DUEL.log.push(`<span class="turn">민첩 판정 · ${esc(S.name)} ${a} vs ${esc(o.n)} ${b} → 선공 ${DUEL.first==="me"?esc(S.name):esc(o.n)}</span>`);
-  drawDuel();
-}
-function drawDuel(){
-  const D=DUEL;
-  const bar=(f)=>`<div class="spread"><b style="color:${f.c}">${esc(f.n)}</b><span class="tiny muted">${f.hp} / 100</span></div>
-    <div class="bar hp" style="margin:4px 0 10px"><i style="width:${f.hp}%"></i></div>`;
-  let action="";
-  if(D.phase==="done"){
-    action=`<div class="row"><button class="btn pri" onclick="closeModal();renderMain()">끝내기</button></div>`;
-  }else if(D.phase==="choose"){
-    action=`<div class="tiny muted" style="margin-bottom:6px">${esc(D.foe.n)}의 공격입니다. 어떻게 대응하시겠습니까?</div>
-      <div class="row"><button class="btn pri" onclick="duelDefend('def')">방어 (방어 D5 + 5)</button>
-      <button class="btn" onclick="duelDefend('eva')">회피 (민첩 D5 대항)</button></div>`;
-  }else{
-    action=`<div class="row"><button class="btn pri" onclick="duelAttack()">공격한다</button>
-      <button class="btn" onclick="closeModal()">기권</button></div>`;
-  }
-  modal(`대련 · ${esc(D.foe.n)}`,`
-    ${bar(D.me)}${bar(D.foe)}
-    <div class="log" id="dlog">${D.log.join("<br>")}</div>
-    <div style="margin-top:12px">${action}</div>`,"");
-  const l=$("#dlog"); if(l) l.scrollTop=l.scrollHeight;
-}
-function duelAttack(){
-  const D=DUEL; D.turn++;
-  D.log.push(`<span class="turn">${D.turn}턴</span>`);
-  D.queue = D.first==="me" ? ["me","foe"] : ["foe","me"];
-  duelNext();
-}
-function duelNext(){
-  const D=DUEL; if(!D) return;
-  if(!D.queue||!D.queue.length){ D.phase="act"; drawDuel(); return; }
-  const who=D.queue.shift();
-  if(who==="me"){
-    const hit=fighterAttack(D.me,D.foe), av=hit.value;
-    if(hit.critical) D.log.push(`<span style="color:var(--gold)">치명타! · 피해 ×${D.me.critD.toFixed(2)}</span>`);
-    const gp=D.foe.agi-D.foe.def;
-    const useEva= gp>1 ? Math.random()<.8 : gp<-1 ? Math.random()<.2 : Math.random()<.5;
-    if(useEva){
-      const ar=d5(D.me.agi+1), dr=d5(D.foe.agi);
-      if(dr>=ar) D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → ${esc(D.foe.n)} 회피 ${dr} vs ${ar} · <span class="s">완전 회피</span>`);
-      else { D.foe.hp=Math.max(0,D.foe.hp-av); D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → 회피 실패 (${dr} vs ${ar}) · <span class="h">−${av}</span>`); }
-    }else{
-      const dv=d5(D.foe.def)+5, dmg=Math.max(0,av-dv);
-      D.foe.hp=Math.max(0,D.foe.hp-dmg);
-      D.log.push(`<span class="d">${esc(D.me.n)}</span> 공격 <b>${av}</b> → 방어 <b>${dv}</b> · ${dmg?`<span class="h">−${dmg}</span>`:`<span class="s">완전 방어</span>`}`);
-    }
-    if(D.foe.hp<=0){ endDuel(true); return; }
-    duelNext();
-  }else{
-    const hit=fighterAttack(D.foe,D.me); D.pendingAtk=hit.value;
-    if(hit.critical) D.log.push(`<span style="color:var(--gold)">${esc(D.foe.n)}의 치명타!</span>`);
-    D.phase="choose"; drawDuel();
-  }
-}
-function duelDefend(mode){
-  const D=DUEL; const av=D.pendingAtk;
-  if(mode==="def"){
-    const dv=d5(D.me.def)+5, dmg=Math.max(0,av-dv);
-    D.me.hp=Math.max(0,D.me.hp-dmg);
-    D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 내 방어 <b>${dv}</b> · ${dmg?`<span class="h">−${dmg}</span>`:`<span class="s">완전 방어</span>`}`);
-  }else{
-    const ar=d5(D.foe.agi+1), dr=d5(D.me.agi);
-    if(dr>=ar) D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 내 회피 ${dr} vs ${ar} · <span class="s">완전 회피</span>`);
-    else { D.me.hp=Math.max(0,D.me.hp-av); D.log.push(`<span class="d">${esc(D.foe.n)}</span> 공격 <b>${av}</b> → 회피 실패 (${dr} vs ${ar}) · <span class="h">−${av}</span>`); }
-  }
-  D.phase="act";
-  if(D.me.hp<=0){ endDuel(false); return; }
-  duelNext();
-}
-function endDuel(win){
-  const D=DUEL; D.phase="done";
-  D.log.push(win?`<span class="s">■ 승리. ${esc(D.foe.n)}이(가) 손을 들었습니다.</span>`
-                :`<span class="h">■ 패배. 임시 체력이 바닥났습니다.</span>`);
-  const rin=win?gainRin(180+S.course*90):gainRin(60);
-  const ex=gainExp(win?160+S.course*70:60);
-  addMark(win?10:4);
-  D.log.push(`<span class="turn">정산 · 륜 +${nf(rin)} · 경험치 +${nf(ex)}</span>`);
-  drawDuel(); renderTop(); renderNav(); save();
-}
+/* ════════════ 대련 ════════════ */
+/* PvP 대련은 pvp.js의 VIEWS.duel에서 구현합니다. */
 
 /* ═══════════════ 석탑 ═══════════════ */
 VIEWS.tower=()=>{
@@ -3687,5 +3598,6 @@ else setTimeout(()=>init(),0);
 <script src="social.js"></script>
 <script src="part8.js"></script>
 <script src="part9.js"></script>
+<script src="pvp.js"></script>
 </body>
 </html>
