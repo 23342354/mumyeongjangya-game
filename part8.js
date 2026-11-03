@@ -906,7 +906,7 @@ function ensureV8(){
 }
 (()=>{ const g=NAVDEF.find(x=>x.id==="craft");
   if(g && !g.sub.some(s=>s.id==="woodv")) g.sub.splice(1,0,{id:"woodv",n:"목석 공방"}); })();
-if(typeof PLACES!=="undefined") PLACES.push({id:"woodp", n:"목석 공방", e:ic("castle"), x:30, y:72, view:"woodv"});
+if(typeof PLACES!=="undefined") PLACES.push({id:"woodp", n:"목석 공방", e:ic("castle"), x:34, y:11, view:"woodv"});
 
 const _boot8 = boot;
 boot = function(){ _boot8(); ensureV8(); renderTop(); renderNav(); renderMain(); };

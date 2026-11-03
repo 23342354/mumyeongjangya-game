@@ -456,7 +456,7 @@ moveHall=function(id){ const before=S.hall; _moveHall(id); syncHall();
 /* 내비 · 지도 */
 (()=>{ const g=NAVDEF.find(x=>x.id==="craft");
   if(g && !g.sub.some(s=>s.id==="alche")) g.sub.unshift({id:"alche",n:"연금 공방"}); })();
-PLACES.push({id:"alchep", n:"연금 공방", e:ic("flask"), x:18, y:64, view:"alche"});
+PLACES.push({id:"alchep", n:"연금 공방", e:ic("flask"), x:15, y:65, view:"alche"});
 
 const _boot4=boot;
 boot=function(){ _boot4(); ensureV4(); renderNav(); renderMain(); };

@@ -329,8 +329,13 @@ textarea.inp{min-height:76px;resize:vertical}
 .log .turn{color:var(--dim2);border-top:1px dashed var(--s4);margin-top:6px;padding-top:5px;font-size:11px;letter-spacing:.1em}
 
 /* 지도 */
+/* 지도는 좁은 기기에서 위치가 압축되어 겹치지 않도록 지도 내부만 가로 스크롤 */
+.mapscroll{max-width:100%;overflow-x:auto;overflow-y:hidden;border-radius:10px;
+  scrollbar-color:var(--s5) var(--s1);scrollbar-width:thin}
 .mapwrap{position:relative;background:linear-gradient(160deg,var(--s1),var(--s1));
-  border:1px solid var(--line);border-radius:10px;height:380px}
+  border:1px solid var(--line);border-radius:10px;height:380px;min-width:640px}
+.map-scroll-hint{display:none;color:var(--dim);font-size:11px;margin:8px 0 0}
+@media(max-width:700px){.map-scroll-hint{display:block}}
 .node{position:absolute;transform:translate(-50%,-50%);text-align:center;cursor:pointer;width:84px}
 .node .nd{width:26px;height:26px;margin:0 auto 3px;border-radius:7px;border:1px solid var(--line2);
   background:var(--s2);display:grid;place-items:center;font-size:13px;transition:.15s}
@@ -2931,7 +2936,7 @@ const PLACES=[
  {id:"train",  n:"연무장",     e:ic("sword"), x:78, y:30, view:"duel"},
  {id:"desk",   n:"의뢰 접수대", e:ic("swords"), x:74, y:56, view:"quest"},
  {id:"shop",   n:"여와의 매점", e:ic("store"), x:30, y:68, view:"shop"},
- {id:"heal",   n:"보건실",     e:ic("bandage"), x:52, y:78, view:null, act:"rest"},
+ {id:"heal",   n:"보건실",     e:ic("bandage"), x:48, y:82, view:null, act:"rest"},
  {id:"dorm",   n:"기숙사",     e:ic("bed"), x:86, y:76, view:"rel"},
  {id:"gate",   n:"정문 · 통행소",e:ic("subway"), x:16, y:86, view:"outing"},
  {id:"exam",   n:"시험장",     e:ic("memo"), x:70, y:88, view:"exam"},
@@ -2943,10 +2948,11 @@ VIEWS.map=()=>{
   <div class="card pad" style="margin-bottom:14px;padding:10px 14px">
     <div class="tiny muted">밝게 표시된 장소를 눌러 이동합니다. 이동에는 명계 시간이 조금 걸립니다. 회색 장소는 과정 제한 구역입니다.</div>
   </div>
+  <div class="mapscroll" tabindex="0" role="region" aria-label="사무전 장소 지도. 화면이 좁으면 좌우로 스크롤하세요.">
   <div class="mapwrap">
     <svg style="position:absolute;inset:0;width:100%;height:100%">
       ${[["plaza","class"],["plaza","tower"],["plaza","train"],["plaza","desk"],["plaza","fest"],
-         ["class","seogo"],["fest","shop"],["fest","heal"],["desk","dorm"],["shop","gate"],
+         ["class","seogo"],["class","woodp"],["fest","shop"],["fest","heal"],["desk","dorm"],["shop","gate"],
          ["heal","exam"],["train","yama"],["dorm","exam"]].map(([a,b])=>{
         const A=PLACES.find(p=>p.id===a),B=PLACES.find(p=>p.id===b);
         return `<line x1="${A.x}%" y1="${A.y}%" x2="${B.x}%" y2="${B.y}%" stroke="var(--s4)" stroke-width="2" stroke-dasharray="3 4"/>`}).join("")}
@@ -2956,6 +2962,8 @@ VIEWS.map=()=>{
       return `<div class="node ${S.place===p.id?"here":""} ${lock?"lock":""}" style="left:${p.x}%;top:${p.y}%"
         onclick="${lock?"":`moveTo('${p.id}')`}"><div class="nd">${p.e}</div><span>${p.n}</span></div>`}).join("")}
   </div>
+  </div>
+  <div class="map-scroll-hint">좁은 화면에서는 지도를 좌우로 밀어 다른 장소를 확인하세요.</div>
   ${hereHTML()}`;
 };
 function moveTo(id){
