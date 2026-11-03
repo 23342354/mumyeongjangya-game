@@ -200,7 +200,7 @@ function claimRoom(r){
       questRecordClear(res.stage);
       gainRin(Math.round((120+res.stage*48)*1.6)); ct&&ct("quest");
     }
-    const it=mkGear(Math.round(res.stage*1.3+S.lvl*.3)); S.bag.push(it);
+    const it=mkGear(Math.round(res.stage*1.3+S.lvl*.3),undefined,true); S.bag.push(it);
     gainExp(Math.round(300+res.stage*140));
     S.lotus+=1; S.war.mine=(S.war.mine||0)+30; addMark(10);
     toast(`<b>함께 ${RKIND[res.kind].n} ${res.stage}${res.kind==="quest"?"단계":"층"}</b> 돌파 · ${n}명 · 법구 「${it.name}」`,"good");

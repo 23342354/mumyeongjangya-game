@@ -560,6 +560,70 @@ const SUBJECTS = [
  {id:"s20",n:"불협화음 교정", st:"res", pf:"삼장",   d:"흐트러진 공명을 폭주 전에 해제하거나 다시 조율한다.", q:"어긋남을 부끄러워하지 마라."},
 ];
 
+/* 과목별 성장 — 기본 능력치는 과정 한계 안에서, 고유 효과는 수료 레벨에 따라 계산합니다. */
+const SUBJECT_TRAINING={
+ s1: {near:{atk:1.2,def:.4},far:{atk:.8,agi:.8},per:{atkP:.02},bonus:{atkP:.05}},
+ s2: {near:{atk:1,res:.6},far:{atk:.6,res:1},per:{critD:.03},bonus:{crit:.01}},
+ s3: {near:{atk:.8,men:.8},far:{atk:.8,agi:.8},per:{boss:.025,quality:.003},bonus:{quality:.03}},
+ s4: {near:{atk:1,agi:.6},far:{atk:.8,men:.8},per:{crit:.004},bonus:{critD:.10}},
+ s5: {near:{def:1.2,men:.4},far:{def:.8,men:.8},per:{defP:.02},bonus:{hpP:.06}},
+ s6: {near:{def:1,res:.6},far:{def:.6,res:1},per:{hpP:.02,heal:.005},bonus:{heal:.05}},
+ s7: {near:{def:1.2,agi:.4},far:{def:.8,agi:.8},per:{defP:.012,hpP:.008},bonus:{defP:.05}},
+ s8: {near:{def:1,men:.6},far:{def:.6,men:1},per:{rest:.025,heal:.005},bonus:{hpP:.05}},
+ s9: {near:{agi:1,atk:.6},far:{agi:1.2,atk:.4},per:{spd:.012},bonus:{crit:.01}},
+ s10:{near:{agi:1,men:.6},far:{agi:1,res:.6},per:{loot:.015},bonus:{quality:.02}},
+ s11:{near:{agi:1,res:.6},far:{agi:.8,res:.8},per:{crit:.003,spd:.006},bonus:{critD:.06}},
+ s12:{near:{agi:1,def:.6},far:{agi:1.2,men:.4},per:{exp:.02,loot:.005},bonus:{exp:.05}},
+ s13:{near:{men:1,def:.6},far:{men:1.2,res:.4},per:{rest:.03,know:.005},bonus:{heal:.05}},
+ s14:{near:{men:1,res:.6},far:{men:.8,res:.8},per:{quality:.01,know:.01},bonus:{quality:.03}},
+ s15:{near:{men:1,def:.6},far:{men:1.2,agi:.4},per:{snGuard:.01},bonus:{snGuard:.03}},
+ s16:{near:{men:.8,res:.8},far:{men:.6,res:1},per:{heal:.015,know:.005},bonus:{heal:.06}},
+ s17:{near:{res:1,agi:.6},far:{res:1.2,agi:.4},per:{crit:.002,mana:.015},bonus:{crit:.01}},
+ s18:{near:{res:1,men:.6},far:{res:1.2,men:.4},per:{study:.02,mana:.01},bonus:{study:.05}},
+ s19:{near:{res:1,atk:.6},far:{res:1.2,atk:.4},per:{spd:.008,atkP:.01},bonus:{atkP:.05}},
+ s20:{near:{res:1,def:.6},far:{res:.8,men:.8},per:{snGuard:.005,heal:.01},bonus:{rest:.08}},
+};
+const SUBJECT_MILESTONES=[{lv:5,mul:1},{lv:10,mul:2},{lv:20,mul:3}];
+const CLASS_EFFECTS={atkP:"공격력",defP:"방어력",hpP:"생명력",crit:"치명타 확률",critD:"치명타 피해",
+  boss:"업귀 피해",spd:"공격 속도",loot:"전리품 획득 확률",quality:"법구 품질 상승 확률",
+  rest:"체력·이성 자연 회복",heal:"치유·보호막 위력",exp:"경험치 획득",know:"지식 획득",
+  mana:"파장 재생",study:"수업 보상",snGuard:"이성 소모 감소"};
+function combatStyle(){
+  if(["근거리","원거리"].includes(S.combatStyle)) return S.combatStyle;
+  return /활|궁|총|원거리|사격|투척/.test(S.weapon||"")?"원거리":"근거리";
+}
+function subjectLevel(id){ return Math.max(0,Math.floor(Number(S.sub[id]?.lv)||0)); }
+function subjectGrowth(id,style=combatStyle()){
+  return SUBJECT_TRAINING[id]?.[style==="원거리"?"far":"near"]||{};
+}
+function subjectEffects(id,lv=subjectLevel(id)){
+  const t=SUBJECT_TRAINING[id]; if(!t) return {};
+  const v={};
+  for(const [k,n] of Object.entries(t.per)) v[k]=n*lv;
+  for(const m of SUBJECT_MILESTONES) if(lv>=m.lv)
+    for(const [k,n] of Object.entries(t.bonus)) v[k]=(v[k]||0)+n*m.mul;
+  return v;
+}
+function subjectMod(key){ return SUBJECTS.reduce((n,s)=>n+(subjectEffects(s.id)[key]||0),0); }
+function subjectStat(key){ return SUBJECTS.reduce((n,s)=>n+(subjectGrowth(s.id)[key]||0)*subjectLevel(s.id),0); }
+function statGrowthText(values){
+  return Object.entries(values).map(([k,v])=>`${STATS.find(s=>s.k===k).n} +${Number(v.toFixed(1))}`).join(" · ");
+}
+function classEffectText(values,mul=1){
+  return Object.entries(values).filter(([,v])=>v>0).map(([k,v])=>`${CLASS_EFFECTS[k]||k} +${Number((v*mul*100).toFixed(1))}${["crit","critD","quality","loot"].includes(k)?"%p":"%"}`).join(" · ")||"아직 수료한 레벨이 없습니다.";
+}
+function lootQualityChance(){ return clamp(mod("quality"),0,.60); }
+function setCombatStyle(style){
+  if(!["근거리","원거리"].includes(style)) return;
+  S.combatStyle=style;
+  renderMain(); renderNav(); renderTop(); save();
+  if(typeof syncUp==="function") syncUp(true);
+}
+function combatStyleHTML(){
+  return `<div class="row"><b>전투 거리</b><span class="seg">${["근거리","원거리"].map(t=>`<button class="${combatStyle()===t?"on":""}" aria-pressed="${combatStyle()===t}" onclick="setCombatStyle('${t}')">${t}</button>`).join("")}</span></div>
+    <div class="tiny muted" style="margin-top:7px">장인·마무기 모두 선택 가능 · 언제든 변경할 수 있습니다.<br>근거리는 공격·방호, 원거리는 민첩·공명 위주로 과목별 성장치가 달라집니다. 바꾸면 수료한 과목의 성장치도 함께 바뀝니다.</div>`;
+}
+
 /* 7과정 */
 const COURSES = [
  {lv:1, n:"파장의 기초",        subs:["s17","s5","s13"],  need:4,  line:64},
@@ -736,7 +800,7 @@ function newState(){
   const res={}; RESEARCH.forEach(r=>res[r.id]=0);
   return {
     made:false, v:1,
-    name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"",
+    name:"이름 없는 차사", gender:"기타", line:"장인", weapon:"", combatStyle:null,
     hall:"dorm", title:"첫 번째 별", intro:"", bio:"", color:"var(--gold)", av:"lantern", avImg:null, avSrc:"",
     base:{atk:3,def:3,agi:3,men:2,res:2},
     bonus:{atk:0,def:0,agi:0,men:0,res:0},
@@ -893,7 +957,11 @@ function hhmm(mins){ mins=Math.max(0,Math.ceil(mins));
   return h>0 ? `${h}시간 ${m}분` : `${m}분`; }
 
 /* ── 능력치 / 보정 ───────────────── */
-function stat(k){ return S.base[k]+S.bonus[k]; }
+function stat(k){
+  /* 예전 저장본의 수업 능력치는 최소 보장값입니다. 새 성장치를 중복해서 더하지 않습니다. */
+  const base=Number(S.base[k])||0, old=Number(S.bonus[k])||0;
+  return +(base+Math.max(old,Math.min(Math.max(0,statCap(k)-base),subjectStat(k)))).toFixed(1);
+}
 function statCap(k){ return STATCAP[k][clamp(S.course-1,0,6)]; }
 function hallBonus(k){ return 0; }   /* 거주지 혜택은 part3의 HALLBONUS 표가 담당합니다 */
 /* 거주지 찾기 — 모르는 값이 들어와도 기숙사로 떨어뜨려 화면이 죽지 않게 합니다 */
@@ -911,7 +979,7 @@ function effStat(k){
 }
 /* 누적 보정치: 연구 + 버프 + 서고 + 날씨 + 거주지 */
 function mod(key){
-  let v=0;
+  let v=subjectMod(key);
   const R=S.res;
   if(key==="mana")  v+=R.r1*.06;
   if(key==="study") v+=R.r3*.02;
@@ -954,8 +1022,12 @@ function gainKnow(n){ n=Math.round(n*(1+mod("know"))); S.know+=n; return n; }
 
 function damageHP(n){ S.hp=Math.max(1,S.hp-n);
   if(S.hp<=1){ toast("체력이 바닥났습니다. 전투 불능 상태로 퇴장합니다.","bad"); } }
-function damageSN(n){ S.sn=Math.max(1,S.sn-n);
-  if(S.sn<=1){ toast("이성이 바닥났습니다. 정상적인 판단이 어렵습니다.","bad"); } }
+function damageSN(n){
+  n=Math.max(0,Math.round(n*(1-clamp(mod("snGuard"),0,.60))));
+  const before=S.sn; S.sn=Math.max(1,S.sn-n);
+  if(S.sn<=1){ toast("이성이 바닥났습니다. 정상적인 판단이 어렵습니다.","bad"); }
+  return before-S.sn;
+}
 
 /* ── 메인 틱 ─────────────────────── */
 let TICK=null;
@@ -1430,9 +1502,34 @@ function lessonPlanMinutes(ids){
   });
   return minutes;
 }
+function lessonReward(id){
+  const lv=subjectLevel(id), efficiency=1+mod("study");
+  return {know:(20+lv*5)*efficiency,exp:(28+lv*6+S.course*10)*efficiency};
+}
+function subjectSyllabus(id){
+  const s=SUBJECTS.find(x=>x.id===id); if(!s) return;
+  const d=S.sub[id], t=SUBJECT_TRAINING[id], style=combatStyle();
+  modal(s.n+" 강의계획서",`
+    <div class="tiny muted">${NPC[s.pf].n} 교사 · 공통 수강 · 현재 Lv ${d.lv} · <b style="color:var(--gold)">${style}</b></div>
+    <p>${s.d}</p><div class="quote">${s.q}</div>
+    <hr class="hr"><div class="sect-t">레벨당 기본 능력치</div>
+    <table class="t"><thead><tr><th>전투 거리</th><th>과목 레벨 +1마다</th></tr></thead><tbody>
+      ${["근거리","원거리"].map(k=>`<tr><td><b style="color:${k===style?"var(--gold)":"var(--tx)"}">${k}${k===style?" · 선택 중":""}</b></td><td>${statGrowthText(subjectGrowth(id,k))}</td></tr>`).join("")}
+    </tbody></table>
+    <div class="tiny muted" style="margin-top:7px">소수점까지 누적되며 실제 전투 판정에는 반올림한 능력치를 사용합니다. 기본 능력치는 과정별 한계까지 적용됩니다.</div>
+    <hr class="hr"><div class="sect-t">레벨당 고유 효과</div>
+    <div style="color:var(--jade)">${classEffectText(t.per)}</div>
+    <div class="tiny muted" style="margin-top:7px">기본 능력치가 한계에 도달해도 고유 효과는 계속 성장합니다.</div>
+    <hr class="hr"><div class="sect-t">레벨 달성 보상 · 각각 누적</div>
+    ${SUBJECT_MILESTONES.map(m=>`<div class="spread" style="gap:10px;padding:7px 0;border-bottom:1px solid var(--line)"><b style="white-space:nowrap">Lv ${m.lv}</b><span style="flex:1">${classEffectText(t.bonus,m.mul)}</span><span class="tag ${d.lv>=m.lv?"j":""}">${d.lv>=m.lv?"적용 중":"미달성"}</span></div>`).join("")}
+    <hr class="hr"><div class="sect-t">이 과목에서 받은 누적 고유 효과</div>
+    <div class="sub" style="line-height:1.9">${classEffectText(subjectEffects(id))}</div>
+    <div class="tiny muted" style="margin-top:10px;line-height:1.9">치명타 확률은 전체 효과 합산 후 최대 65%입니다. 법구 품질은 전투 보상으로 얻는 무작위 법구가 한 등급 높아질 확률이며 최대 60%, 전설까지 적용됩니다. 상점·고정 등급 보상은 제외됩니다. 이성 소모 감소는 최대 60%입니다.<br>수업 보상은 완료 시 얻는 경험치·지식을 늘립니다. 수업 시간과 필요한 교시 수는 그대로입니다.</div>
+    <hr class="hr"><div class="row"><button class="btn pri" onclick="closeModal();quickLesson('${id}')">1교시 듣기 · ${hhmm(subjectLessonMinutes(d))}</button><span class="tiny muted">Lv ${d.lv+1}까지 ${subjectLessonsLeft(d)}교시</span></div>`);
+}
 let CLASSFILTER="전체", CLASSSORT="즐겨찾기";
 VIEWS.class=()=>{
-  const eff=(2.16+S.course*0.18)*(1+mod("study"));
+  const eff=1+mod("study");
   const cur=S.lesson?SUBJECTS.find(s=>s.id===S.lesson.plan[S.lesson.idx]):null;
 
   const planCards=S.plans.map((p,i)=>{
@@ -1454,20 +1551,23 @@ VIEWS.class=()=>{
 
   const subCards=list.map(s=>{
     const d=S.sub[s.id], st=STATS.find(x=>x.k===s.st);
-    const capped=stat(s.st)>=statCap(s.st);
+    const growth=subjectGrowth(s.id), capped=Object.keys(growth).every(k=>stat(k)>=statCap(k));
     const isExam=COURSES[S.course-1].subs.includes(s.id);
     return `<div class="sub ${cur&&cur.id===s.id?"active":""}">
       <button class="starbtn ${d.fav?"on":""}" title="${d.fav?"즐겨찾기 해제":"즐겨찾기"}" onclick="favSub('${s.id}')">${ic("star",15)}</button>
       <h4>${s.n} <span class="lv">${d.lv}</span> ${isExam?'<span class="tag g">시험</span>':""}</h4>
       <div class="tiny muted">${NPC[s.pf].n} 교사 · ${st.n} 계열</div>
-      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${Number(d.p.toFixed(1))}% ${capped?`<span style="color:var(--gold)">· ${st.n} 한계</span>`:`· 완료 시 ${st.n} +1`}</div>
+      <div class="tiny" style="margin-top:7px;color:var(--gold)">${combatStyle()} · 레벨당 ${statGrowthText(growth)}</div>
+      <div class="tiny" style="margin-top:5px;color:var(--jade)">${classEffectText(SUBJECT_TRAINING[s.id].per)}</div>
+      <div class="tiny muted" style="margin:6px 0 2px">진행도 ${Number(d.p.toFixed(1))}% ${capped?`<span style="color:var(--gold)">· 기본 능력치 한계 · 고유 효과는 계속 성장</span>`:""}</div>
       <div class="bar"><i style="width:${d.p}%"></i></div>
       <div class="tiny muted" style="margin-top:5px">Lv ${d.lv+1}까지 ${subjectLessonsLeft(d)}교시 남음 · 이 레벨 총 ${subjectLessonCount(d.lv)}교시</div>
       <div class="tiny muted" style="margin:7px 0 4px">${s.d}</div>
       <div class="quote">${s.q}</div>
       <div class="row" style="margin-top:8px">
         <button class="btn sm" onclick="quickLesson('${s.id}')">1교시 듣기 · ${hhmm(subjectLessonMinutes(d))}</button>
-        <span class="tiny muted" style="margin-left:auto">지식 +${Math.round((20+d.lv*5)*(1+mod("know")))}</span>
+        <button class="btn sm ghost" onclick="subjectSyllabus('${s.id}')">강의계획서</button>
+        <span class="tiny muted">지식 +${Math.round(lessonReward(s.id).know*(1+mod("know")))}</span>
       </div></div>`;
   }).join("");
 
@@ -1482,12 +1582,17 @@ VIEWS.class=()=>{
       <div class="tiny muted" style="margin-top:6px">
         시간표 「${esc(S.plans[S.lesson.planIdx]?S.plans[S.lesson.planIdx].n:"즉석")}」 ${S.lesson.idx+1}/${S.lesson.plan.length}교시 ·
         다음: ${S.lesson.idx+1<S.lesson.plan.length?SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx+1]).n:"없음"}</div>
-      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 1교시 인정 · Lv ${S.sub[cur.id].lv+1}까지 ${subjectLessonsLeft(S.sub[cur.id])}교시 · 지식 +${Math.round((20+S.sub[cur.id].lv*5)*(1+mod("know")))}</div>
-      <div class="tiny" style="color:var(--jade);margin-top:4px">끝까지 들으면 경험치 +5%</div>
+      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 1교시 인정 · Lv ${S.sub[cur.id].lv+1}까지 ${subjectLessonsLeft(S.sub[cur.id])}교시 · 지식 +${Math.round(lessonReward(cur.id).know*(1+mod("know")))}</div>
+      <div class="tiny" style="color:var(--jade);margin-top:4px">수업 보상 ×${eff.toFixed(2)} · 완료 경험치·지식에 적용</div>
     </div>`:"";
 
-  return head("일곱 과목, 일곱 해",ic("book")+" 강의실", `전공 수업 효율 <b style="color:var(--gold)">×${eff.toFixed(2)}</b><br><span class="tiny">경험치 · 지식 획득량</span>`)+`
+  return head("스무 과목, 나만의 성장",ic("book")+" 강의실", `수업 보상 <b style="color:var(--gold)">×${eff.toFixed(2)}</b><br><span class="tiny">경험치 · 지식 획득량</span>`)+`
   ${buffStrip()}
+  <div class="card pad" style="margin-bottom:12px">
+    ${combatStyleHTML()}
+    <div class="tiny" style="margin-top:10px;color:var(--jade)">현재 치명타 ${(C().crit*100).toFixed(1)}% · 법구 품질 상승 ${(lootQualityChance()*100).toFixed(1)}% · 이성 소모 감소 ${(clamp(mod("snGuard"),0,.60)*100).toFixed(1)}%</div>
+    <div class="tiny muted" style="margin-top:6px">과목마다 성장 효과가 다르며 Lv 5·10·20에 추가 효과가 열립니다. 자세한 수치는 강의계획서에서 확인하세요.</div>
+  </div>
   <div class="card pad" style="margin-bottom:12px">
     <div class="spread"><div class="sect-t" style="margin:0">시간표</div>
       <button class="btn sm pri" onclick="examPlan()">${S.course}과정 시험 과목으로 짜기</button></div>
@@ -1503,7 +1608,7 @@ VIEWS.class=()=>{
     <span class="tiny muted" style="margin-left:12px">필터</span>
     <span class="seg">${["전체",...STATS.map(s=>s.n)].map(x=>`<button class="${CLASSFILTER===x?"on":""}" onclick="setCF('${x}')">${x}</button>`).join("")}</span>
   </div>
-  <div class="grid g4">${subCards}</div>`;
+  <div class="grid g2">${subCards}</div>`;
 };
 function examPlan(){
   const c=COURSES[S.course-1];
@@ -1530,14 +1635,16 @@ function stopLesson(){ S.lesson=null; renderMain(); renderTop(); }
 function finishPeriod(){
   const L=S.lesson; const id=L.plan[L.idx]; const s=SUBJECTS.find(x=>x.id===id); const d=S.sub[id];
   const next=subjectNext(d);
-  gainKnow(20+d.lv*5);
-  gainExp(28+d.lv*6+S.course*10);
+  const reward=lessonReward(id);
+  gainKnow(reward.know);
+  gainExp(reward.exp);
   addMark(5);
   d.p=next.p;
   while(d.lv<next.lv){
     d.lv++;
-    if(stat(s.st)<statCap(s.st)){ S.bonus[s.st]++; toast(`「${s.n}」 수료 · <b>${STATS.find(x=>x.k===s.st).n} +1</b>`,"good"); }
-    else toast(`「${s.n}」 Lv ${d.lv} · ${STATS.find(x=>x.k===s.st).n}은(는) 이미 한계입니다.`);
+    toast(`「${s.n}」 Lv ${d.lv} · <b>${classEffectText(SUBJECT_TRAINING[id].per)}</b>`,"good");
+    const milestone=SUBJECT_MILESTONES.find(m=>m.lv===d.lv);
+    if(milestone) toast(`Lv ${d.lv} 달성 보상 · ${classEffectText(SUBJECT_TRAINING[id].bonus,milestone.mul)}`,"good");
   }
   const extra=L.left; // 음수 캐리
   if(L.idx+1<L.plan.length){ L.idx++; L.total=subjectLessonMinutes(S.sub[L.plan[L.idx]]); L.left=L.total+extra; }
@@ -1702,8 +1809,15 @@ function addMark(n){
    ═══════════════════════════════════════════════════ */
 function mkFighter(n,st,hp,c){ return {n, atk:st.atk, def:st.def, agi:st.agi, men:st.men, res:st.res, hp, max:hp, c:c||"var(--violetL)"}; }
 function meFighter(tempHP){
-  return mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},
+  const f=mkFighter(S.name,{atk:effStat("atk"),def:effStat("def"),agi:effStat("agi"),men:effStat("men"),res:effStat("res")},
     tempHP||Math.round(S.hp*(1+mod("hpP"))*1.6+60), S.color);
+  const c=C(); f.crit=c.crit; f.critD=c.critD; f.bossDamage=mod("boss");
+  return f;
+}
+function fighterAttack(A,D){
+  const critical=Math.random()<clamp(A.crit||0,0,.65);
+  const value=Math.round((d5(A.atk)+5)*(critical?Math.max(1,A.critD||2):1)*(D?.boss?1+(A.bossDamage||0):1));
+  return {value,critical};
 }
 function enemyFor(stage,boss){
   const k=stage;
@@ -1716,11 +1830,11 @@ function enemyFor(stage,boss){
 }
 function resolveAttack(A,D,log,opts={}){
   const bonusEvade=opts.duel?1:0;
-  const av=d5(A.atk)+5;
+  const hit=fighterAttack(A,D), av=hit.value;
   // 민첩이 방어보다 뚜렷하게 높으면 회피를, 아니면 방어를 고른다 (비슷하면 섞는다)
   const gap=D.agi-D.def;
   const wantEvade = gap>1 ? Math.random()<.8 : gap<-1 ? Math.random()<.2 : Math.random()<.5;
-  let line=`<span class="d">${esc(A.n)}</span> 공격 판정 <b>${av}</b>`;
+  let line=`<span class="d">${esc(A.n)}</span> ${hit.critical?'<b style="color:var(--gold)">치명타!</b> ':""}공격 판정 <b>${av}</b>`;
   if(wantEvade){
     let ar,dr,guard=0;
     do{ ar=d5(A.agi+bonusEvade); dr=d5(D.agi); guard++; }while(ar===dr && guard<8); // 동점은 재판정
@@ -1910,7 +2024,7 @@ function runQuest(stage,party){
   if(pos==="지원"){ hpL=Math.round(hpL*.8); snL=Math.round(snL*.8); }
   if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
   if(!res.win){ hpL=Math.round(hpL*1.8); snL=Math.round(snL*1.6); }
-  damageHP(hpL); damageSN(snL);
+  damageHP(hpL); snL=damageSN(snL);
 
   let reward=null;
   if(res.win){
@@ -2015,7 +2129,8 @@ function duelNext(){
   if(!D.queue||!D.queue.length){ D.phase="act"; drawDuel(); return; }
   const who=D.queue.shift();
   if(who==="me"){
-    const av=d5(D.me.atk)+5;
+    const hit=fighterAttack(D.me,D.foe), av=hit.value;
+    if(hit.critical) D.log.push(`<span style="color:var(--gold)">치명타! · 피해 ×${D.me.critD.toFixed(2)}</span>`);
     const gp=D.foe.agi-D.foe.def;
     const useEva= gp>1 ? Math.random()<.8 : gp<-1 ? Math.random()<.2 : Math.random()<.5;
     if(useEva){
@@ -2030,7 +2145,8 @@ function duelNext(){
     if(D.foe.hp<=0){ endDuel(true); return; }
     duelNext();
   }else{
-    D.pendingAtk=d5(D.foe.atk)+5;
+    const hit=fighterAttack(D.foe,D.me); D.pendingAtk=hit.value;
+    if(hit.critical) D.log.push(`<span style="color:var(--gold)">${esc(D.foe.n)}의 치명타!</span>`);
     D.phase="choose"; drawDuel();
   }
 }
@@ -2789,6 +2905,8 @@ function drawMe(){
         <button class="${S.line==="마무기"?"on":""}" onclick="setLine('마무기')">마무기</button></span>
         <input class="inp" id="e_wep" style="flex:1" maxlength="14" placeholder="무기 종류 (예: 장검 / 권총 / 거울)" value="${esc(S.weapon)}">
       </div>
+      <label class="f">전투 거리 · 수업 성장</label>
+      <select id="e_style" class="inp">${["근거리","원거리"].map(t=>`<option ${combatStyle()===t?"selected":""}>${t}</option>`).join("")}</select>
       <label class="f">거주지</label>
       <div class="row">${HALLS.map(h=>`<button class="btn sm ${S.hall===h.id?"pri":""}" onclick="setHall('${h.id}')">${h.n} <span class="tiny">· ${h.b}</span></button>`).join("")}</div>
       <label class="f">한 줄 소개 (40자)</label>
@@ -2850,6 +2968,7 @@ function saveMe(){
   const n=$("#e_name").value.trim(); if(n) S.name=n;
   const src=$("#e_avsrc"); if(src) S.avSrc=src.value.trim();
   S.weapon=$("#e_wep").value.trim();
+  const style=$("#e_style"); if(style&&["근거리","원거리"].includes(style.value)) S.combatStyle=style.value;
   S.intro=$("#e_intro").value.trim();
   S.bio=$("#e_bio").value;
   closeModal(); renderTop(); renderNav(); renderMain(); save(); toast("저장했습니다.","good");
@@ -2894,7 +3013,7 @@ function showSaveText(txt){
 /* ═══════════════ 입학 (캐릭터 생성) ═══════════════ */
 let MK=null;
 function openCreate(){
-  MK={name:"", line:"장인", weapon:"장검", hall:"dorm", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
+  MK={name:"", line:"장인", weapon:"장검", combatStyle:"근거리", hall:"dorm", color:"var(--gold)", av:"lantern", avImg:null, intro:"",
       st:{atk:3,def:3,agi:3,men:2,res:2}};
   drawCreate();
 }
@@ -2923,6 +3042,9 @@ function drawCreate(){
           <label class="f">무기 종류 ${MK.line==="장인"?"(다루는 무기)":"(변형하는 형태)"}</label>
           <input class="inp" id="c_wep" value="${esc(MK.weapon)}" maxlength="14" oninput="MK.weapon=this.value"
             placeholder="장검 / 권총 / 거울 / 석장 …">
+          <label class="f">전투 거리</label>
+          <div class="seg">${["근거리","원거리"].map(t=>`<button class="${MK.combatStyle===t?"on":""}" onclick="MK.combatStyle='${t}';drawCreate()">${t}</button>`).join("")}</div>
+          <div class="tiny muted" style="margin-top:6px">수업에서 오르는 능력치가 달라집니다. 입학 후에도 변경할 수 있습니다.</div>
           <label class="f">두상</label>
           <div class="row" style="margin-bottom:6px;align-items:center">
             ${MK.avImg?`<div style="width:46px;height:46px;border-radius:50%;overflow:hidden;border:2px solid ${MK.color};flex:none"><img src="${MK.avImg}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`:""}
@@ -2973,6 +3095,7 @@ function mkSt(k,d){
 function finishCreate(){
   S=newState();
   S.made=true; S.name=MK.name.trim(); S.line=MK.line; S.weapon=MK.weapon.trim();
+  S.combatStyle=MK.combatStyle||"근거리";
   S.hall=MK.hall; S.color=MK.color; S.av=MK.av; S.avImg=MK.avImg||null; S.intro=MK.intro.trim();
   S.base={...MK.st};
   S.plans[0]={n:"1과정 시험 준비", list:[...COURSES[0].subs, COURSES[0].subs[0]]};

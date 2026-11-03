@@ -298,7 +298,7 @@ function startRun(stage,party){
   const room=party?S.quests.room:null;
   const pos=room?room.pos:"후열";
   const me=meFighter();
-  me.max=Math.round(300+effStat("def")*40+effStat("men")*30);
+  me.max=Math.round((300+effStat("def")*40+effStat("men")*30)*(1+mod("hpP")));
   me.hp=Math.round(me.max*clamp(S.hp/100,.25,1));
   me.pos=pos;
   if(pos==="선봉") me.atk=Math.round(me.atk*1.1);
@@ -326,7 +326,7 @@ function runStep(){
   const r=Math.random();
   if(r<0.14){ pushRun(`<span class="muted">${pick(RUNFLAVOR)}</span>`); return; }
   if(r<0.2 && R.me.hp<R.me.max*.7){
-    const heal=Math.round(R.me.max*0.06);
+    const heal=Math.round(R.me.max*0.06*(1+mod("heal")));
     R.me.hp=Math.min(R.me.max,R.me.hp+heal);
     pushRun(`<span class="s">상처가 천천히 아문다. 생명력 +${nf(heal)}</span>`); return;
   }
@@ -353,7 +353,7 @@ function runStep(){
     pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(gain)}</span>`);
     if(foe.boss){ ct("boss"); }
     if(Math.random()<(0.14+mod("loot"))){
-      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3)); S.bag.push(it);
+      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); S.bag.push(it);
       pushRun(`<span class="s">${GRADES[it.grade].n} 법구 「${esc(it.name)}」를 주웠다.</span>`);
     }
     if(Math.random()<0.18){ const dd=rnd(1,3)+Math.floor(R.stage/12); S.mat.가루+=dd;
@@ -372,7 +372,7 @@ function endRun(ok){
   if(R.pos==="지원"){ hpL=Math.round(hpL*.8); snL=Math.round(snL*.8); }
   if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
   if(!ok){ hpL=Math.round(hpL*1.7); snL=Math.round(snL*1.6); }
-  damageHP(hpL); damageSN(snL);
+  damageHP(hpL); snL=damageSN(snL);
   const rin=gainRin(R.rin+ (cleared?Math.round(120+R.stage*48):0));
   const ex=gainExp(Math.round((60+R.stage*22)*R.kills*0.6+ (cleared?90+R.stage*34:0)));
   const kn=gainKnow(Math.round((10+R.stage*4)*Math.max(1,R.kills*0.5)));

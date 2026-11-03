@@ -208,12 +208,13 @@ const _power=power;
 power=function(){ return _power()+gearPower()+Math.round(S.pets.list.length*120)+(S.pts?0:0); };
 
 /* ═══════════ 법구 생성 ═══════════ */
-function mkGear(lv,gradeHint){
+function mkGear(lv,gradeHint,fromLoot=false){
   const slot=pick(SLOTS);
   let g=gradeHint!==undefined?gradeHint:(()=> {
     const r=Math.random()*100*(1+mod("loot"));
     return r>97?4:r>88?3:r>70?2:r>44?1:0; })();
   g=clamp(g,0,4);
+  if(fromLoot&&gradeHint===undefined&&g<4&&Math.random()<lootQualityChance()) g++;
   const G=GRADES[g];
   const base=Math.max(1,Math.round((0.8+lv*.085)*G.m));
   const opts=[];
@@ -295,7 +296,7 @@ function mkPet(gi){
 }
 function OPTNAME(k){
   return ({atkP:"공격력",hpP:"생명력",defP:"방어력",crit:"치명타 확률",critD:"치명타 피해",spd:"공격 속도",
-    gold:"륜 획득",exp:"경험치",loot:"전리품 확률",mana:"파장 재생",study:"수업 효율",know:"지식 획득",hatch:"부화 효율"})[k]||k;
+    gold:"륜 획득",exp:"경험치",loot:"전리품 획득 확률",quality:"법구 품질 상승 확률",snGuard:"이성 소모 감소",rest:"체력·이성 자연 회복",heal:"치유·보호막 위력",boss:"업귀 피해",mana:"파장 재생",study:"수업 보상",know:"지식 획득",hatch:"부화 효율"})[k]||k;
 }
 function hatchNeed(){ return 1800+S.pets.list.length*420; }
 function startHatch(){
@@ -744,6 +745,7 @@ VIEWS.stats=()=>{
       </div></div>`;
   };
   return head("능력치 · 성향 · 전투 능력",ic("chart")+" 능력치", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+  <div class="card pad" style="margin-bottom:14px">${combatStyleHTML()}</div>
   <div class="grid g2">
     <div class="card pad">
       <div class="spread"><div class="sect-t" style="margin:0">능력치</div>
@@ -782,13 +784,14 @@ VIEWS.stats=()=>{
         <tr><td>사역귀 동행</td><td style="text-align:right">${S.pets.list.length?S.pets.list[0].e+" "+S.pets.list[0].n:"없음"}</td></tr>
       </table>
       <div class="tiny muted" style="margin-top:8px">초당 피해는 석탑·결계의 탑·업귀 토벌·연무제에서 쓰입니다.
-      의뢰·대련·승급 시험은 세계관 규칙대로 <b>공격 D5 + 5</b> 판정으로 따로 계산합니다.</div>
+      의뢰·대련·승급 시험은 <b>공격 D5 + 5</b>에 치명타·업귀 피해 효과를 적용합니다.</div>
       <hr class="hr">
       <div class="sect-t">적용 중인 효과</div>
-      ${["atkP","hpP","defP","crit","critD","spd","gold","exp","know","loot","study","mana"].map(k=>{
+      ${["atkP","hpP","defP","crit","critD","spd","boss","gold","exp","know","loot","quality","snGuard","rest","heal","study","mana"].map(k=>{
         const v=mod(k); if(Math.abs(v)<0.001) return "";
         return `<div class="spread tiny" style="padding:2px 0"><span>${OPTNAME(k)}</span>
-          <b style="color:${v>0?"var(--jade)":"var(--red)"}">${v>0?"+":""}${(v*100).toFixed(1)}%</b></div>`}).join("")}
+          <b style="color:${v>0?"var(--jade)":"var(--red)"}">${v>0?"+":""}${(v*100).toFixed(1)}${["crit","critD","quality","loot"].includes(k)?"%p":"%"}</b></div>`}).join("")}
+      <div class="tiny muted" style="margin-top:8px">품질 상승·이성 소모 감소는 각각 최대 60%까지 적용됩니다. 현재 품질 상승 ${(lootQualityChance()*100).toFixed(1)}%, 이성 소모 감소 ${(clamp(mod("snGuard"),0,.60)*100).toFixed(1)}%.</div>
     </div>
   </div>`;
 };
@@ -883,7 +886,7 @@ function climbTower(chain){
     if(!win) break;
     S.tower=fl; gained++;
     rin+=1200+fl*260; if(fl%5===0) sari++; S.mat.가루+=2;
-    if(fl%3===0) drops.push(mkGear(Math.round(fl*1.4)));
+    if(fl%3===0) drops.push(mkGear(Math.round(fl*1.4),undefined,true));
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
@@ -942,7 +945,7 @@ function climbGuard(chain){
     logs.push(`<span class="${win?"s":"h"}">${fl}층</span> — 버틴 시간 ${Math.min(99,sustain).toFixed(1)}초 / 30초 → ${win?"방어 성공":"붕괴"}`);
     if(!win) break;
     S.tower2=fl; gained++; rin+=700+fl*210;
-    if(fl%4===0) drops.push(mkGear(Math.round(fl*1.3)));
+    if(fl%4===0) drops.push(mkGear(Math.round(fl*1.3),undefined,true));
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
@@ -1002,7 +1005,7 @@ function hitBoss(){
   if(S.wb.tickets<1) return;
   S.wb.tickets--;
   const c=C();
-  const dmg=Math.round(c.dps*30*(0.92+Math.random()*0.18));
+  const dmg=Math.round(c.dps*30*(1+mod("boss"))*(0.92+Math.random()*0.18));
   S.wb.dmg+=dmg; S.wb.total+=dmg;
   const rin=gainRin(Math.round(dmg/3000)+400), ex=gainExp(600);
   addMark(10);
@@ -1084,7 +1087,7 @@ function arenaGo(mode){
     S.arena.round++; S.arena.best=Math.max(S.arena.best,r);
     const rin=gainRin((900+r*520)*sn), ex=gainExp((500+r*240)*sn);
     S.lotus+=1; addMark(10);
-    const drop=mkGear(Math.round(r*4+S.lvl*.4+sn*20)); S.bag.push(drop);
+    const drop=mkGear(Math.round(r*4+S.lvl*.4+sn*20),undefined,true); S.bag.push(drop);
     rew=`륜 +${nf(rin)} · 경험치 +${nf(ex)} · 연등 +1 · 법구 「${drop.name}」`;
     if(S.arena.round>15){
       S.arena.season=sn+1; S.arena.round=1;
@@ -1478,7 +1481,7 @@ runQuest=function(stage,party){
   _runQuest(stage,party);
   const last=S.quests.log[0];
   if(last && last.win && Math.random()<(0.45+mod("loot"))){
-    const it=mkGear(Math.round(stage*1.2+S.lvl*.3)); S.bag.push(it);
+    const it=mkGear(Math.round(stage*1.2+S.lvl*.3),undefined,true); S.bag.push(it);
     toast(`전리품 · <b style="color:${GRADES[it.grade].c}">${it.name}</b>`,"good");
   }
   if(Math.random()<.12) S.pets.eggs++;
