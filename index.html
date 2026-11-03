@@ -584,6 +584,27 @@ textarea.inp{min-height:76px;resize:vertical}
 .pvp-chat-compose textarea{min-width:0;flex:1;resize:vertical;min-height:58px}
 @media(max-width:730px){.pvp-rooms-grid{grid-template-columns:1fr}.pvp-fighters{gap:5px;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)}.pvp-fighter{padding:10px 8px;font-size:12px}.pvp-fighter .tag{padding:2px 4px;font-size:10px}.pvp-log,.pvp-chat{height:245px}}
 
+
+/* 콘텐츠별 합동방: 다른 콘텐츠와 분리된 간결한 모집 UI */
+.coop-panel{margin:0 0 14px;border-color:var(--line2)}
+.coop-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.coop-panel-head .sect-t{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.coop-start{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 10px;padding:11px 12px;border-radius:9px;background:var(--s1);border:1px solid var(--line)}
+.coop-start .tiny{flex:1;min-width:180px;line-height:1.6}
+.coop-room-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px}
+.coop-room{border-radius:10px;background:var(--subBg);border:1px solid var(--line);padding:12px;min-width:0}
+.coop-room.joined{border-color:var(--gold2)}
+.coop-room-top{align-items:flex-start;gap:6px;flex-wrap:wrap}
+.coop-room-top b{color:var(--tx)}
+.coop-members{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.coop-note{margin-top:7px;overflow-wrap:anywhere}
+.coop-actions{margin-top:10px;align-items:center;gap:7px;flex-wrap:wrap}
+.coop-empty{padding:12px;border:1px dashed var(--line2);border-radius:9px;grid-column:1/-1}
+.coop-other{margin:10px 0;padding:9px;border-radius:8px;border:1px solid var(--gold2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.coop-history{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.coop-history summary,.coop-legacy summary{cursor:pointer;color:var(--dim);font-size:12px}
+.coop-history .spread{padding:8px 0;gap:8px;border-bottom:1px solid var(--line)}
+@media(max-width:630px){.coop-panel{padding:12px}.coop-panel-head{align-items:center}.coop-start .btn{flex:1}.coop-room-list{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -2276,7 +2297,7 @@ VIEWS.quest=()=>{
     const rq=questAt(room.stage);
     return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
       <div class="spread"><div class="sect-t" style="margin:0">함께 의뢰 <span class="tag">최대 4명</span></div>
-        <span class="tiny muted">인원이 다 모이지 않아도 출동할 수 있습니다</span></div>
+        <span class="tiny muted">인연·교사 동행 · 인원 제한 없이 출동 가능</span></div>
       <div class="spread" style="margin:6px 0">
         <div><b>${rq.stage}단계 · ${rq.t}</b>
           <div class="tiny muted">사건번호 ${rq.no} · ${rq.ward.n} · <span style="color:${rq.rank.c}">${rq.rank.r}등급 ${rq.rank.n}</span></div></div>
@@ -2377,13 +2398,13 @@ function questReward(q){
   return {rin:Math.round((120+k*48)*m), exp:Math.round((90+k*34)*m), know:Math.round((18+k*7)*m),
           sari:(q.rank.r==="Ⅳ"&&Math.random()<.3)||q.rank.r==="Ⅴ"?1:0};
 }
-function makeRoom(st){ if(!questCheck(st)) return; S.quests.room={stage:st,pos:"후열",party:[]}; renderMain(); toast("함께 의뢰 방을 열었습니다. 다른 학생이 들어오기를 기다립니다."); }
+function makeRoom(st){ if(!questCheck(st)) return; S.quests.room={stage:st,pos:"후열",party:[]}; renderMain(); toast("함께 의뢰를 준비했습니다. 인연이나 교사를 동행으로 불러 보세요."); }
 function leaveRoom(){ S.quests.room=null; renderMain(); }
 function setPos(p){ S.quests.room.pos=p; renderMain(); }
 function inviteParty(){
   const r=S.quests.room; if(r.party.length>=3){ toast("자리가 다 찼습니다.","bad"); return; }
   const pool=S.friends.map(f=>f.n);
-  if(!pool.length){ toast("함께 갈 사람이 없습니다. 의뢰 화면 아래 「함께 가기」에서 방을 열어 보세요.","bad"); return; }
+  if(!pool.length){ toast("등록된 인연이 없습니다. 학생 명부에서 인연을 맺거나 교사 동행을 이용해 주세요.","bad"); return; }
   r.party.push({n:pick(pool), pos:pick(["선봉","후열","지원"]), lv:rnd(1,7)});
   renderMain(); toast("동행 요청을 수락했습니다.");
 }

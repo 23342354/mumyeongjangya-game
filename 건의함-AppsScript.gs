@@ -7,7 +7,7 @@
  */
 
 var SHEET_NAME = '건의함';
-var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변'];
+var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변', '열람 코드 해시'];
 
 /** 시트를 가져오고, 없으면 만들어 머리글을 넣습니다. */
 function getSheet_() {
@@ -25,6 +25,9 @@ function getSheet_() {
     sh.setColumnWidth(5, 260);  // 제목
     sh.setColumnWidth(6, 420);  // 내용
     sh.setColumnWidth(10, 420); // 답변
+  } else if (String(sh.getRange(1, 11).getValue()) !== HEADER[10]) {
+    // 기존 건의함에 있는 10개 열은 보존하고, 개인 열람 코드 해시 열만 추가합니다.
+    sh.getRange(1, 11).setValue(HEADER[10]);
   }
   return sh;
 }
@@ -33,6 +36,12 @@ function json_(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function receiptHash_(token) {
+  if (!/^[a-f0-9]{64}$/.test(String(token || ''))) return '';
+  var data = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, token, Utilities.Charset.UTF_8);
+  return data.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
 }
 
 /** 게임이 목록을 불러갈 때 */
@@ -54,7 +63,7 @@ function doGet(e) {
           cat:    String(v[3] || '기타'),
           title:  String(v[4] || ''),
           // 비공개 글의 내용은 게임에 내려보내지 않습니다. 운영진은 시트에서 직접 봅니다.
-          body:   secret ? '(비공개 글입니다. 운영진만 시트에서 볼 수 있습니다.)' : String(v[5] || ''),
+          body:   secret ? '(비공개 글입니다. 작성자와 운영진만 볼 수 있습니다.)' : String(v[5] || ''),
           secret: secret ? 1 : 0,
           likes:  Number(v[7] || 0),
           status: String(v[8] || '접수'),
@@ -74,10 +83,31 @@ function doPost(e) {
     var p = JSON.parse(e.postData.contents);
     var sh = getSheet_();
 
+    if (p.action === 'read_private') {
+      var receiptHash = receiptHash_(p.receipt);
+      if (!receiptHash) return json_({ ok: false, error: '올바른 열람 코드를 입력해 주세요.' });
+      var lastPrivate = sh.getLastRow();
+      if (lastPrivate > 1) {
+        var privateRows = sh.getRange(2, 1, lastPrivate - 1, HEADER.length).getValues();
+        for (var j = 0; j < privateRows.length; j++) {
+          var rec = privateRows[j];
+          if (String(rec[0]) === String(p.id)
+              && (rec[6] === true || rec[6] === 1 || rec[6] === '1' || rec[6] === 'Y')
+              && String(rec[10] || '') === receiptHash) {
+            return json_({ok:true, body:String(rec[5] || '')});
+          }
+        }
+      }
+      return json_({ ok:false, error:'열람 코드가 맞지 않거나 이전 방식으로 작성한 글입니다.' });
+    }
+
     if (p.action === 'add') {
       var title = String(p.title || '').slice(0, 80);
       var body  = String(p.body  || '').slice(0, 3000);
       if (!title || !body) return json_({ ok: false, error: '제목과 내용이 필요합니다' });
+      var receiptHash = p.secret ? receiptHash_(p.receipt) : '';
+      if (p.secret && !receiptHash)
+        return json_({ ok:false, error:'비공개 글을 위한 개인 열람 코드가 필요합니다.' });
 
       // 같은 사람이 연달아 올리는 것을 1분에 한 번으로 제한합니다.
       var last = sh.getLastRow();
@@ -92,8 +122,9 @@ function doPost(e) {
         }
       }
 
+      var issuedId = 'B' + new Date().getTime() + '-' + Math.floor(Math.random() * 1000000);
       sh.appendRow([
-        'B' + new Date().getTime(),
+        issuedId,
         new Date(),
         String(p.name || '이름 없는 차사').slice(0, 20),
         String(p.cat || '기타'),
@@ -102,9 +133,10 @@ function doPost(e) {
         p.secret ? 1 : '',
         0,
         '접수',
-        ''
+        '',
+        receiptHash
       ]);
-      return json_({ ok: true });
+      return json_({ ok: true, id:issuedId });
     }
 
     if (p.action === 'like') {

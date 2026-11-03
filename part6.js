@@ -41,7 +41,7 @@ function sbSend(method, path, body, prefer){
 }
 function sbErr(e){
   S.sb.state="err"; S.sb.err=String(e&&e.message||e);
-  if(["roster","rank","hallv","together","board"].includes(VIEW)) renderMain();
+  if(["roster","rank","hallv","tower","guard","board"].includes(VIEW)) renderMain();
 }
 
 /* ─── 내 기록 올리기 ─── */
@@ -100,7 +100,7 @@ function syncRooms(force){
       S.sb.myRoom=mine?mine.id:null;
       (rows||[]).forEach(r=>{ if(r.status==="done" && r.result) claimRoom(r); });
       S.sb.state="ok"; S.sb.err="";
-      if(VIEW==="together" || VIEW==="quest") renderMain(true);
+      if(VIEW==="tower" || VIEW==="guard" || (VIEW==="quest" && S.sb.myRoom && (S.sb.rooms||[]).some(x=>x.id===S.sb.myRoom && x.kind==="quest"))) renderMain(true);
     })
     .catch(sbErr);
 }
@@ -110,8 +110,11 @@ const RKIND={tower:{n:"석탑",e:ic("tower")}, guard:{n:"결계의 탑",e:ic("sh
 function roomCreate(kind,stage,note){
   if(!sbOn()){ toast("먼저 공유 기록을 연결해 주세요.","bad"); return; }
   if(S.sb.myRoom){ toast("이미 들어가 있는 방이 있습니다.","bad"); return; }
-  if(kind==="quest" && !questCheck(stage)) return;
-  sbSend("POST","rooms",[{kind, stage, host_id:S.sb.id, host_name:S.name, note:note||""}])
+  // 의뢰에는 이미 별도의 인연·교사 동행 기능이 있습니다. 온라인 합동방은 탑 2종에만 만듭니다.
+  if(kind!=="tower" && kind!=="guard") { toast("이 콘텐츠에서는 새 합동방을 만들 수 없습니다.","bad"); return; }
+  stage=Number(stage);
+  if(!Number.isInteger(stage) || stage<1 || stage>999){ toast("1~999층 중에서 골라 주세요.","bad"); return; }
+  sbSend("POST","rooms",[{kind, stage, host_id:S.sb.id, host_name:S.name, note:String(note||"").slice(0,40)}])
     .then(rows=>{
       const r=rows[0];
       return sbSend("POST","room_members",[roomMe(r.id)],"return=minimal").then(()=>r);
@@ -215,94 +218,83 @@ function claimRoom(r){
   achCheck&&achCheck(); renderTop(); renderNav(); save(); syncUp(true);
 }
 
-/* ═══════════ 함께 가기 (의뢰 화면 안) ═══════════ */
-let TKIND="tower";
-/* 함께 가기 — 의뢰 화면 안에 들어갑니다 (예전 「함께 가기」 탭 자리) */
-function togetherBody(){
-  if(!sbOn()) return `<div class="card pad" style="border-color:var(--gold2)">
-      <div class="tiny muted" style="line-height:1.9">
-        다른 학생과 함께 탑을 오르려면 모두의 기록이 한곳에 모여야 합니다.
-        설정(${ic("gear",13)})의 <b>공유 기록 연결</b>에 주소와 키를 넣어 주세요.
-        만드는 방법은 함께 드린 안내서 「공유 기록 연결하기」를 보시면 됩니다.</div>
-      <button class="btn pri" style="margin-top:12px" onclick="sbConnect()">공유 기록 연결</button>
-    </div>`;
-
-  const rooms=S.sb.rooms.filter(r=>r.status!=="done");
-  const done =S.sb.rooms.filter(r=>r.status==="done"&&r.result).slice(0,6);
-  const cur  =rooms.find(r=>r.id===S.sb.myRoom);
-
-  const card=(r)=>{
-    const ms=r.room_members||[];
-    const dps=ms.reduce((a,m)=>a+(+m.dps||0),0), hp=ms.reduce((a,m)=>a+(+m.hpv||0),0);
-    const host=r.host_id===S.sb.id, joined=ms.some(m=>m.student_id===S.sb.id);
-    const K=RKIND[r.kind]||RKIND.tower;
-    const locked=r.kind==="quest"&&!questCanEnter(r.stage);
-    return `<div class="sub" style="${joined?"border-color:var(--gold2)":""}">
-      <div class="spread"><div><b>${K.e} ${K.n} ${r.stage}${r.kind==="quest"?"단계":"층"}</b>
-        ${host?'<span class="tag g">내 방</span>':joined?'<span class="tag j">참가 중</span>':""}</div>
-        <span class="tiny muted">${ms.length} / 4명</span></div>
-      ${r.note?`<div class="tiny muted" style="margin:4px 0">${esc(r.note)}</div>`:""}
-      <div class="row" style="margin:7px 0">
-        ${[0,1,2,3].map(i=>{ const m=ms[i];
-          return m?`<span class="buffchip" style="${m.student_id===S.sb.id?"border-color:var(--gold2)":""}">
-            ${esc(m.name)} <span class="muted">${m.course}과정</span></span>`
-          :`<span class="buffchip" style="color:var(--s6)">빈자리</span>`}).join("")}
-      </div>
-      <div class="tiny" style="color:var(--jade)">합산 초당 피해 ${nf(dps)} · 합산 생명력 ${nf(hp)}</div>
-      ${locked?`<div class="tiny muted" style="margin-top:5px">${questGate()+10}단계 관문을 먼저 통과해야 참가할 수 있습니다.</div>`:""}
-      <div class="row" style="margin-top:8px">
-        ${host?`<button class="btn pri sm" ${locked?"disabled":""} onclick="roomDepart(${r.id})">지금 출발</button>
-                <button class="btn sm red" onclick="roomClose(${r.id})">방 닫기</button>`
-          :joined?`<button class="btn sm" onclick="roomLeave(${r.id})">나가기</button>
-                   <span class="tiny muted">방장이 출발하기를 기다립니다</span>`
-          :`<button class="btn pri sm" ${S.sb.myRoom||locked?"disabled":""} onclick="roomJoin(${r.id})">들어가기</button>`}
-      </div></div>`;
-  };
-
-  return `<div class="card pad" style="margin-bottom:12px">
-    <div class="spread"><div class="sect-t" style="margin:0">방 만들기</div>
-      <button class="btn sm ghost" onclick="syncRooms(true)">새로 고침</button></div>
-    <div class="tiny muted" style="margin:6px 0 10px">방을 열면 다른 학생이 들어옵니다. 방장이 「지금 출발」을 누르면
-    <b>참가자 전원의 초당 피해와 생명력을 합산해</b> 판정하고, 결과와 보상은 참가자 모두에게 기록됩니다.
-    여럿이 나눠 맞으므로 받는 피해가 줄어듭니다.</div>
-    <div class="row">
-      <span class="seg">${Object.keys(RKIND).map(k=>
-        `<button class="${TKIND===k?"on":""}" onclick="TKIND='${k}';renderMain()">${RKIND[k].e} ${RKIND[k].n}</button>`).join("")}</span>
-      <button class="btn pri" ${S.sb.myRoom?"disabled":""} onclick="roomMake()">${S.sb.myRoom?"이미 방에 있습니다":"방 열기"}</button>
+/* ═══════════ 석탑·결계의 탑 전용 온라인 동행 ═══════════ */
+/* 이전 버전의 여러 콘텐츠를 한꺼번에 보이던 페이지를 더 이상 사용하지 않습니다.
+   기존에 만들어진 의뢰 서버방은 아래 legacyQuestRoom()에서 참가자에 한해 정리할 수 있습니다. */
+function coopRoomCard(r){
+  const ms=r.room_members||[];
+  const joined=ms.some(m=>m.student_id===S.sb.id), host=r.host_id===S.sb.id;
+  const dps=ms.reduce((a,m)=>a+(Number(m.dps)||0),0);
+  const hp=ms.reduce((a,m)=>a+(Number(m.hpv)||0),0);
+  const unit=r.kind==="quest"?"단계":"층";
+  return `<article class="coop-room ${joined?"joined":""}">
+    <div class="spread coop-room-top"><div><b>${esc(r.host_name||"방장")}</b>님의 ${Number(r.stage)||1}${unit}
+      ${host?'<span class="tag g">내 방</span>':joined?'<span class="tag j">참가 중</span>':""}</div>
+      <span class="tag">${ms.length} / 4명</span></div>
+    ${r.note?`<div class="tiny muted coop-note">${esc(r.note)}</div>`:""}
+    <div class="coop-members">${ms.length?ms.map(m=>`<span class="buffchip" ${m.student_id===S.sb.id?'style="border-color:var(--gold2)"':""}>${esc(m.name||"학생")}</span>`).join(""):"<span class='tiny muted'>참가자를 기다립니다</span>"}</div>
+    <div class="tiny muted">합산 초당 피해 <b>${nf(dps)}</b> · 생명력 <b>${nf(hp)}</b></div>
+    <div class="row coop-actions">
+      ${host?`<button class="btn pri sm" onclick="roomDepart(${Number(r.id)})">출발</button>
+               <button class="btn sm ghost" onclick="roomClose(${Number(r.id)})">방 닫기</button>`
+       :joined?`<button class="btn sm" onclick="roomLeave(${Number(r.id)})">나가기</button><span class="tiny muted">방장 출발 대기</span>`
+       :`<button class="btn pri sm" ${S.sb.myRoom?'disabled title="다른 방에 참가 중입니다"':""} onclick="roomJoin(${Number(r.id)})">참가하기</button>`}
     </div>
-  </div>
-
-  ${S.sb.state==="err"?`<div class="card pad" style="margin-bottom:12px;border-color:var(--redD);padding:10px 14px">
-    <span class="tag r">연결 실패</span> <span class="tiny">${esc(S.sb.err)}</span>
-    <button class="btn sm" style="margin-left:8px" onclick="sbConnect()">연결 고치기</button></div>`:""}
-
-  ${rooms.length?`<div class="grid g2">${rooms.map(card).join("")}</div>`
-    :`<div class="card pad"><div class="tiny muted" style="padding:14px 2px;text-align:center">
-       열린 방이 없습니다. 먼저 방을 열어 보세요.</div></div>`}
-
-  ${done.length?`<div class="card pad" style="margin-top:14px">
-    <div class="sect-t">최근 합동 기록</div>
-    <table class="t">
-      ${done.map(r=>`<tr>
-        <td style="width:120px">${(RKIND[r.result.kind]||RKIND.tower).e} ${(RKIND[r.result.kind]||RKIND.tower).n} ${r.result.stage}${r.result.kind==="quest"?"단계":"층"}</td>
-        <td class="tiny muted">${(r.result.members||[]).map(m=>esc(m.name)).join(" · ")}</td>
-        <td style="text-align:right"><span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span></td></tr>`).join("")}
-    </table></div>`:""}`;
+  </article>`;
 }
-function roomMake(){
-  const k=TKIND, K=RKIND[k];
-  const suggest = k==="tower" ? (S.tower||0)+1 : k==="guard" ? (S.tower2||0)+1 : questOpenLimit();
+function coopRoomPanel(kind){
+  if(kind!=="tower" && kind!=="guard") return "";
+  const K=RKIND[kind], rooms=(S.sb?.rooms||[]).filter(r=>r.kind===kind && r.status!=="done");
+  const records=(S.sb?.rooms||[]).filter(r=>r.kind===kind && r.status==="done" && r.result).slice(0,3);
+  const mine=S.sb?.myRoom&&(S.sb.rooms||[]).find(r=>r.id===S.sb.myRoom && r.status!=="done");
+  return `<section class="card pad coop-panel" aria-label="${K.n} 같이 가기">
+    <div class="coop-panel-head">
+      <div><div class="sect-t" style="margin:0">${ic("handshake",16)} 함께 ${K.n} 오르기
+        <span class="tag">온라인 동행 · 최대 4명</span></div>
+        <div class="tiny muted" style="margin-top:4px">같은 탑에 도전할 러너를 모집합니다. 혼자 도전은 위 버튼을 이용하세요.</div></div>
+      ${sbOn()?`<button class="btn sm ghost" onclick="syncRooms(true)">새로 고침</button>`:""}
+    </div>
+    ${!sbOn()?`<div class="coop-empty"><div class="tiny muted">다른 러너와 함께 오르려면 공유 기록 연결이 필요합니다.</div>
+        <button class="btn sm" style="margin-top:9px" onclick="sbConnect()">공유 기록 연결</button></div>`:
+      `<div class="coop-start">
+         <div class="tiny muted">열린 ${K.n} 방 <b>${rooms.length}개</b> · 참가자 전원의 공격력과 생명력을 합산해 돌파를 판정합니다.</div>
+         <button class="btn pri" ${S.sb.myRoom?'disabled':''} onclick="roomMake('${kind}')">${K.n} 방 열기</button>
+       </div>
+       ${mine&&mine.kind!==kind?`<div class="coop-other tiny">지금 <b>${RKIND[mine.kind]?.n||"다른 콘텐츠"} ${mine.stage}${mine.kind==="quest"?"단계":"층"}</b> 방에 참가 중입니다.
+         <button class="btn sm ghost" onclick="go('${mine.kind==='quest'?'quest':mine.kind}')">참가 중인 방으로 이동</button></div>`:""}
+       ${S.sb.state==="err"?`<div class="tiny" style="color:var(--red)">연결 확인: ${esc(S.sb.err||"일시적인 연결 오류")}</div>`:""}
+       <div class="coop-room-list">${rooms.length?rooms.map(coopRoomCard).join(""):
+         `<div class="coop-empty tiny muted">모집 중인 방이 없습니다. 첫 번째 ${K.n} 방을 열어 보세요.</div>`}</div>
+       ${records.length?`<details class="coop-history"><summary>최근 ${K.n} 합동 기록 ${records.length}건</summary>
+           ${records.map(r=>`<div class="spread tiny"><span>${Number(r.result.stage)||1}층 · ${(r.result.members||[]).map(m=>esc(m.name)).join(" · ")}</span>
+             <span class="tag ${r.result.win?"j":"r"}">${r.result.win?"돌파":"실패"}</span></div>`).join("")}</details>`:""}`}
+  </section>`;
+}
+function roomMake(kind){
+  if(kind!=="tower" && kind!=="guard") { toast("석탑 또는 결계의 탑에서 동행방을 열어 주세요.","bad"); return; }
+  const K=RKIND[kind];
+  const suggest=kind==="tower"?(S.tower||0)+1:(S.tower2||0)+1;
   modal(`${K.e} ${K.n} 합동 방 열기`, `
-    <label class="f">${k==="quest"?"단계":"층"}</label>
-    <input class="inp" id="r_stage" type="number" min="1" max="${k==="quest"?questOpenLimit():999}" value="${suggest}">
-    <div class="tiny muted" style="margin-top:5px">내 기록은 ${k==="tower"?(S.tower||0)+"층":k==="guard"?(S.tower2||0)+"층":S.quests.cleared+"단계"}입니다.
-    혼자서 버거운 곳을 적어 두면 사람이 모입니다.</div>
-    ${k==="quest"?`<div class="tiny muted" style="margin-top:5px">현재 1~${questOpenLimit()}단계에 참가할 수 있습니다. 함께 관문을 통과해도 다음 구간이 열립니다.</div>`:""}
-    <label class="f">한 줄 덧붙이기 (선택 · 40자)</label>
-    <input class="inp" id="r_note" maxlength="40" placeholder="예: 수호 성향 한 분만 더">
+    <div class="tiny muted">${K.n}에서 함께 도전할 층을 선택합니다. 상대의 진행 상황과 관계없이 합동 판정 결과가 각각의 기록에 반영됩니다.</div>
+    <label class="f">도전할 층</label>
+    <input class="inp" id="r_stage" type="number" min="1" max="999" value="${Math.min(suggest,999)}">
+    <label class="f">모집 메모 (선택 · 40자)</label>
+    <input class="inp" id="r_note" maxlength="40" placeholder="예: 수호 성향 한 분 더!">
     <div class="row" style="margin-top:14px">
-      <button class="btn pri" onclick="roomCreate('${k}', +document.getElementById('r_stage').value||1, document.getElementById('r_note').value)">방 열기</button>
+      <button class="btn pri" onclick="roomCreate('${kind}', Number(document.getElementById('r_stage').value), document.getElementById('r_note').value)">모집 시작</button>
       <button class="btn" onclick="closeModal()">취소</button></div>`);
+}
+function legacyQuestRoom(){
+  /* 이전 서버 합동 의뢰 방에 이미 참가한 사람만 마무리할 수 있게 남겨 둡니다.
+     새 합동 의뢰 방은 생성하지 않습니다. 기존 의뢰의 인연·교사 동행과 겹치기 때문입니다. */
+  if(!sbOn() || !S.sb.myRoom) return "";
+  const r=(S.sb.rooms||[]).find(x=>x.id===S.sb.myRoom && x.kind==="quest" && x.status!=="done");
+  if(!r) return "";
+  return `<details class="card pad coop-legacy" style="margin-bottom:12px">
+    <summary><b>이전에 참여한 합동 의뢰 방</b> · ${Number(r.stage)||1}단계 <span class="tiny muted">기존 방 마무리</span></summary>
+    <div class="tiny muted" style="margin:9px 0">이전 버전에서 만든 온라인 의뢰방입니다. 현재 새 의뢰 동행은 아래 기존 기능을 사용합니다.</div>
+    ${coopRoomCard(r)}
+  </details>`;
 }
 
 /* ═══════════ 화면 — 학생 명부 ═══════════ */
@@ -414,9 +406,17 @@ boardSubmit=function(){
   if(!title){ toast("제목을 적어 주세요.","bad"); return; }
   if(!body){ toast("내용을 적어 주세요.","bad"); return; }
   S.board.name=name;
+  let receipt="";
+  if(secret){try{receipt=boardNewReceipt();}catch(e){toast(String(e.message||e),"bad");return;}}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  sbSend("POST","suggestions",[{name, cat, title, body, secret, status:"접수"}],"return=minimal")
-    .then(()=>{ closeModal(); toast("건의함에 올렸습니다. 고맙습니다.","good"); boardFetch(true); })
+  sbSend("POST","rpc/submit_private_readable_suggestion",
+    {p_name:name,p_cat:cat,p_title:title,p_body:body,p_secret:secret,p_receipt:receipt})
+    .then(id=>{
+      if(id===undefined||id===null||id==="") throw Error("서버에서 글 번호를 받지 못했습니다.");
+      if(secret) boardPrivateSubmitted(id,receipt);
+      else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
+      boardFetch(true);
+    })
     .catch(e=>{ if(btn){ btn.disabled=false; btn.textContent="올리기"; }
       toast("보내지 못했습니다 · "+esc(String(e.message||e)),"bad"); });
 };
@@ -429,7 +429,9 @@ boardLike=function(id){
   const r=(S.board.cache||[]).find(x=>String(x.id)===String(id));
   const nv=(r?+r.likes:0)+1; if(r) r.likes=nv;
   renderMain(); save();
-  sbSend("PATCH",`suggestions?id=eq.${id}`,{likes:nv},"return=minimal").catch(()=>{});
+  sbSend("POST","rpc/bump_suggestion_like",{p_id:Number(id)})
+    .then(count=>{if(r && Number.isFinite(+count)){r.likes=+count;if(VIEW==="board")renderMain();save();}})
+    .catch(()=>{if(r){r.likes=Math.max(0,nv-1);if(VIEW==="board")renderMain();save();}toast("공감을 저장하지 못했습니다. SQL 설치를 확인해 주세요.","bad");});
 };
 
 /* ═══════════ 연결 설정 ═══════════ */
@@ -477,7 +479,7 @@ step=function(m){
   _step6(m);
   if(!S||!S.made||!S.sb||!sbOn()) return;
   if(Math.random()<0.02*m) syncUp(false);
-  if(VIEW==="together" || VIEW==="quest") syncRooms(false);
+  if(VIEW==="tower" || VIEW==="guard" || (VIEW==="quest" && S.sb?.myRoom)) syncRooms(false);
 };
 const _go6=go;
 go=function(v){
@@ -485,7 +487,7 @@ go=function(v){
   if(!sbOn()) return;
   if(v==="roster"||v==="rank"||v==="hallv") { syncUp(false); syncRoster(false); }
   if(v==="hallv") pairFetch(true);
-  if(v==="together" || v==="quest") syncRooms(true);
+  if(v==="tower" || v==="guard" || (v==="quest" && S.sb?.myRoom)) syncRooms(true);
 };
 const _openSettings6=openSettings;
 openSettings=function(){
@@ -505,7 +507,7 @@ openSettings=function(){
 };
 
 /* ═══════════ 내비 ═══════════ */
-(()=>{ /* 함께 가기는 의뢰 화면 안으로 들어갔습니다 — 따로 탭을 두지 않습니다 */
+(()=>{ /* 탑별 동행은 각 탑 화면에 있고, 공용 동행 탭은 따로 두지 않습니다. */
   const s=NAVDEF.find(x=>x.id==="soc");
   if(s && !s.sub.some(x=>x.id==="roster")) s.sub.unshift({id:"roster",n:"학생 명부"}); })();
 
@@ -1048,26 +1050,27 @@ function pairRunHTML(){
           <div class="tiny muted">${esc(r.run_ward||"")} <b>${r.run_stage}단계</b> 진행 중
             · 처치 ${nf(r.run_kills||0)}체</div></div>
         <div class="tiny muted">${hhmm(r.run_left||0)} 남음</div></div>
-       <div class="tiny muted" style="margin-top:6px">같이 가고 싶으면 아래에서 방을 열어 부르세요.</div>`
+       <div class="tiny muted" style="margin-top:6px">페어의 현재 진행 상황입니다. 내 의뢰 동행은 접수대의 기존 동행 기능에서 준비할 수 있습니다.</div>`
       :`<div class="tiny muted" style="margin-top:4px">${pairTitle(r)} 님은 지금 의뢰에 나가 있지 않습니다.</div>`}
   </div>`;
 }
 
-/* ─── 함께 가기를 의뢰 화면 안으로 ─── */
-const _questTogether=VIEWS.quest;
+/* ─── 콘텐츠별 동행 영역: 석탑 / 결계의 탑 각각 표시 ─── */
+const _towerParty=VIEWS.tower;
+VIEWS.tower=()=>{
+  const h=_towerParty();
+  const key='<div class="card pad">\n    <div class="sect-t">탑 기록</div>';
+  const i=h.indexOf(key);
+  return i>=0?h.slice(0,i)+coopRoomPanel("tower")+h.slice(i):h+coopRoomPanel("tower");
+};
+const _guardParty=VIEWS.guard;
+VIEWS.guard=()=>_guardParty()+coopRoomPanel("guard");
+
+/* 의뢰에는 기존 동행 모집/출정 기능이 있으므로 별도 '같이 가기'를 덧붙이지 않습니다. */
+const _questParty=VIEWS.quest;
 VIEWS.quest=()=>{
-  let h=_questTogether();
-  if(!sbOn()) return h;
-  const rooms=(S.sb.rooms||[]).filter(r=>r.status!=="done");
-  /* 페어 현황과 함께 가기를 의뢰 화면 위쪽으로 — 진행 중인 일지가 있으면 그 바로 아래 */
-  const block = pairRunHTML() + `
-  <div class="card pad" style="margin:0 0 12px;border-color:var(--line2)">
-    <div class="spread"><div class="sect-t" style="margin:0">
-      ${ic("handshake",15)} 함께 가기 <span class="muted">· 열린 방 ${rooms.length}개</span></div>
-      <span class="tiny muted">${sbStateChip()}</span></div>
-    <div class="tiny muted" style="margin:4px 0 0">석탑·결계의 탑·의뢰를 다른 러너와 함께 갑니다.</div>
-  </div>` + togetherBody() + `<div style="height:14px"></div>`;
-  const cut=h.indexOf("<!--QSPLIT-->");
-  return cut<0 ? block+h
-    : h.slice(0,cut) + block + h.slice(cut+13);
+  const h=_questParty();
+  const block=pairRunHTML()+legacyQuestRoom();
+  const cut=h.indexOf('<!--QSPLIT-->');
+  return cut<0?block+h:h.slice(0,cut)+block+h.slice(cut+'<!--QSPLIT-->'.length);
 };

@@ -129,6 +129,7 @@ create table if not exists suggestions (
   likes      int default 0,
   status     text default '접수',
   reply      text,
+  author_receipt_hash text, -- 신규 비공개 글의 작성자 개인 열람 코드 해시
   created_at timestamptz default now()
 );
 
@@ -170,7 +171,10 @@ create policy p_sugg_update      on suggestions  for update using (true) with ch
 -- 건의함 표는 직접 읽지 못하게 하고, 내용을 가린 화면만 읽게 합니다.
 revoke select on suggestions from anon;
 grant  select on suggestions_public to anon;
-grant  insert, update on suggestions to anon;
+grant  insert on suggestions to anon;
+-- 비공개 글의 열람 코드나 상태를 임의로 변경하지 못하도록 원본 직접 조회/수정 차단
+revoke select, update on suggestions from public, anon, authenticated;
+-- 글 작성과 공감 기능은 건의함-작성자열람-업데이트.sql의 보안 함수로 처리합니다.
 
 -- ── 5. 오래된 방 정리 (선택) ────────────────────────────────
 -- 하루 지난 방을 지웁니다. 가끔 SQL Editor 에서 이 줄만 실행하시면 됩니다.

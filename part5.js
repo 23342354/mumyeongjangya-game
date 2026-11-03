@@ -31,6 +31,101 @@ function ensureV5(){
 function boardOn(){ return !!(S.board && S.board.url); }
 function boardList(){ return boardOn()? (S.board.cache||[]) : (S.board.local||[]); }
 
+/* ─── 비공개 글 작성자용 개인 열람 코드 ───
+   공용 캐시/S 에 원문이나 코드를 저장하지 않습니다. 보관은 이 기기의
+   계정별 localStorage에만 하며, 서버는 코드의 해시만 검사합니다. */
+function boardReceiptStorageKey(){
+  const id=(typeof ACCT!=="undefined" && ACCT && ACCT.id) || (S.sb&&S.sb.id) || "local";
+  return "mmjy:board-private-receipts:v1:"+String(id);
+}
+function boardReceiptAll(){
+  try{const v=JSON.parse(localStorage.getItem(boardReceiptStorageKey())||"{}");return v&&typeof v==="object"&&!Array.isArray(v)?v:{};}
+  catch(_){return {};}
+}
+function boardReceiptFor(id){return String(boardReceiptAll()[String(id)]||"");}
+function boardRememberReceipt(id,receipt){
+  if(!/^[a-f0-9]{64}$/.test(String(receipt))) return false;
+  try{const v=boardReceiptAll();v[String(id)]=receipt;localStorage.setItem(boardReceiptStorageKey(),JSON.stringify(v));return true;}
+  catch(_){return false;}
+}
+function boardNewReceipt(){
+  if(!window.crypto || typeof window.crypto.getRandomValues!=="function")
+    throw Error("안전한 열람 코드를 만들 수 없습니다. HTTPS에서 다시 시도해 주세요.");
+  const bytes=new Uint8Array(32);window.crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+}
+function boardReadPrivate(id,receipt){
+  if(S.board&&S.board.url){
+    return boardSend({action:"read_private",id:String(id),receipt}).then(j=>{
+      if(!j||!j.ok||typeof j.body!=="string") throw Error(j&&j.error||"열람 코드를 확인할 수 없습니다.");
+      return j.body;
+    });
+  }
+  if(typeof sbSend==="function" && typeof sbOn==="function" && sbOn()){
+    return sbSend("POST","rpc/read_my_private_suggestion",{p_id:Number(id),p_receipt:receipt}).then(rows=>{
+      const item=Array.isArray(rows)?rows[0]:rows;
+      if(!item||typeof item.body!=="string") throw Error("열람 코드가 맞지 않거나 이전 방식으로 작성한 글입니다.");
+      return item.body;
+    });
+  }
+  return Promise.reject(Error("건의함이 연결되지 않았습니다."));
+}
+function boardPrivateArea(id){
+  const token=boardReceiptFor(id);
+  return `<div id="board_private_body" data-post-id="${esc(String(id))}" style="white-space:pre-wrap;line-height:1.9;font-size:14px">${token?"비공개 본문을 확인하는 중…":"비공개 글입니다. 작성자만 열람 코드로 본문을 볼 수 있습니다."}</div>
+    <div id="board_private_unlock" style="margin-top:10px;${token?"display:none":""}">
+      <div class="tiny muted" style="margin-bottom:6px">본인이 작성한 글이라면 글을 올릴 때 받은 열람 코드를 입력해 주세요.</div>
+      <div class="row" style="gap:8px">
+        <input class="inp" id="board_receipt_input" type="text" autocomplete="off" spellcheck="false" placeholder="64자리 개인 열람 코드" maxlength="64" style="flex:1;min-width:180px">
+        <button class="btn sm pri" onclick="boardUnlock('${esc(String(id))}')">본문 보기</button>
+      </div>
+      <div class="tiny muted" style="margin-top:6px">기존 비공개 글은 작성자 확인용 코드가 없어 운영진이 기존 글에 코드를 발급해야 합니다.</div>
+    </div>`;
+}
+function boardPrivateLoad(id,code){
+  const body=document.getElementById("board_private_body"), unlock=document.getElementById("board_private_unlock");
+  if(!body || body.dataset.postId!==String(id)) return;
+  body.textContent="비공개 본문을 확인하는 중…";
+  boardReadPrivate(id,code).then(text=>{
+    const current=document.getElementById("board_private_body");
+    if(!current || current.dataset.postId!==String(id)) return;
+    current.textContent=text;
+    const row=document.getElementById("board_private_unlock");if(row)row.style.display="none";
+    boardRememberReceipt(id,code);
+  }).catch(e=>{
+    const current=document.getElementById("board_private_body");if(!current)return;
+    current.textContent="비공개 글입니다. "+String(e.message||e);
+    const row=document.getElementById("board_private_unlock");if(row)row.style.display="";
+  });
+}
+function boardUnlock(id){
+  const input=document.getElementById("board_receipt_input");
+  const token=String(input&&input.value||"").trim().toLowerCase();
+  if(!/^[a-f0-9]{64}$/.test(token)){toast("64자리 열람 코드를 입력해 주세요.","bad");return;}
+  boardPrivateLoad(id,token);
+}
+function boardPrivateSubmitted(id,receipt){
+  boardRememberReceipt(id,receipt);
+  modal("비공개 건의글 등록 완료",`
+    <div class="tiny" style="line-height:1.8;margin-bottom:12px">내 글의 본문은 이 기기에서 바로 읽을 수 있습니다.
+    <b>다른 기기에서 읽으려면 아래 개인 열람 코드가 필요합니다.</b>
+    운영진 이외의 다른 러너에게는 본문을 공개하지 않습니다.</div>
+    <label class="f">개인 열람 코드</label>
+    <input class="inp" id="board_new_receipt" readonly value="${esc(receipt)}" style="width:100%;font-size:12px" onclick="this.select()">
+    <div class="row" style="margin-top:12px">
+      <button class="btn pri" onclick="boardCopyReceipt()">열람 코드 복사</button>
+      <button class="btn" onclick="closeModal()">확인</button>
+    </div>
+    <div class="tiny muted" style="margin-top:10px">코드를 잃으면 운영진에게 별도 재발급을 요청해야 합니다.</div>`);
+}
+function boardCopyReceipt(){
+  const el=document.getElementById("board_new_receipt");if(!el)return;
+  el.select();
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(el.value).then(()=>toast("열람 코드를 복사했어요.","good")).catch(()=>toast("코드를 선택했어요. 직접 복사해 주세요."));
+  else toast("코드를 선택했어요. 직접 복사해 주세요.");
+}
+
 /* ─── 구글 시트와 주고받기 ─── */
 function boardFetch(force){
   if(!boardOn()) return;
@@ -63,7 +158,7 @@ function boardWrite(){
   const cats=BCAT.map(c=>`<option value="${c.k}">${c.k} — ${c.d}</option>`).join("");
   modal("건의함에 글 올리기", `
     <div class="tiny muted" style="margin-bottom:10px">
-      ${boardOn()?"운영진과 다른 학생 모두가 볼 수 있습니다. 비공개로 올리면 운영진만 봅니다."
+      ${boardOn()?"운영진과 다른 학생 모두가 볼 수 있습니다. 비공개로 올리면 작성자와 운영진만 봅니다."
                  :"지금은 <b>혼자 보기</b>입니다. 이 브라우저에만 저장되며 운영진에게 전달되지 않습니다."}
     </div>
     <label class="f">쓰는 사람</label>
@@ -76,7 +171,7 @@ function boardWrite(){
     <textarea class="inp" id="b_body" style="min-height:140px" maxlength="1500"
       placeholder="어떤 화면에서, 무엇을 하려다, 어떻게 되었는지 적어 주시면 가장 빠릅니다."></textarea>
     <label class="row" style="margin-top:12px;gap:7px;cursor:pointer">
-      <input type="checkbox" id="b_secret"> <span class="tiny">비공개 — 운영진만 보기</span></label>
+      <input type="checkbox" id="b_secret"> <span class="tiny">비공개 — 작성자와 운영진만 보기</span></label>
     <div class="row" style="margin-top:14px">
       <button class="btn pri" id="b_go" onclick="boardSubmit()">올리기</button>
       <button class="btn" onclick="closeModal()">취소</button>
@@ -98,11 +193,16 @@ function boardSubmit(){
     toast("혼자 보기에 저장했습니다. 운영진에게 보내려면 설정에서 건의함을 연결해 주세요.");
     return;
   }
+  let receipt="";
+  if(secret){try{receipt=boardNewReceipt();}catch(e){toast(String(e.message||e),"bad");return;}}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  boardSend({action:"add", ...row})
+  boardSend({action:"add", ...row, receipt})
     .then(j=>{
       if(!j||!j.ok) throw new Error(j&&j.error||"보내지 못했습니다");
-      closeModal(); toast("건의함에 올렸습니다. 고맙습니다.","good");
+      if(secret){
+        if(!j.id) throw Error("서버에서 글 번호를 받지 못했습니다. 운영진에게 문의해 주세요.");
+        boardPrivateSubmitted(j.id,receipt);
+      }else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
     .catch(e=>{
@@ -131,7 +231,7 @@ function boardOpen(id){
       </div>
       <span class="tiny muted">${esc(r.name)} · ${boardDate(r.time)}</span>
     </div>
-    <div style="white-space:pre-wrap;line-height:1.9;font-size:14px">${esc(r.body)}</div>
+    ${(+r.secret&&boardOn())?boardPrivateArea(r.id):`<div style="white-space:pre-wrap;line-height:1.9;font-size:14px">${esc(r.body)}</div>`}
     ${r.reply?`<div class="card pad" style="margin-top:14px;border-color:var(--gold2)">
       <div class="sect-t" style="margin:0 0 6px">운영진 답변</div>
       <div style="white-space:pre-wrap;line-height:1.9;font-size:13.5px">${esc(r.reply)}</div></div>`:""}
@@ -140,6 +240,7 @@ function boardOpen(id){
         onclick="boardLike('${esc(String(r.id))}')">공감 ${+r.likes||0}</button>
       <button class="btn" style="margin-left:auto" onclick="closeModal()">닫기</button>
     </div>`);
+  if(+r.secret&&boardOn()&&boardReceiptFor(r.id)) boardPrivateLoad(r.id,boardReceiptFor(r.id));
 }
 function boardDate(t){
   try{ const d=new Date(t);
