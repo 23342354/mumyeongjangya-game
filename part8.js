@@ -1471,96 +1471,209 @@ pairPostFetch = function(force){
 /* 게시판을 보고 있지 않아도 둘의 기록 알림이 오도록 */
 setInterval(()=>{ if(sbOn() && pairEnsure().mine && VIEW!=="pairboard") pairPostFetch(false); }, 45000);
 
-/* ───────── ② 댓글에 단 답글은 그 댓글 아래로 ───────── */
-const RPINDENT=[0,22,40,54,64,70];
-/* 자기 자신을 가리키는 어긋난 기록이 섞여도 멈추지 않도록 한 번 본 글은 다시 따라가지 않습니다 */
-function rpKids(id, seen){
-  return (SOCIAL.posts||[])
-    .filter(p=>p.parent_id===id && p.id!==id && !(seen&&seen.has(p.id)))
-    .sort((a,b)=>a.id-b.id);
+/* ───────── ② RP 게시판: 깊은 들여쓰기 대신 하나의 타임라인 ───────── */
+function rpThreadRows(root){
+  const byParent=new Map();
+  (SOCIAL.posts||[]).forEach(p=>{
+    if(p.parent_id===null||p.parent_id===undefined)return;
+    const key=String(p.parent_id), rows=byParent.get(key)||[];
+    rows.push(p);byParent.set(key,rows);
+  });
+  byParent.forEach(rows=>rows.sort((a,b)=>Number(a.id)-Number(b.id)));
+  const result=[{p:root,depth:0}], seen=new Set([String(root.id)]);
+  const visit=(id,depth)=>{
+    if(depth>80||result.length>2100)return;
+    (byParent.get(String(id))||[]).forEach(child=>{
+      if(seen.has(String(child.id)))return;
+      seen.add(String(child.id));result.push({p:child,depth});visit(child.id,depth+1);
+    });
+  };
+  visit(root.id,1);return result;
 }
-function rpCount(id){
-  const seen=new Set([id]); let n=0;
-  const walk=x=>{ rpKids(x,seen).forEach(k=>{ if(seen.has(k.id)) return; seen.add(k.id); n++; walk(k.id); }); };
-  walk(id); return n;
+function rpThreadHTML(root,marks){
+  const items=rpThreadRows(root);
+  return `<section class="rp-thread" data-root="${Number(root.id)}">
+    ${rpEntryHTML(root,0,marks,items.length-1)}
+    ${items.length>1?`<details class="rp-thread-tail" open><summary>답글 ${items.length-1}개 · 펼치기 / 접기</summary>
+      ${items.slice(1).map(item=>rpEntryHTML(item.p,item.depth,marks,0)).join("")}
+    </details>`:""}
+  </section>`;
 }
-function rpNode(p, depth, seen){
-  seen=seen||new Set([p.id]);
+function rpEntryHTML(p,depth,marks,count){
   const mine=String(p.author_id)===socialId();
-  const kids=depth>12?[]:rpKids(p.id,seen);
-  kids.forEach(k=>seen.add(k.id));
-  const pad=RPINDENT[Math.min(depth,RPINDENT.length-1)];
-  return `<div style="margin-left:${pad}px;${depth?"border-left:2px solid var(--line2);padding-left:11px":""}">
-    <div class="card pad" style="margin-top:8px;padding:11px 13px">
-      <div class="spread"><b>${esc(socialName(p.author_id))}</b>
-        <span class="tiny muted">${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</span></div>
-      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0">${fmtChat(p.body)}</div>
-      <div class="row" style="gap:4px">
-        <button class="btn sm ghost" onclick="rpReply(${p.id})">${ic("bubble",12)} 답글${kids.length?" "+kids.length:""}</button>
-        ${mine?`<button class="btn sm ghost" onclick="rpDelete(${p.id})">삭제</button>`:""}
+  const who=socialStudent(p.author_id)||{id:p.author_id,name:socialName(p.author_id),av:"lantern",color:"var(--violet)"};
+  const parent=p.parent_id?(SOCIAL.posts||[]).find(x=>String(x.id)===String(p.parent_id)):null;
+  const starred=marks.includes(Number(p.id));
+  const root=depth===0;
+  return `<article class="rp-entry" id="rp-post-${Number(p.id)}" data-depth="${depth}" data-parent="${esc(p.parent_id||"")}">
+    <div class="rp-avatar">${faceHTML(who,42)}</div>
+    <div class="rp-main">
+      <div class="rp-byline"><b>${esc(socialName(p.author_id))}</b>
+        <span class="rp-handle">${esc(pairHandle(who))}</span>
+        <span class="rp-time">· ${esc(pairPostWhen(p.created_at))}</span></div>
+      ${parent?`<div class="rp-context">↳ ${esc(socialName(parent.author_id))} 님에게 답글${depth>1?` · ${depth}단계 대화`:""}</div>`:""}
+      <div class="rp-body">${fmtChat(p.body)}</div>
+      <div class="rp-actions" role="group" aria-label="${esc(socialName(p.author_id))}의 글 동작">
+        <button type="button" class="rp-act" title="답글 달기" aria-label="답글 달기" onclick="rpReply(${Number(p.id)})">${pairPostIcon("reply")}${count?`<span>${count}</span>`:""}</button>
+        ${root?`<button type="button" class="rp-act" title="북마크" aria-label="북마크" aria-pressed="${starred}" onclick="rpBookmark(${Number(p.id)})">${pairPostIcon("bookmark")}</button>`:""}
+        ${mine?`<button type="button" class="rp-act" title="이 글 삭제" aria-label="이 글 삭제" onclick="rpDelete(${Number(p.id)})">${pairPostIcon("more")}</button>`:""}
       </div>
     </div>
-    ${kids.map(k=>rpNode(k, depth+1, seen)).join("")}
-  </div>`;
+  </article>`;
 }
 VIEWS.rpboard=()=>{
-  const marks=rpBookmarks();
-  let roots=(SOCIAL.posts||[]).filter(p=>!p.parent_id);
-  if(RP_FILTER==="mine") roots=roots.filter(p=>String(p.author_id)===socialId());
-  if(RP_FILTER==="bookmark") roots=roots.filter(p=>marks.includes(p.id));
-  if(RP_FILTER==="replies") roots=roots.filter(p=>{
-    const seen=new Set([p.id]), out=[];
-    const walk=id=>rpKids(id,seen).forEach(k=>{ if(seen.has(k.id)) return; seen.add(k.id); out.push(k); walk(k.id); });
-    walk(p.id); return out.some(c=>String(c.author_id)===socialId());
-  });
-  if(RP_QUERY) roots=roots.filter(p=>(p.body+" "+socialName(p.author_id)).toLowerCase().includes(RP_QUERY.toLowerCase()));
-  const pages=Math.max(1,Math.ceil(roots.length/10));
-  RP_PAGE=Math.min(RP_PAGE,pages-1);
-  return head("짧게 남기고 이어 쓰는 역극","RP 게시판","메모 500자 · 댓글에도 답글을 달 수 있습니다 · 대사와 *행동*")
-   + socialStatus()
-   + `<div class="card pad"><textarea id="rp-compose" class="inp" rows="4" maxlength="500" style="width:100%"
-        placeholder="다른 학생이 댓글로 이어 씁니다. 대사와 *행동*을 남겨 주세요."></textarea>
-      <div class="row" style="margin-top:10px"><button class="btn pri" onclick="rpPost()">남기기</button></div></div>
-     <div class="card pad" style="margin:14px 0">
-      <div class="row">${[["all","전체"],["bookmark","북마크"],["mine","내 메모"],["replies","내 댓글"]]
-        .map(([k,n])=>`<button class="btn sm ${RP_FILTER===k?"pri":""}" onclick="rpFilter('${k}')">${n}</button>`).join("")}</div>
-      <div class="row" style="margin-top:10px">
-        <input class="inp" id="rp-search" value="${esc(RP_QUERY)}" placeholder="내용 · 작성자 검색"
-          onkeydown="if(event.key==='Enter')rpSearch()">
-        <button class="btn sm" onclick="rpSearch()">검색</button></div></div>
-     <div class="spread" style="margin-bottom:12px">
-      <button class="btn sm" onclick="RP_PAGE=Math.max(0,RP_PAGE-1);renderMain()">이전</button>
-      <span class="tiny muted">${RP_PAGE+1} / ${pages} · 글 ${roots.length}개</span>
-      <button class="btn sm" onclick="RP_PAGE=Math.min(${pages-1},RP_PAGE+1);renderMain()">다음</button></div>
-     ${roots.slice(RP_PAGE*10,RP_PAGE*10+10).map(p=>{
-        const total=rpCount(p.id), kids=rpKids(p.id,new Set([p.id]));
-        return `<article class="card pad" style="margin-bottom:14px">
-          <div class="spread"><b>${esc(socialName(p.author_id))}</b>
-            <span class="tiny muted">${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</span></div>
-          <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0">${fmtChat(p.body)}</div>
-          <div class="row" style="gap:4px">
-            <button class="btn sm ghost" onclick="rpBookmark(${p.id})">${marks.includes(p.id)?"★ 북마크 해제":"☆ 북마크"}</button>
-            <button class="btn sm ghost" onclick="rpReply(${p.id})">${ic("bubble",12)} 이어 쓰기</button>
-            ${String(p.author_id)===socialId()?`<button class="btn sm ghost" onclick="rpDelete(${p.id})">삭제</button>`:""}
-          </div>
-          ${total?`<details open style="margin-top:10px">
-            <summary style="cursor:pointer"><span class="tiny muted">댓글 ${total}개</span></summary>
-            ${kids.map(k=>rpNode(k,1)).join("")}
-          </details>`:""}
-        </article>`;
-      }).join("") || '<div class="card pad">아직 남겨진 메모가 없습니다.</div>'}`;
+  const marks=rpBookmarks().map(Number),mine=socialId();
+  const ids=new Set((SOCIAL.posts||[]).map(p=>String(p.id)));
+  let roots=(SOCIAL.posts||[]).filter(p=>!p.parent_id||!ids.has(String(p.parent_id)));
+  if(RP_FILTER==="mine")roots=roots.filter(p=>String(p.author_id)===mine);
+  if(RP_FILTER==="bookmark")roots=roots.filter(p=>marks.includes(Number(p.id)));
+  if(RP_FILTER==="replies")roots=roots.filter(p=>rpThreadRows(p).slice(1).some(x=>String(x.p.author_id)===mine));
+  if(RP_QUERY){
+    const query=RP_QUERY.toLowerCase();
+    roots=roots.filter(p=>rpThreadRows(p).some(x=>(String(x.p.body||"")+" "+socialName(x.p.author_id)).toLowerCase().includes(query)));
+  }
+  if(typeof RP_FOCUS_ROOT!=="undefined"&&RP_FOCUS_ROOT&&RP_FILTER==="all"&&!RP_QUERY){
+    const index=roots.findIndex(p=>String(p.id)===String(RP_FOCUS_ROOT));
+    if(index>=0)RP_PAGE=Math.floor(index/10);
+  }
+  const pages=Math.max(1,Math.ceil(roots.length/10)); RP_PAGE=Math.max(0,Math.min(RP_PAGE,pages-1));
+  const profile=socialStudent(mine)||{id:mine,name:S.name,av:S.av,av_img:S.avImg,color:S.color};
+  return head("함께 써 내려가는 이야기","RP 게시판","답글이 여러 번 이어져도 카드가 오른쪽으로 밀리지 않습니다")
+    +socialStatus()+`<div class="rp-board">
+      <div class="rp-compose"><div class="rp-compose-row">${faceHTML(profile,42)}
+        <div class="rp-compose-main"><label class="tiny muted" for="rp-compose">새 RP 작성 · 최대 500자</label>
+        <textarea id="rp-compose" class="inp" rows="3" maxlength="500" placeholder="대사와 *행동*을 남겨 주세요."></textarea>
+        <div class="rp-compose-actions"><span class="tiny muted">Ctrl + Enter로 게시</span>
+          <button class="btn pri" onclick="rpPost()">게시</button></div></div></div></div>
+      <div class="rp-tools"><div class="rp-filter-row">${[["all","전체"],["bookmark","북마크"],["mine","내 글"],["replies","내가 답한 대화"]]
+        .map(([k,n])=>`<button class="btn sm ${RP_FILTER===k?"pri":"ghost"}" onclick="rpFilter('${k}')">${n}</button>`).join("")}</div>
+        <div class="rp-search-row"><input class="inp" id="rp-search" value="${esc(RP_QUERY)}" placeholder="글·답글·작성자 검색"
+          onkeydown="if(event.key==='Enter')rpSearch()"><button class="btn sm" onclick="rpSearch()">검색</button></div></div>
+      <div class="rp-pager"><button class="btn sm ghost" onclick="RP_PAGE=Math.max(0,RP_PAGE-1);renderMain()">◀ 이전</button>
+        <span class="tiny muted">${RP_PAGE+1} / ${pages} · 대화 ${roots.length}개</span>
+        <button class="btn sm ghost" onclick="RP_PAGE=Math.min(${pages-1},RP_PAGE+1);renderMain()">다음 ▶</button></div>
+      <div class="rp-feed" aria-label="RP 타임라인">
+        ${roots.slice(RP_PAGE*10,RP_PAGE*10+10).map(p=>rpThreadHTML(p,marks)).join("") ||
+        '<div class="rp-empty">아직 작성된 글이 없어요. 첫 대화를 시작해 보세요.</div>'}
+      </div></div>`;
 };
-/* 답글 창에 「누구에게 답하는지」가 보이게 */
+/* 직접 답한 글의 내용과 작성자를 보여 줍니다. */
 rpReply=function(id){
-  const p=(SOCIAL.posts||[]).find(x=>x.id===id);
-  if(!p){ toast("원글을 찾지 못했습니다."); return; }
-  modal(`${esc(socialName(p.author_id))} 님에게 답하기`, `
-    <div class="sub" style="margin-bottom:10px">
-      <div class="tiny muted">${esc(socialName(p.author_id))} · ${esc(new Date(p.created_at).toLocaleString("ko-KR"))}</div>
-      <div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px">${fmtChat(p.body)}</div></div>
-    <textarea class="inp" id="rp-reply-${id}" maxlength="500" rows="5"
+  const p=(SOCIAL.posts||[]).find(x=>String(x.id)===String(id));
+  if(!p){toast("답할 글을 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.");return;}
+  modal(`${esc(socialName(p.author_id))} 님에게 답하기`, `<div class="mm-reply-parent">
+    <div class="tiny muted">${esc(socialName(p.author_id))} · ${esc(pairPostWhen(p.created_at))}</div>
+    <div class="mm-reply-snippet">${fmtChat(p.body)}</div></div>
+    <textarea class="inp" id="rp-reply-${Number(id)}" maxlength="500" rows="5" style="width:100%"
       placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
-    <button class="btn pri" style="margin-top:10px"
-      onclick="rpPost(${id}).then(ok=>{if(ok)closeModal()})">댓글 남기기</button>
-    <div class="tiny muted" style="margin-top:8px">이 댓글 바로 아래에 붙습니다.</div>`);
+    <div class="rp-compose-actions"><span class="tiny muted">이 글에 직접 연결되는 답글입니다.</span>
+      <button class="btn pri" onclick="rpPost(${Number(id)}).then(ok=>{if(ok)closeModal()})">답글 게시</button></div>`);
 };
+const _rpPostUI=rpPost;
+rpPost=async function(parent=null){
+  const result=await _rpPostUI(parent);
+  if(result&&!parent){
+    const input=document.getElementById("rp-compose");if(input)input.value="";
+  }
+  return result;
+};
+document.addEventListener("keydown",e=>{
+  if(!(e.ctrlKey||e.metaKey)||e.key!=="Enter"||VIEW!=="rpboard")return;
+  const el=document.activeElement;
+  if(!el||el.id!=="rp-compose")return;
+  e.preventDefault();rpPost();
+});
+
+/* ───────── ③ 서버 저장형 RP 답글 알림 ─────────
+   SQL을 실행한 경우: 로그인하지 않았을 때 온 답글도 다음 접속에 복구합니다.
+   SQL 미적용 환경에서는 종전의 게시판 새로고침 비교를 안전망으로 사용합니다. */
+let RP_ALERT_BACKEND=false, RP_ALERT_BUSY=false, RP_ALERT_ATTEMPT=0;
+let RP_FOCUS_ROOT=null, RP_FOCUS_POST=null, RP_FOCUS_TRIES=0;
+function rpAlertRemember(postId){
+  if(S.alerts&&S.alerts[0])S.alerts[0].rpPostId=Number(postId);
+}
+function rpAlertHas(postId){
+  return Array.isArray(S.alerts)&&S.alerts.some(a=>Number(a.rpPostId)===Number(postId));
+}
+function rpAlertEmit(p,rootId){
+  if(!p||String(p.author_id)===socialId()||rpAlertHas(p.id))return;
+  const parent=(SOCIAL.posts||[]).find(x=>String(x.id)===String(p.parent_id));
+  const msg=`[RP 답글] ${socialName(p.author_id)} 님이 ${parent&&String(parent.author_id)===socialId()?"내 글":"내가 시작한 대화"}에 답글을 남겼습니다.`;
+  alertPush("soc",msg,"rpboard");rpAlertRemember(p.id);
+  if(S.alerts&&S.alerts[0])S.alerts[0].rpRootId=Number(rootId||p.parent_id);
+  if(typeof notifySound==="function")notifySound("board");
+}
+function rpFallbackScan(){
+  if(!SOCIAL.ready||!S?.made||RP_ALERT_BACKEND)return;
+  const all=SOCIAL.posts||[];
+  const max=all.reduce((m,p)=>Math.max(m,Number(p.id)||0),0);
+  if(typeof S.alertRpMax!=="number"){S.alertRpMax=max;save();return;}
+  if(max<=S.alertRpMax)return;
+  const mine=socialId(), cutoff=S.alertRpMax;
+  S.alertRpMax=max;
+  all.filter(p=>Number(p.id)>cutoff&&p.parent_id&&String(p.author_id)!==mine)
+    .sort((a,b)=>Number(a.id)-Number(b.id))
+    .forEach(p=>{
+      const parent=all.find(x=>String(x.id)===String(p.parent_id));
+      const root=rpRootOf(p,all);
+      if((parent&&String(parent.author_id)===mine)||(root&&String(root.author_id)===mine))rpAlertEmit(p,root.id);
+    });
+  save();
+}
+rpAlertScan=rpFallbackScan;
+async function rpAlertServerSync(){
+  if(RP_ALERT_BUSY||!S?.made||!sbOn()||!ACCT?.id||!ACCT?.tok)return;
+  RP_ALERT_BUSY=true;
+  try{
+    const owner=String(ACCT.id);
+    if(S.alertRpAccount!==owner){S.alertRpAccount=owner;S.alertRpCursor=0;}
+    const since=Number(S.alertRpCursor)||0;
+    const rows=await sbSend("POST","rpc/rp_read_alerts",{p_actor:owner,p_token:ACCT.tok,p_after:since});
+    if(String(ACCT.id)!==owner)return;
+    RP_ALERT_BACKEND=true;
+    const found=Array.isArray(rows)?rows:[];
+    let added=0;
+    for(const r of found){
+      if(Number(r.id)>Number(S.alertRpCursor||0))S.alertRpCursor=Number(r.id);
+      if(rpAlertHas(r.post_id))continue;
+      const who=socialName(r.actor_id);
+      const direct=(SOCIAL.posts||[]).find(x=>String(x.id)===String(r.parent_id));
+      const type=direct&&String(direct.author_id)===socialId()?"내 글":"내가 시작한 대화";
+      alertPush("soc",`[RP 답글] ${who} 님이 ${type}에 답글을 남겼습니다.`,"rpboard");
+      rpAlertRemember(r.post_id);
+      if(S.alerts&&S.alerts[0])S.alerts[0].rpRootId=Number(r.root_id||r.parent_id);
+      added++;
+    }
+    if(found.length||added){save();alertBadge();}
+    if(added&&typeof notifySound==="function")notifySound("board");
+  }catch(e){
+    // SQL을 아직 설치하지 않은 사이트는 RP 목록 기반 알림을 계속 사용합니다.
+    RP_ALERT_BACKEND=false;
+    if(SOCIAL.ready)rpFallbackScan();
+  }finally{RP_ALERT_BUSY=false;RP_ALERT_ATTEMPT=Date.now();}
+}
+/* 게시판 fetch와 별도로 서버를 폴링합니다. 조회 실패가 반복되어도 화면은 멈추지 않습니다. */
+setInterval(()=>{if(S?.made&&sbOn()&&ACCT?.id)rpAlertServerSync();},15000);
+const _bootRpAlert=boot;
+boot=function(){
+  _bootRpAlert();
+  if(sbOn()&&ACCT?.id)setTimeout(rpAlertServerSync,1600);
+};
+/* 알림에서 "보기"를 누르면 관련 원글이 있는 페이지로 이동합니다. */
+const _alertGoRp=alertGo;
+alertGo=function(id){
+  const a=(S.alerts||[]).find(x=>x.i===id);
+  if(!a||a.v!=="rpboard"||!a.rpRootId){_alertGoRp(id);return;}
+  RP_FILTER="all";RP_QUERY="";RP_FOCUS_TRIES=0;RP_FOCUS_ROOT=Number(a.rpRootId);RP_FOCUS_POST=Number(a.rpPostId);
+  closeModal();go("rpboard");
+  setTimeout(rpFocusApply,160);
+};
+function rpFocusApply(){
+  if(VIEW!=="rpboard"||!RP_FOCUS_ROOT)return;
+  const root=(SOCIAL.posts||[]).find(x=>String(x.id)===String(RP_FOCUS_ROOT));
+  if(!root){if(RP_FOCUS_TRIES++<2){socialFetch(true).then(()=>setTimeout(rpFocusApply,150));}else{RP_FOCUS_ROOT=null;RP_FOCUS_POST=null;toast("원글이 삭제되었거나 조회 범위를 벗어났습니다.");}return;}
+  renderMain();
+  const target=document.getElementById("rp-post-"+RP_FOCUS_POST)||document.getElementById("rp-post-"+RP_FOCUS_ROOT);
+  if(target){target.scrollIntoView({block:"center",behavior:"smooth"});target.classList.add("rp-focus");}
+  RP_FOCUS_ROOT=null;RP_FOCUS_POST=null;
+}

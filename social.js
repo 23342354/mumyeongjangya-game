@@ -19,7 +19,7 @@ async function socialFetch(force=false){
  // Derived compatibility cache uses actual profile fields, never random values.
  if(!S.socialLegacy)S.socialLegacy={friends:JSON.parse(JSON.stringify(S.friends||[])),relations:JSON.parse(JSON.stringify(S.rel||[]))};
  S.friends=SOCIAL.links.filter(r=>r.kind==='friend'&&r.status==='accepted').map(r=>{const id=socialPeer(r),p=socialStudent(id);return {id,n:p?.name||id,c:p?.course,lv:p?.lvl,line:p?.line,last:p?.updated_at||'',linkId:r.id};});
- if(['rel','pairhub','rpboard','roster'].includes(VIEW))renderMain(true);
+ if(['rel','pairhub','rpboard','roster'].includes(VIEW)){const editor=VIEW==='rpboard'&&['rp-compose','rp-search'].includes(document.activeElement?.id);if(!editor)renderMain(true);}
  }catch(e){SOCIAL.error='교류 정보를 불러오지 못했습니다. 교류-업데이트.sql 적용과 연결을 확인해 주세요.';if(['rel','pairhub','rpboard'].includes(VIEW))renderMain(true);}
  finally{SOCIAL.busy=false;}
 }

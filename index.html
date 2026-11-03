@@ -443,6 +443,56 @@ textarea.inp{min-height:76px;resize:vertical}
  .mm-message{font-size:13px}.mm-action{padding:6px 4px}
 }
 
+
+/* ─── RP 게시판: 마스토돈형 평면 타임라인 ─── */
+.rp-board{width:100%;max-width:1000px;margin:0 auto}
+.rp-compose,.rp-tools,.rp-feed{background:linear-gradient(180deg,var(--cardA),var(--cardB));border:1px solid var(--line);border-radius:13px;overflow:hidden;backdrop-filter:blur(4px)}
+.rp-compose{padding:16px 18px;margin-bottom:12px}
+.rp-compose-row{display:flex;align-items:flex-start;gap:13px}
+.rp-compose-main{min-width:0;flex:1}
+.rp-compose textarea{width:100%;min-height:94px;resize:vertical;background:var(--s1);border:1px solid var(--line);border-radius:9px}
+.rp-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap}
+.rp-tools{padding:12px 15px;margin-bottom:11px}
+.rp-filter-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.rp-search-row{display:flex;gap:8px;margin-top:9px}
+.rp-search-row input{flex:1;min-width:0}
+.rp-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 10px}
+.rp-feed{margin-bottom:14px}
+.rp-thread{position:relative;border-bottom:1px solid var(--line)}
+.rp-thread:last-child{border-bottom:0}
+.rp-entry{display:grid;grid-template-columns:44px minmax(0,1fr);gap:11px;padding:13px 17px 3px;position:relative;transition:background .15s ease}
+.rp-entry + .rp-entry{border-top:1px solid rgba(153,109,192,.12)}
+.rp-entry:hover{background:rgba(155,110,215,.05)}
+.rp-avatar{position:relative;min-height:44px;z-index:1}
+.rp-entry:not(:last-child) .rp-avatar::after{content:"";position:absolute;left:21px;top:47px;bottom:-22px;border-left:2px solid var(--line2);pointer-events:none;z-index:-1}
+.rp-main{min-width:0}
+.rp-byline{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;line-height:1.35}
+.rp-byline b{font-size:13.5px;color:var(--tx)}
+.rp-handle,.rp-time{font-size:11.5px;color:var(--dim)}
+.rp-context{font-size:11px;color:var(--dim);margin-top:3px}
+.rp-entry[data-depth]:not([data-depth="0"]) .rp-context{color:var(--violetL)}
+.rp-body{font-size:13.5px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;margin:7px 0 2px;color:var(--tx)}
+.rp-actions{display:flex;align-items:center;gap:14px;max-width:490px;margin:5px 0 2px}
+.rp-act{color:var(--dim);border:0;background:transparent;min-height:32px;min-width:32px;padding:5px 7px;display:inline-flex;align-items:center;gap:5px;border-radius:20px;font:inherit;font-size:11px;cursor:pointer}
+.rp-act:hover,.rp-act:focus-visible{background:var(--wash1);color:var(--violetL);outline:none}
+.rp-act[aria-pressed="true"]{color:var(--pink)}
+.rp-act:last-child:not(:first-child){margin-left:auto}
+.rp-thread-tail{padding:6px 18px 11px 72px}
+.rp-thread-tail summary{font-size:12px;color:var(--dim);cursor:pointer;padding:4px 0;list-style:none}
+.rp-thread-tail summary::before{content:'▾';margin-right:6px}
+.rp-thread-tail:not([open]) summary::before{content:'▸'}
+.rp-thread-tail .rp-entry{margin-left:-72px;padding-left:17px}
+.rp-empty{text-align:center;padding:36px 16px;color:var(--dim)}
+.rp-focus{outline:2px solid var(--violetL);outline-offset:-2px;background:var(--wash1)}
+@media(max-width:540px){
+ .rp-compose{padding:12px 11px}.rp-compose-row{gap:10px}
+ .rp-tools{padding:10px 11px}.rp-entry{grid-template-columns:38px minmax(0,1fr);gap:9px;padding:11px 10px 3px}
+ .rp-avatar>div{transform:scale(.86);transform-origin:top left}
+ .rp-entry:not(:last-child) .rp-avatar::after{left:19px;top:43px}
+ .rp-thread-tail{padding:5px 10px 10px 57px}.rp-thread-tail .rp-entry{margin-left:-57px;padding-left:10px}
+ .rp-byline b{font-size:12.5px}.rp-handle,.rp-time{font-size:11px}
+ .rp-body{font-size:13px}.rp-actions{gap:5px;justify-content:space-between}
+}
 </style>
 </head>
 <body>
