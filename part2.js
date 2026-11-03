@@ -14,14 +14,12 @@ const GRADES=[
  {n:"전설", c:"var(--gold)", m:3.40, opt:4},
 ];
 const SLOTS=[
- {k:"weapon", n:"무기",  st:"atk", e:ic("sword")},
  {k:"robe",   n:"법의",  st:"def", e:ic("robe")},
  {k:"cap",    n:"관",    st:"men", e:ic("cap")},
  {k:"charm",  n:"부적",  st:"agi", e:ic("beads")},
  {k:"sutra",  n:"경문",  st:"res", e:ic("scroll")},
 ];
 const GEARWORD={
- weapon:["장검","낫","권총","석장","쌍검","철편","단도","활"],
  robe:["승복","흑단 장삼","기름 먹인 외투","법의","누비옷"],
  cap:["두건","머리띠","면구","관","삿갓"],
  charm:["염주","부적","방울","패","향낭"],
@@ -95,8 +93,33 @@ const WBOSS=[
 function ensureV2(){
   const d=(k,v)=>{ if(S[k]===undefined) S[k]=v; };
   d("pts",0); d("alloc",{atk:0,def:0,agi:0,men:0,res:0}); d("tendency","파괴");
-  d("gear",{weapon:null,robe:null,cap:null,charm:null,sutra:null});
+  d("gear",{robe:null,cap:null,charm:null,sutra:null});
   d("bag",[]); d("gid",1);
+  /* 이전 저장 기록에 포함된 무기 법구는 부가 법구로 변경하고 바랑에 보관합니다.
+     등급·레벨·각인·추가 능력치·고유 ID는 그대로 둡니다. */
+  const convertOldWeapon=(it)=>{
+    if(!it||it.slot!=="weapon") return;
+    const idx=Math.abs(Number(it.id)||0)%SLOTS.length;
+    const slot=SLOTS[idx];
+    const prefix=PREFIX.find(p=>(it.name||"").startsWith(p+" "))||"무명의";
+    const names=GEARWORD[slot.k];
+    it.slot=slot.k;
+    it.name=`${prefix} ${names[Math.abs(Number(it.id)||0)%names.length]}`;
+    if(!it.main) it.main={st:slot.st,v:1};
+    it.main.st=slot.st;
+  };
+  if(S.gear.weapon){
+    const oldWeapon=S.gear.weapon;
+    convertOldWeapon(oldWeapon);
+    if(!S.bag.some(b=>b.id===oldWeapon.id)) S.bag.push(oldWeapon);
+  }
+  delete S.gear.weapon;
+  S.bag.forEach(convertOldWeapon);
+  if(S.market&&Array.isArray(S.market.list)) S.market.list.forEach(m=>convertOldWeapon(m?.it));
+  if(Array.isArray(S._merch)) S._merch.forEach(m=>convertOldWeapon(m?.it));
+  if(S.auc&&Array.isArray(S.auc.lots)) S.auc.lots.forEach(m=>convertOldWeapon(m?.it));
+  /* 장인에게는 별도의 무기 설정이 없습니다. 페어인 마무기가 실제 무기입니다. */
+  if(S.line==="장인") S.weapon="";
   // 이전 버전에서 착용했던 고레벨 법구는 잃지 않도록 바랑으로 되돌립니다.
   SLOTS.forEach(sl=>{ const it=S.gear[sl.k];
     if(it && (Number(it.lv)||1)>S.lvl){
@@ -207,7 +230,7 @@ function gearScore(it){
   let p=it.main.v*900+it.enh*210*GRADES[it.grade].m;
   it.opts.forEach(o=>p+=o.v*95); return Math.round(p);
 }
-function gearCanEquip(it){ return !!it && (Number(it.lv)||1)<=S.lvl; }
+function gearCanEquip(it){ return !!it && SLOTS.some(s=>s.k===it.slot) && (Number(it.lv)||1)<=S.lvl; }
 function equip(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
   const it=S.bag[i];
@@ -530,7 +553,7 @@ NAVDEF.push(
  {id:"study", ic:ic("book"), n:"수업·수행", sub:[{id:"class",n:"강의실"},{id:"research",n:"수행"},{id:"exam",n:"승급 시험"}]},
  {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
- {id:"gearn", ic:ic("sword"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
+ {id:"gearn", ic:ic("beads"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
  {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"shop",n:"매점"},{id:"merchant",n:"떠돌이 상인"}]},
@@ -573,8 +596,9 @@ VIEWS.gear=()=>{
     if(!cands.length) return null;
     return cands.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
   };
-  return head("무기 · 법의 · 관 · 부적 · 경문",ic("sword")+" 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
-  <div class="grid g3" style="margin-bottom:14px">
+  return head("법의 · 관 · 부적 · 경문",ic("beads")+" 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+  <div class="gear-slot-scroll" aria-label="법의·관·부적·경문 법구 장비 목록">
+  <div class="gear-slot-grid">
     ${SLOTS.map(sl=>{
       const it=S.gear[sl.k]; const b=best(sl.k);
       const up=b&&(!it||gearScore(b)>gearScore(it));
@@ -596,6 +620,7 @@ VIEWS.gear=()=>{
         <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
       </div>`;
     }).join("")}
+  </div>
   </div>
 
   <div class="card pad" style="margin-bottom:14px">
