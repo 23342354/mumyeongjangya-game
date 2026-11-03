@@ -33,6 +33,35 @@ create policy p_pair_posts_all on public.pair_posts for all using (true) with ch
 grant select, insert, update, delete on public.pair_posts to anon, authenticated;
 grant usage, select on all sequences in schema public to anon, authenticated;
 
+-- ── 3. RP 게시판 — 댓글에 다시 답글 달기 ──────────────────
+-- 지금까지는 원글에만 답글을 달 수 있었습니다. 이제 댓글에도 답글을 달아
+-- 그 댓글 바로 아래로 이어 붙일 수 있게 합니다.
+-- (아래는 「교류-업데이트.sql」의 함수를 그대로 다시 만들면서 그 한 줄만 고친 것입니다.)
+create or replace function public.social_action(actor text, token text, action text, data jsonb default '{}') returns jsonb language plpgsql security definer set search_path=public as $$
+declare l social_links%rowtype; p pairs%rowtype; result_id bigint; target text; begin
+ if not exists(select 1 from accounts where id=actor and pw=token) then raise exception '로그인이 필요합니다'; end if;
+ if action='request' then
+ target:=data->>'target';
+ insert into social_links(from_id,to_id,kind,role_from,role_to) values(actor,target,data->>'kind',left(coalesce(data->>'a','친구'),20),left(coalesce(data->>'b','친구'),20)) returning id into result_id;
+ elsif action='respond' then
+ select * into l from social_links where id=(data->>'id')::bigint for update;
+ if not found or l.to_id<>actor or l.status<>'pending' then raise exception '받은 신청만 처리할 수 있습니다'; end if;
+ update social_links set status=case when data->>'accept'='true' then 'accepted' else 'declined' end where id=l.id;
+ elsif action='remove' then
+ update social_links set status='broken' where id=(data->>'id')::bigint and actor in(from_id,to_id);
+ elsif action='post' then
+ if data->>'parent' is not null and not exists(select 1 from rp_posts where id=(data->>'parent')::bigint) then raise exception '원글이 없습니다'; end if;
+ insert into rp_posts(author_id,body,parent_id) values(actor,trim(data->>'body'),(data->>'parent')::bigint) returning id into result_id;
+ elsif action='delete_post' then
+ delete from rp_posts where id=(data->>'id')::bigint and author_id=actor;
+ elsif action='pair_name' then
+ update pairs set pair_name=left(trim(data->>'name'),30),updated_at=now() where id=(data->>'id')::bigint and actor in(from_id,to_id) and status='accepted';
+ else raise exception '지원하지 않는 요청'; end if;
+ return jsonb_build_object('ok',true,'id',result_id);
+end $$;
+revoke all on function public.social_action(text,text,text,jsonb) from public;
+grant execute on function public.social_action(text,text,text,jsonb) to anon,authenticated;
+
 commit;
 
 -- ── 알아 두실 점 ────────────────────────────────────────────

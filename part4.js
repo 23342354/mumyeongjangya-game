@@ -17,13 +17,6 @@ const ING=[
  {k:"종모래",n:"종루의 모래",   w:"석탑 종루",          e:ic("hourglass")},
  {k:"심연정",n:"심연 결정",     w:"심연",               e:ic("crystal")},
 ];
-const AREA_ING={
- "사무전 지하 봉인고":"먼지", "제2구역 뒷골목":"홍월초", "제3구역 폐공방":"톱니",
- "제4구역 폐터널":"집광편", "제6구역 판자촌":"잿불씨", "제7구역 검은 바다":"인광",
- "속삭이는 폐허":"먹잉크", "석탑 종루":"종모래", "심연":"심연정",
-};
-DAREA.push("제3구역 폐공방","석탑 종루","심연");
-
 /* ─── 조제법 ─── */
 const POTIONS=[
  {id:"q1", n:"집중의 물약", c:"var(--blue)", dur:120, mana:1512,
@@ -57,7 +50,7 @@ const HALLMAX={
  w4:  {mana:.14, brew:.10},                       // 제4구역 — 일륜 발전 구역
  w5:  {loot:.12, boss:.10},                       // 제5구역 — 용병과 현상수배
  w6:  {hpP:.14, defP:.08, heal:.08},              // 제6구역 — 바닥의 아래
- w7:  {petOut:.25, mana:.08},                     // 제7구역 — 검은 바다
+ w7:  {mana:.08},                                // 제7구역 — 검은 바다
 };
 Object.entries(HALLMAX).forEach(([id,base])=>{
   Object.keys(base).forEach(k=>{ if(k!=="fee") base[k]*=HALLMULT[id]; });
@@ -70,7 +63,7 @@ const HALLLABEL={
  w4:  [["파장 재생","mana"],["양조 효율","brew"]],
  w5:  [["전리품 확률","loot"],["업귀 피해","boss"]],
  w6:  [["생명력","hpP"],["방어력","defP"],["회복력","heal"]],
- w7:  [["사역귀 파견 보상","petOut"],["파장 재생","mana"]],
+ w7:  [["파장 재생","mana"]],
 };
 /* ═══════════ 거처 — 일세와 집 짓기 ═══════════
    · 기숙사 : 일세 없음. 방을 네 단계 꾸며 혜택 100%까지 키웁니다.
@@ -83,7 +76,7 @@ const HOMECOST=[
  {rin:12000,  mat:{가루:20,  뿌리:6},            lotus:6,  n:"방 한 칸",   d:"침상과 등롱 하나를 들였다."},
  {rin:40000,  mat:{가루:60,  뿌리:12, 꽃:8},     lotus:8,  n:"부엌",       d:"불을 쓸 수 있게 되었다."},
  {rin:120000, mat:{가루:150, 어물:20, 열매:15},  lotus:10, n:"작업방",     d:"법구를 늘어놓을 자리가 생겼다."},
- {rin:320000, mat:{가루:320, 약초:30, 꽃:20},    lotus:12, n:"안뜰",       d:"사역귀를 풀어 둘 만한 공간."},
+ {rin:320000, mat:{가루:320, 약초:30, 꽃:20},    lotus:12, n:"안뜰",       d:"작은 마당을 만들어 바람을 들였다."},
  {rin:800000, mat:{가루:700, 혼백:6,  어물:40},  lotus:20, n:"다락과 서가", d:"이제 여기를 집이라 불러도 되겠다."},
 ];
 /* 기숙사도 0 에서 시작합니다. 다만 사무전이 내어 준 방이라 일세가 없고,
@@ -253,7 +246,7 @@ VIEWS.alche=()=>{
 
       <div class="card pad">
         <div class="spread"><div class="sect-t" style="margin:0">재료 보관함</div>
-          <span class="tiny muted">사역귀 파견·의뢰·나들이에서 모입니다</span></div>
+          <span class="tiny muted">의뢰·나들이·탐사에서 모입니다</span></div>
         <table class="t">
           ${ING.map(i=>`<tr>
             <td>${i.e} ${i.n} <span class="tiny muted" style="margin-left:6px">${i.w}</span></td>
@@ -265,8 +258,6 @@ VIEWS.alche=()=>{
           <tr><td>부적가루 <span class="tiny muted" style="margin-left:6px">법구 분해</span></td>
             <td style="text-align:right"><b>${nf(S.mat.가루||0)}</b></td></tr>
         </table>
-        <div class="tiny muted" style="margin-top:8px">사역귀를 파견한 <b>지역에 따라</b> 돌아올 때 가져오는 재료가 다릅니다.</div>
-        <button class="btn sm" style="margin-top:8px" onclick="go('pets')">사육장으로</button>
       </div>
     </div>
   </div>`;
@@ -422,27 +413,6 @@ step=function(m){
 /* 치유·보호막 위력에 물약 효과 반영 */
 const _C=C;
 C=function(){ const c=_C(); c.heal=+(c.heal+mod("heal")).toFixed(2); return c; };
-
-/* 파견 — 지역에 맞는 조제 재료와 거주지 보너스 */
-const _recall4=recall;
-recall=function(i){
-  const p=S.pets.list[i];
-  const done=p&&p.out&&S.t>=p.out.end;
-  const h=done?p.out.h:0, area=p?p.area:null;
-  const before=S.rin;
-  _recall4(i);
-  if(!done) return;
-  const bonus=mod("petOut");
-  const add=Math.round((S.rin-before)*bonus);
-  if(add>0) S.rin+=add;
-  const key=AREA_ING[area];
-  if(key){
-    const amt=Math.max(1, Math.round((rnd(2,4)*h/4)*(1+bonus)));
-    S.ing[key]=(S.ing[key]||0)+amt;
-    toast(`${matName(key)} +${amt}${add>0?` · 거주지 보정 륜 +${nf(add)}`:""}`,"good");
-  }
-  renderTop(); renderNav(); renderMain(); save();
-};
 
 /* 의뢰 처치 — 가끔 조제 재료 */
 const _runStep=runStep;

@@ -2,7 +2,7 @@
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장 3
    기록실 · 랭킹 · 거처 · 휴게실 · 세계관
-   경매 · 매점 확장 · 사역귀 용품점 · 실시간 의뢰 일지
+   경매 · 매점 확장 · 실시간 의뢰 일지
    ═══════════════════════════════════════════════════ */
 
 /* ─── 몬스터 도감 ─── */
@@ -56,9 +56,6 @@ const ACH=[
  {id:"a29", n:"검은 바다의 손",d:"물고기 100마리",             c:"fish",   g:100,p:20},
  {id:"a30", n:"주방 보조",     d:"요리 10번 만들기",           c:"cook",   g:10, p:10},
  {id:"a31", n:"삼장의 제자",   d:"요리 100번 만들기",          c:"cook",   g:100,p:30},
- {id:"a32", n:"첫 사역귀",     d:"사역귀 1마리",               c:"pet",    g:1,  p:5},
- {id:"a33", n:"사육장의 주인", d:"사역귀 10마리",              c:"pet",    g:10, p:25},
- {id:"a34", n:"파견 감독",     d:"파견 100회 귀환",            c:"dispatch",g:100,p:20},
  {id:"a35", n:"연무제 입상",   d:"연무제 5회전 돌파",          c:"arenaBest",g:5, p:20},
  {id:"a36", n:"연무제 우승",   d:"연무제 15회전 완주",         c:"arenaBest",g:15,p:60},
  {id:"a37", n:"토벌 참여",     d:"업귀 토벌 10회 공격",        c:"wb",     g:10, p:15},
@@ -111,25 +108,12 @@ const STORY=[
   "육신은 멸하여도 업은 멸하지 않는다. 남은 업은 인연을 따라 다시 무명의 장야에 이른다."]},
 ];
 
-/* ─── 사역귀 간식 ─── */
-const SNACKS=[
- {id:"sn1", n:"잿불 사탕",     e:ic("candy"), c:300,  b:2, d:"잿불을 녹여 졸인 작은 사탕입니다."},
- {id:"sn2", n:"이슬 비스킷",   e:ic("cookie"), c:600,  b:3, d:"새벽 이슬을 넣어 구운 바삭한 비스킷입니다."},
- {id:"sn3", n:"안개 젤리",     e:ic("ice"), c:900,  b:3, d:"제7구역의 바다 안개를 굳혀 만든 말랑한 젤리입니다."},
- {id:"sn4", n:"반딧불 씨앗",   e:ic("bean"), c:900,  b:3, d:"어두운 곳에서 은은하게 빛나는 씨앗입니다."},
- {id:"sn5", n:"꿀사과 조각",   e:ic("apple"), c:1200, b:3, d:"제1구역 찻집의 꿀사과를 잘게 썬 것입니다."},
- {id:"sn6", n:"은빛 말린 생선",e:ic("fish"), c:1200, b:3, d:"검은 바다에서 잡아 말린 생선입니다.", mat:"어물"},
- {id:"sn7", n:"텃밭 열매 타르트",e:ic("pie"),c:0,   b:4, d:"텃밭에서 딴 열매를 듬뿍 올려 구운 타르트입니다.", mat:"열매", mc:4, tag:"텃밭 간식"},
- {id:"sn8", n:"약초 경단",     e:ic("dango"), c:0,    b:4, d:"향긋한 약초를 빻아 빚은 쫀득한 경단입니다.", mat:"약초", mc:4, tag:"텃밭 간식"},
-];
-
 /* ─── 매점 품목 (확장) ─── */
 const MART=[
  {id:"m1", n:"사리 꾸러미",  d:"사리 10개",                    cost:{rin:21100},  give:{sari:10},   lim:3,  per:"day"},
  {id:"m2", n:"연등 주머니",  d:"연등 10개 (하루 1번)",          cost:{rin:105000}, give:{lotus:10},  lim:1,  per:"day"},
  {id:"m3", n:"부적가루 교환",d:"사리 10개를 부적가루 80으로",    cost:{sari:10},    give:{dust:80},   lim:99, per:"day"},
  {id:"m4", n:"보급 상자",    d:"지금 과정보다 3~7단계 높은 법구 1개 (고급 이상)", cost:{rin:26300}, give:{gear:1}, lim:5, per:"day"},
- {id:"m5", n:"업연의 알",    d:"사역귀 알 1개",                 cost:{lotus:25},   give:{egg:1},     lim:9,  per:"day"},
  {id:"m6", n:"륜 주머니",    d:"연등 10개를 륜 10.5만으로",      cost:{lotus:10},   give:{rin:105000},lim:3,  per:"day"},
  {id:"m7", n:"압축 파장병",  d:"파장 4시간 생산분을 즉시 획득",   cost:{lotus:12},   give:{mana:240},  lim:3,  per:"day"},
  {id:"m8", n:"토벌 도전권",  d:"업귀 토벌 도전권 +1 (주 2회)",   cost:{lotus:10},   give:{wb:1},      lim:2,  per:"week"},
@@ -142,7 +126,7 @@ const MART=[
 /* ═══════════ 상태 보강 3 ═══════════ */
 function ensureV3(){
   const d=(k,v)=>{ if(S[k]===undefined) S[k]=v; };
-  d("ct",{classH:0,mon:0,boss:0,quest:0,harvest:0,fish:0,cook:0,pet:0,dispatch:0,
+  d("ct",{classH:0,mon:0,boss:0,quest:0,harvest:0,fish:0,cook:0,
           wb:0,outing:0,duelWin:0,gradeA:0,gradeS:0,enhMax:0,days:0});
   d("dex",{mon:[],plant:[],fish:[],dish:[],title:[],wards:[]});
   d("ach",[]);
@@ -152,8 +136,6 @@ function ensureV3(){
   d("home",{stage:0, due:0, auto:true});
   d("lounge",{pts:0,stage:0,today:{rin:false,mana:false,mat:false},month:0});
   d("auc",{phase:"idle",left:0,next:0,lots:[],hist:[],slot:0});
-  d("mile",0);
-  d("snack",{today:0});
   d("mart",{});
   d("crest",null);
   d("run",null);
@@ -181,7 +163,6 @@ function achVal(a){
     case "clubLv":   return S.club?S.club.lv:0;
     case "dexP":     return dexScore();
     case "legend":   return SLOTS.some(s=>S.gear[s.k]&&S.gear[s.k].grade===4)?1:0;
-    case "pet":      return S.pets.list.length;
     default:         return C[a.c]||0;
   }
 }
@@ -419,7 +400,7 @@ step=function(m){
 const _onNewDay3=onNewDay;
 onNewDay=function(){
   _onNewDay3();
-  S.snack.today=0; S.mart={};
+  S.mart={};
   S.lounge.today={rin:false,mana:false,mat:false};
 };
 
@@ -491,8 +472,8 @@ VIEWS.record=()=>{
     const rows=[["명계에서 보낸 날",cal().day+1+"일"],["수업 교시",nf(C.classH)],["처치한 악인",nf(C.mon)],
       ["처치한 보스",nf(C.boss)],["해결한 의뢰",nf(C.quest)],["석탑 최고",(S.tower||0)+"층"],["결계의 탑 최고",(S.tower2||0)+"층"],
       ["연무제 최고",S.arena.best+"회전"],["업귀 토벌 공격",nf(C.wb)+"회"],["구역 나들이",nf(C.outing)+"회"],
-      ["수확",nf(C.harvest)+"회"],["낚시",nf(C.fish)+"마리"],["요리",nf(C.cook)+"번"],["사역귀",S.pets.list.length+"마리"],
-      ["파견 귀환",nf(C.dispatch)+"회"],["업적 점수",achPts()],["도감 점수",dexScore()],["전투력",nf(power())]];
+      ["수확",nf(C.harvest)+"회"],["낚시",nf(C.fish)+"마리"],["요리",nf(C.cook)+"번"],
+      ["업적 점수",achPts()],["도감 점수",dexScore()],["전투력",nf(power())]];
     body=`<div class="grid g4">${rows.map(([k,v])=>`<div class="card pad" style="padding:11px 13px">
       <div class="tiny muted">${k}</div><div style="font-size:18px;font-weight:600;color:var(--gold)">${v}</div></div>`).join("")}</div>`;
   }
@@ -677,7 +658,7 @@ function readStory(ch){
 }
 
 /* ═══════════════════════════════════════════════════
-   화면 — 떠돌이 상인(경매) · 매점 · 사역귀 용품점
+   화면 — 떠돌이 상인(경매) · 매점
    ═══════════════════════════════════════════════════ */
 VIEWS.merchant=()=>{
   const A=S.auc;
@@ -781,7 +762,6 @@ function martBuy(id){
   if(g.lotus){ S.lotus+=g.lotus; msg.push(`연등 +${g.lotus}`); }
   if(g.rin){ const r=gainRin(g.rin); msg.push(`륜 +${nf(r)}`); }
   if(g.dust){ S.mat.가루+=g.dust; msg.push(`부적가루 +${g.dust}`); }
-  if(g.egg){ S.pets.eggs+=g.egg; msg.push(`업연의 알 +${g.egg}`); }
   if(g.mana){ S.mana=Math.min(maxMana()*3, S.mana+manaRate()*g.mana); msg.push(`파장 +${nf(Math.round(manaRate()*g.mana))}`); }
   if(g.wb){ S.wb.tickets+=g.wb; msg.push(`토벌 도전권 +${g.wb}`); }
   if(g.bag){ S.res.r11=Math.min(10,S.res.r11+1); msg.push("바랑 칸 +5"); }
@@ -792,81 +772,6 @@ function martBuy(id){
     msg.push(`휘장 · ${o.n} +${S.crest.v}%`); }
   toast(msg.join(" · "),"good");
   achCheck(); renderTop(); renderNav(); renderMain(); save();
-}
-
-VIEWS.petshop=()=>{
-  const lv=p=>p.lv;
-  const maxed=S.pets.list.filter(p=>p.lv>=20).length;
-  return head("제3구역 골목 끝",ic("basket")+" 사역귀 용품점", `보유 륜 ${nf(S.rin)} · 마일리지 ${S.mile}`)+`
-  <div class="card pad" style="margin-bottom:14px">
-    <div class="tiny muted">종이학 우체국 옆에 자리한 사역귀 먹이 상점입니다. 주인 할머니가 사역귀마다 좋아하는 것이 다르다고 귀띔합니다.</div>
-  </div>
-  <div class="grid g2" style="margin-bottom:14px">
-    <div class="card pad">
-      <div class="spread"><div class="sect-t" style="margin:0">마일리지 상점</div>
-        <span class="tiny muted">마일리지 <b style="color:var(--gold)">${S.mile}</b></span></div>
-      <div class="tiny muted" style="margin-bottom:8px">최대 레벨(20)인 사역귀가 다시 깨어나면 마일리지가 쌓입니다(일반 2 · 고급 5 · 희귀 10 · 영웅 20 · 전설 50). 구매한 알은 바로 깨어납니다.</div>
-      <div class="row">
-        ${[["희귀 이상 알",28,2],["영웅 이상 알",58,3],["전설 알",100,4]].map(([n,c,g])=>
-          `<button class="btn sm ${S.mile>=c?"pri":""}" ${S.mile>=c?"":"disabled"} onclick="mileBuy(${c},${g})">${n} ${c}</button>`).join("")}
-      </div>
-      <div class="tiny muted" style="margin-top:8px">최대 레벨 사역귀 ${maxed}마리 · <button class="btn sm ghost" onclick="releasePet()">최대 레벨 사역귀 돌려보내기</button></div>
-    </div>
-    <div class="card pad">
-      <div class="sect-t">영양 먹이</div>
-      <div class="tiny muted">사역귀의 레벨을 1 올리는 먹이는 「사역귀 사육장」의 카드에서 바로 줄 수 있습니다.</div>
-      <button class="btn sm" style="margin-top:9px" onclick="go('pets')">사육장으로 이동</button>
-      <hr class="hr">
-      <div class="sect-t">오늘 준 간식 ${S.snack.today} / 2</div>
-      <div class="tiny muted">간식은 교감할 때 쓰는 소모품입니다. 하루 2번까지 줄 수 있습니다.</div>
-    </div>
-  </div>
-  <div class="card pad">
-    <div class="sect-t">간식</div>
-    <div class="grid g4">
-      ${SNACKS.map(s=>{
-        const matOK=!s.mat||S.mat[s.mat]>=(s.mc||1);
-        const canBuy=(s.c?S.rin>=s.c:true)&&matOK&&S.snack.today<2&&S.pets.list.length;
-        return `<div class="sub">
-          <div class="spread"><b>${s.e} ${s.n}</b>${s.tag?`<span class="tag j">${s.tag}</span>`:""}</div>
-          <div class="tiny muted" style="margin:5px 0 4px">${s.d}</div>
-          <div class="tiny" style="color:var(--jade)">유대 +${s.b}</div>
-          <div class="tiny muted">${s.c?`륜 ${nf(s.c)}`:""}${s.mat?`${s.c?" · ":""}${s.mat} ${s.mc||1}`:""}</div>
-          <button class="btn sm ${canBuy?"pri":""}" ${canBuy?"":"disabled"} style="margin-top:7px" onclick="giveSnack('${s.id}')">주기</button>
-        </div>`}).join("")}
-    </div>
-  </div>`;
-};
-function mileBuy(c,g){
-  if(S.mile<c){ toast("마일리지가 부족합니다.","bad"); return; }
-  S.mile-=c;
-  const p=mkPet(g); S.pets.list.push(p); ct("pet");
-  toast(`<b>${p.e} ${p.n}</b> (${GRADES[p.g].n})이(가) 깨어났습니다.`,"good");
-  achCheck(); renderMain(); save();
-}
-function releasePet(){
-  const i=S.pets.list.findIndex(p=>p.lv>=20);
-  if(i<0){ toast("최대 레벨인 사역귀가 없습니다.","bad"); return; }
-  const p=S.pets.list[i];
-  if(!confirm(`${p.nick||p.n}을(를) 돌려보낼까요? 마일리지를 받습니다.`)) return;
-  S.mile+=[2,5,10,20,50][p.g];
-  S.pets.list.splice(i,1);
-  toast(`${p.n}이(가) 떠났습니다 · 마일리지 +${[2,5,10,20,50][p.g]}`,"good");
-  renderMain(); save();
-}
-function giveSnack(id){
-  const s=SNACKS.find(x=>x.id===id);
-  if(S.snack.today>=2){ toast("오늘은 두 번 다 주었습니다.","bad"); return; }
-  if(!S.pets.list.length){ toast("사역귀가 없습니다.","bad"); return; }
-  if(s.c&&S.rin<s.c){ toast("륜이 부족합니다.","bad"); return; }
-  if(s.mat&&S.mat[s.mat]<(s.mc||1)){ toast(`${s.mat}이(가) 부족합니다.`,"bad"); return; }
-  if(s.c) S.rin-=s.c;
-  if(s.mat) S.mat[s.mat]-=(s.mc||1);
-  S.snack.today++;
-  const p=S.pets.list[0];
-  p.bond=Math.min(100,p.bond+s.b);
-  toast(`${p.nick||p.n}에게 ${s.n}을(를) 주었습니다 · 유대 +${s.b}`,"good");
-  renderTop(); renderMain(); save();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -958,11 +863,6 @@ fishHook=function(){ const before=S.ct.fish; _fishHook();
     const m=el.textContent.match(/^\s*(\S+)\s/); const nm=(el.querySelector("b")||{}).textContent||"";
     const f=FISHES.find(x=>nm.includes(x.n)); if(f) dexAdd("fish",f.n);
     achCheck(); } };
-const _recall=recall;
-recall=function(i){ const had=S.pets.list[i]&&S.pets.list[i].out&&S.t>=S.pets.list[i].out.end;
-  _recall(i); if(had){ ct("dispatch"); S.war.mine=(S.war.mine||0)+4; achCheck(); } };
-const _doHatch=doHatch;
-doHatch=function(){ _doHatch(); ct("pet"); achCheck(); };
 const _climbTower=climbTower;
 climbTower=function(c){ const b=S.tower||0; _climbTower(c);
   if((S.tower||0)>b){ ct("boss",Math.floor(((S.tower||0)-b)/50)); S.war.mine=(S.war.mine||0)+((S.tower||0)-b)*8;
@@ -1002,10 +902,10 @@ NAVDEF.push(
  {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
  {id:"gearn", ic:ic("sword"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
- {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"pets",n:"사역귀 사육장"},{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
+ {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"},
                                           {id:"outing",n:"구역 나들이"},{id:"fest",n:"염라제",bd:"축제"}]},
- {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"merchant",n:"떠돌이 상인"},{id:"shop",n:"매점"},{id:"petshop",n:"사역귀 용품점"}]},
+ {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"merchant",n:"떠돌이 상인"},{id:"shop",n:"매점"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록·랭킹", sub:[{id:"world",n:"세계관"},{id:"record",n:"업적·도감"},{id:"rank",n:"랭킹"},
                                           {id:"hallv",n:"거처"},{id:"lounge",n:"휴게실"}]},
 );

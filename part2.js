@@ -2,7 +2,7 @@
 /* ═══════════════════════════════════════════════════
    無明長夜 · 사무전 — 확장
    법구 · 능력치 · 탑 · 업귀 토벌 · 연무제
-   사역귀 · 약초밭 · 낚시 · 식당 · 모임 · 중개소
+   약초밭 · 낚시 · 식당 · 모임 · 중개소
    ═══════════════════════════════════════════════════ */
 
 /* ─── 등급 · 부위 ─── */
@@ -39,27 +39,6 @@ const OPTS=[
  {k:"exp",   n:"경험치",        v:[3,10]},
  {k:"loot",  n:"전리품 확률",   v:[2,7]},
 ];
-
-/* ─── 사역귀 ─── */
-const PETDEF=[
- {n:"먹그림자 박쥐", e:ic("bat"), g:0, k:"gold",  v:[14,24], d:"골목 천장에 거꾸로 붙어 잔다."},
- {n:"초롱 도마뱀",   e:ic("lizard"), g:0, k:"atkP",  v:[10,20], d:"꼬리 끝에 작은 불이 붙어 있다."},
- {n:"이끼 거북",     e:ic("turtle"), g:0, k:"hpP",   v:[12,22], d:"등딱지에 누가 부적을 붙여 놓았다."},
- {n:"도토리 쥐",     e:ic("mouse"), g:0, k:"defP",  v:[10,20], d:"볼주머니에 뭔가를 늘 숨기고 있다."},
- {n:"연잎 개구리",   e:ic("frog"), g:1, k:"hatch", v:[20,34], d:"울음소리가 목탁과 비슷하다."},
- {n:"등롱 병아리",   e:ic("chick"), g:1, k:"exp",   v:[14,24], d:"어둠 속에서 저 혼자 희미하게 빛난다."},
- {n:"사리 햄스터",   e:ic("hamster"), g:1, k:"mana",  v:[12,22], d:"볼에 작은 사리를 물고 다닌다."},
- {n:"달 토끼",       e:ic("rabbit"), g:2, k:"study", v:[10,18], d:"홍월이 뜬 밤에만 모습을 보인다."},
- {n:"잿빛 까마귀",   e:ic("crow"), g:2, k:"loot",  v:[6,14],  d:"반짝이는 것을 물어 온다. 대개 쓸모없다."},
- {n:"수월 잉어",     e:ic("fish"), g:3, k:"critD", v:[18,34], d:"수면에 비친 달만 따라다닌다."},
- {n:"업연의 구렁이", e:ic("snake"), g:3, k:"atkP",  v:[20,34], d:"허물에 지난 생의 무늬가 남는다."},
- {n:"무명 호랑이",   e:ic("tiger"), g:4, k:"atkP",  v:[30,48], d:"이름을 부르면 돌아보지 않는다."},
-];
-const DISPATCH=[
- {h:2,  n:"2시간"}, {h:4, n:"4시간"}, {h:8, n:"8시간"}, {h:12, n:"12시간"},
-];
-const DAREA=["사무전 지하 봉인고","제2구역 뒷골목","제4구역 폐터널","제6구역 판자촌","제7구역 검은 바다","속삭이는 폐허"];
-const BONDS=["낯섦","익숙함","친근함","신뢰","공명"];
 
 /* ─── 약초밭 ─── */
 const CROPS=[
@@ -122,7 +101,6 @@ function ensureV2(){
   d("tower",0); d("tower2",0);
   d("wb",{dmg:0,tickets:3,next:300,total:6160000000,week:0,boss:0,rank:0});
   d("arena",{round:1,best:0,cool:0});
-  d("pets",{eggs:2,list:[],hatch:null,prog:0});
   d("farm",{plots:Array.from({length:9},()=>null),skill:1,exp:0,fert:3,order:null,done:0});
   d("fish",{skill:1,exp:0,cool:0});
   d("kit",{have:{},eat:null,dess:null});
@@ -130,7 +108,6 @@ function ensureV2(){
   d("market",{list:[],next:0});
   d("meal",null);
   if(!S.alloc) S.alloc={atk:0,def:0,agi:0,men:0,res:0};
-  if(S.pets.list.length===0 && S.pets.eggs===2){ S.pets.list.push(mkPet(0)); }
   if(!S.farm.order) rollFarmOrder();
   if(!S.market.list.length) rollMarket();
 }
@@ -152,11 +129,6 @@ function gearOpt(key){
     it.opts.forEach(o=>{ if(o.k===key) v+=o.v/100; }); });
   return v;
 }
-function petOpt(key){
-  let v=0;
-  S.pets.list.forEach(p=>{ if(p.k===key) v+=p.v/100; });
-  return v;
-}
 function clubOpt(key){
   if(!S.club) return 0;
   const m={cl1:{know:.05,loot:.05}, cl2:{gold:.08}, cl3:{study:.06}}[S.club.id]||{};
@@ -166,7 +138,7 @@ function clubOpt(key){
 }
 /* mod 확장 */
 const _mod=mod;
-mod=function(key){ return _mod(key)+gearOpt(key)+petOpt(key)+clubOpt(key)+mealOpt(key); };
+mod=function(key){ return _mod(key)+gearOpt(key)+clubOpt(key)+mealOpt(key); };
 function mealOpt(key){
   let v=0;
   ["eat","dess"].forEach(s=>{ const m=S.kit&&S.kit[s]; if(!m||m.left<=0) return;
@@ -205,7 +177,7 @@ function gearPower(){
   return Math.round(p);
 }
 const _power=power;
-power=function(){ return _power()+gearPower()+Math.round(S.pets.list.length*120)+(S.pts?0:0); };
+power=function(){ return _power()+gearPower(); };
 
 /* ═══════════ 법구 생성 ═══════════ */
 function mkGear(lv,gradeHint,fromLoot=false){
@@ -287,79 +259,10 @@ function bulkDo(kind,maxGrade){
   renderTop(); renderMain(); save();
 }
 
-/* ═══════════ 사역귀 ═══════════ */
-function mkPet(gi){
-  const pool=PETDEF.filter(p=>p.g===gi);
-  const d=pick(pool.length?pool:PETDEF);
-  return {n:d.n, e:d.e, g:d.g, k:d.k, kn:OPTNAME(d.k), v:+(rnd(d.v[0]*10,d.v[1]*10)/10).toFixed(1),
-          d:d.d, lv:1, exp:0, bond:0, out:null, area:pick(DAREA), nick:""};
-}
+/* ─── 효과 이름 (법구·요리·수업에서 공용) ─── */
 function OPTNAME(k){
   return ({atkP:"공격력",hpP:"생명력",defP:"방어력",crit:"치명타 확률",critD:"치명타 피해",spd:"공격 속도",
-    gold:"륜 획득",exp:"경험치",loot:"전리품 획득 확률",quality:"법구 품질 상승 확률",snGuard:"이성 소모 감소",rest:"체력·이성 자연 회복",heal:"치유·보호막 위력",boss:"업귀 피해",mana:"파장 재생",study:"수업 보상",know:"지식 획득",hatch:"부화 효율"})[k]||k;
-}
-function hatchNeed(){ return 1800+S.pets.list.length*420; }
-function startHatch(){
-  if(S.pets.eggs<1){ toast("업연의 알이 없습니다.","bad"); return; }
-  if(S.pets.hatch){ toast("이미 알을 품고 있습니다.","bad"); return; }
-  S.pets.eggs--; S.pets.hatch={need:hatchNeed(),prog:0}; toast("알을 품기 시작했습니다. 활동할수록 진행됩니다.");
-  renderMain(); save();
-}
-function hatchPush(n){
-  if(!S.pets.hatch) return;
-  S.pets.hatch.prog+=n*(1.3+petOpt("hatch"));
-  if(S.pets.hatch.prog>=S.pets.hatch.need) doHatch();
-}
-function doHatch(){
-  S.pets.hatch=null;
-  const r=Math.random()*100;
-  const gi=r>97?4:r>88?3:r>72?2:r>46?1:0;
-  const p=mkPet(gi);
-  S.pets.list.push(p);
-  toast(`알이 깨어났습니다 — <b>${p.e} ${p.n}</b> (${GRADES[p.g].n})`,"good");
-  pushNews(`[사육장] ${S.name} 학생의 알에서 ${p.n}이(가) 깨어났습니다.`);
-  save();
-}
-function hatchNow(){
-  const h=S.pets.hatch; if(!h) return;
-  const left=Math.max(0,h.need-h.prog);
-  const cost=Math.round(left*4);
-  if(S.mana<cost){ toast(`파장이 부족합니다. (${nf(cost)} 필요)`,"bad"); return; }
-  S.mana-=cost; doHatch(); renderTop(); renderMain();
-}
-function dispatch(i,h){
-  const p=S.pets.list[i]; if(p.out) return;
-  p.out={end:S.t+h*60, h};
-  toast(`${p.n}을(를) ${p.area}(으)로 ${h}시간 파견했습니다.`); renderMain(); save();
-}
-function recall(i){
-  const p=S.pets.list[i]; if(!p.out) return;
-  const done=S.t>=p.out.end;
-  if(!done){ p.out=null; toast(`${p.n}이(가) 빈손으로 돌아왔습니다.`); renderMain(); return; }
-  const h=p.out.h;
-  const rin=gainRin(rnd(200,420)*h), know=gainKnow(rnd(8,22)*h);
-  const mats=["약초","열매","뿌리","꽃"]; const mk=pick(mats), mv=rnd(1,2)*h;
-  S.mat[mk]+=mv;
-  let extra="";
-  if(Math.random()<.10*h/4){ S.sari++; extra+=" · 사리 +1"; }
-  if(Math.random()<.08*h/4){ S.pets.eggs++; extra+=" · 업연의 알 +1"; }
-  p.exp+=h*40; p.bond=Math.min(100,p.bond+h*2);
-  while(p.exp>=p.lv*220){ p.exp-=p.lv*220; p.lv++; p.v=+(p.v*1.03+.2).toFixed(1); }
-  p.out=null;
-  toast(`${p.n} 귀환 · 륜 +${nf(rin)} · ${mk} +${mv} · 지식 +${nf(know)}${extra}`,"good");
-  renderTop(); renderNav(); renderMain(); save();
-}
-function feedPet(i){
-  const p=S.pets.list[i];
-  const cost=Math.round(9000*(1+p.lv*.2));
-  if(S.rin<cost){ toast("륜이 부족합니다.","bad"); return; }
-  S.rin-=cost; p.exp+=260; p.bond=Math.min(100,p.bond+6);
-  while(p.exp>=p.lv*220){ p.exp-=p.lv*220; p.lv++; p.v=+(p.v*1.03+.2).toFixed(1); }
-  toast(`${p.n}에게 먹이를 주었습니다. 유대 +6`); renderTop(); renderMain(); save();
-}
-function recallAll(){
-  let n=0; S.pets.list.forEach((p,i)=>{ if(p.out&&S.t>=p.out.end){ recall(i); n++; } });
-  if(!n) toast("돌아올 사역귀가 없습니다.");
+    gold:"륜 획득",exp:"경험치",loot:"전리품 획득 확률",quality:"법구 품질 상승 확률",snGuard:"이성 소모 감소",rest:"체력·이성 자연 회복",heal:"치유·보호막 위력",boss:"업귀 피해",mana:"파장 재생",study:"수업 보상",know:"지식 획득"})[k]||k;
 }
 
 /* ═══════════ 약초밭 ═══════════ */
@@ -575,8 +478,6 @@ step=function(m){
   if(S.arena.cool>0) S.arena.cool=Math.max(0,S.arena.cool-m);
   // 중개소 갱신
   S.market.next-=m; if(S.market.next<=0) rollMarket();
-  // 부화 진행 (활동량 비례)
-  hatchPush(m*1.2);
 };
 const _onNewDay=onNewDay;
 onNewDay=function(){
@@ -586,8 +487,6 @@ onNewDay=function(){
   rollFarmOrder();
   S.fish.cool=0;
 };
-const _addMark=addMark;
-addMark=function(n){ _addMark(n); hatchPush(n*3); };
 
 /* ═══════════ 내비 재구성 ═══════════ */
 NAVDEF.length=0;
@@ -597,7 +496,7 @@ NAVDEF.push(
  {id:"war",   ic:ic("swords"), n:"의뢰·전투", sub:[{id:"quest",n:"의뢰"},{id:"tower",n:"석탑"},{id:"guard",n:"결계의 탑"},
                                           {id:"wboss",n:"업귀 토벌",bd:"주간"},{id:"arena",n:"연무제"},{id:"duel",n:"대련"}]},
  {id:"gearn", ic:ic("sword"), n:"법구·바랑", sub:[{id:"gear",n:"법구"},{id:"stats",n:"능력치"},{id:"bag",n:"바랑"}]},
- {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"pets",n:"사역귀 사육장"},{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
+ {id:"craft", ic:ic("pot"), n:"공방·생활", sub:[{id:"fishv",n:"낚시"},{id:"farm",n:"약초밭"},{id:"kitchen",n:"식당"}]},
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"club",n:"모임"},{id:"rel",n:"인연·관계"}]},
  {id:"shopn", ic:ic("store"), n:"상점",      sub:[{id:"market",n:"중개소"},{id:"shop",n:"매점"},{id:"merchant",n:"떠돌이 상인"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"fest",n:"염라제",bd:"축제"},{id:"outing",n:"구역 나들이"},{id:"record",n:"기록·성적"}]},
@@ -713,7 +612,6 @@ VIEWS.bag=()=>{
     <div class="card pad">
       <div class="sect-t">재료</div>${matRows}
       <hr class="hr">
-      <div class="spread tiny"><span>업연의 알</span><b>${S.pets.eggs}</b></div>
       <div class="spread tiny"><span>비료</span><b>${S.farm.fert}</b></div>
     </div>
     <div class="card pad">
@@ -781,7 +679,6 @@ VIEWS.stats=()=>{
         <tr><td>치명타</td><td style="text-align:right">${(c.crit*100).toFixed(1)}% · ×${c.critD.toFixed(2)}</td></tr>
         <tr><td>생명력 · 방어력</td><td style="text-align:right">${nf(c.hp)} · ${nf(c.def)}</td></tr>
         <tr><td>치유·보호막 위력</td><td style="text-align:right">×${c.heal.toFixed(2)}</td></tr>
-        <tr><td>사역귀 동행</td><td style="text-align:right">${S.pets.list.length?S.pets.list[0].e+" "+S.pets.list[0].n:"없음"}</td></tr>
       </table>
       <div class="tiny muted" style="margin-top:8px">초당 피해는 석탑·결계의 탑·업귀 토벌·연무제에서 쓰입니다.
       의뢰·대련·승급 시험은 <b>공격 D5 + 5</b>에 치명타·업귀 피해 효과를 적용합니다.</div>
@@ -986,7 +883,7 @@ VIEWS.wboss=()=>{
       <button class="btn pri" ${S.wb.tickets<1?"disabled":""} onclick="hitBoss()">30초 공격</button>
     </div>
     <div class="tiny muted" style="margin-top:8px">이번 주 내 피해 <b style="color:var(--gold)">${nf(S.wb.dmg)}</b> (${3-S.wb.tickets}회).
-    보상: 토벌하는 순간 도전한 학생 모두에게 연등 20과 업연의 알. 다음 주에 참여 연등 10과 피해 상위 1%·10%·50% 추가 보상.</div>
+    보상: 토벌하는 순간 도전한 학생 모두에게 연등 20. 다음 주에 참여 연등 10과 피해 상위 1%·10%·50% 추가 보상.</div>
   </div>
   <div class="card pad">
     <div class="spread"><div class="sect-t" style="margin:0">업귀 피해 순위</div>
@@ -1009,7 +906,6 @@ function hitBoss(){
   S.wb.dmg+=dmg; S.wb.total+=dmg;
   const rin=gainRin(Math.round(dmg/3000)+400), ex=gainExp(600);
   addMark(10);
-  if(Math.random()<.35) S.pets.eggs++;
   modal("업귀 토벌",`
     <div style="text-align:center;padding:8px 0">
       <div class="tiny muted">30초 동안 입힌 피해</div>
@@ -1111,84 +1007,8 @@ function arenaGo(mode){
 }
 
 /* ═══════════════════════════════════════════════════
-   화면 — 사역귀 · 낚시 · 약초밭 · 식당
+   화면 — 낚시 · 약초밭 · 식당
    ═══════════════════════════════════════════════════ */
-VIEWS.pets=()=>{
-  const h=S.pets.hatch;
-  const out=S.pets.list.filter(p=>p.out).length;
-  const ready=S.pets.list.filter(p=>p.out&&S.t>=p.out.end).length;
-  return head("사무전 지하 사육장",ic("egg")+" 사역귀 사육장", `보유 ${S.pets.list.length}마리 · 알 ${S.pets.eggs}개`)+`
-  ${buffStrip()}
-  <div class="grid g2" style="margin-bottom:14px">
-    <div class="card pad">
-      <div class="sect-t">부화기</div>
-      <div class="tiny muted" style="margin-bottom:8px">보관 중인 알 ${S.pets.eggs}개. 업귀 토벌·의뢰·파견·매점에서 얻습니다.
-      알을 품으면 활동할수록(수업·의뢰·수행·조제 등) 진행도가 오르고, 다 차면 파장 없이 깨어납니다.</div>
-      ${h?`
-        <div class="spread"><b>품고 있는 알</b><span class="tiny muted">${Math.floor(h.prog)} / ${h.need} (${Math.round(h.prog/h.need*100)}%)</span></div>
-        <div class="bar" style="margin:5px 0 8px"><i style="width:${clamp(h.prog/h.need*100,0,100)}%"></i></div>
-        <div class="tiny muted">부화 효율 ×${(1.3+petOpt("hatch")).toFixed(2)} · 활동으로 얻는 기여도 × 부화 효율만큼 오릅니다</div>
-        <div class="row" style="margin-top:9px">
-          <button class="btn pri sm" onclick="hatchNow()">파장으로 바로 깨우기 · ${nf(Math.round(Math.max(0,h.need-h.prog)*4))}</button>
-          <button class="btn sm" onclick="S.pets.hatch=null;S.pets.eggs++;renderMain()">품기 취소</button></div>`
-      :`<button class="btn pri" ${S.pets.eggs<1?"disabled":""} onclick="startHatch()">알 품기</button>`}
-      <hr class="hr">
-      <div class="tiny muted">부화 효율 <b style="color:var(--gold)">×${(1.3+petOpt("hatch")).toFixed(2)}</b> · 사역귀를 가지고 있을수록 다음 알이 더 많은 기여도를 요구합니다.</div>
-    </div>
-    <div class="card pad">
-      <div class="sect-t">파견</div>
-      <div class="tiny muted" style="margin-bottom:8px">동행하지 않는 사역귀를 정해진 시간 동안 내보내면 재료·륜·사리, 가끔 알을 물어 옵니다.</div>
-      <div class="row">${DISPATCH.map(d=>`<button class="btn sm" onclick="dispatchAll(${d.h})">${d.n} 전체 파견</button>`).join("")}</div>
-      <div class="row" style="margin-top:9px">
-        <button class="btn pri sm" ${ready?"":"disabled"} onclick="recallAll()">돌아온 사역귀 모두 귀환 ${ready?`(${ready})`:""}</button>
-        <span class="tiny muted">파견 중 ${out}마리</span></div>
-      <hr class="hr">
-      <div class="sect-t">사역귀 효과</div>
-      <ul class="tiny muted" style="margin:0;padding-left:16px;line-height:1.8">
-        <li><b>보유 효과</b> · 가지고 있는 모든 사역귀의 능력 보너스가 동행·파견 여부와 관계없이 항상 적용됩니다.</li>
-        <li><b>동행 효과</b> · 목록 맨 위의 사역귀가 전투에 함께 나갑니다.</li>
-        <li><b>파견</b> · 파견 중에는 경험치와 유대가 함께 오릅니다.</li>
-      </ul>
-    </div>
-  </div>
-  <div class="grid g4">
-    ${S.pets.list.map((p,i)=>{
-      const G=GRADES[p.g];
-      const done=p.out&&S.t>=p.out.end;
-      return `<div class="sub" style="border-color:${p.out?"var(--s4)":G.c}">
-        <div class="spread"><div><b>${p.e} ${esc(p.nick||p.n)}</b> <span class="tiny" style="color:var(--gold)">Lv ${p.lv}</span></div>
-          ${gradeTag(p.g)}</div>
-        <div class="tiny muted">${p.d}</div>
-        <div class="tiny" style="color:var(--jade);margin:5px 0 3px">${p.kn} +${p.v}%</div>
-        <div class="tiny muted">${p.exp} / ${p.lv*220}</div>
-        <div class="bar" style="margin:3px 0 6px"><i style="width:${clamp(p.exp/(p.lv*220)*100,0,100)}%"></i></div>
-        <div class="spread tiny muted"><span>유대 <span style="color:var(--gold)">${BONDS[Math.min(4,Math.floor(p.bond/21))]}</span></span><span>${p.bond} / 100</span></div>
-        <div class="bar jd" style="margin:3px 0 8px"><i style="width:${p.bond}%"></i></div>
-        ${p.out?`<div class="tiny muted">파견 중 · ${p.area}<br>${done?'<span style="color:var(--jade)">돌아올 준비가 되었습니다</span>':`${hhmm(p.out.end-S.t)} 남음`}</div>
-          <button class="btn sm ${done?"pri":""}" style="margin-top:6px" onclick="recall(${i})">${done?"귀환":"불러들이기"}</button>`
-        :`<select class="inp" style="font-size:11.5px;padding:4px 7px" onchange="S.pets.list[${i}].area=this.value;save()">
-            ${DAREA.map(a=>`<option ${p.area===a?"selected":""}>${a}</option>`).join("")}</select>
-          <div class="row" style="margin-top:6px">
-            ${DISPATCH.map(d=>`<button class="btn sm" onclick="dispatch(${i},${d.h})">${d.h}h</button>`).join("")}</div>
-          <div class="row" style="margin-top:6px">
-            <button class="btn sm ghost" onclick="feedPet(${i})">먹이 ${nf(Math.round(9000*(1+p.lv*.2)))}</button>
-            <button class="btn sm ghost" onclick="namePet(${i})">이름 짓기</button>
-            ${i>0?`<button class="btn sm ghost" onclick="leadPet(${i})">동행</button>`:'<span class="tag g">동행 중</span>'}</div>`}
-      </div>`}).join("")||'<div class="tiny muted">사역귀가 없습니다. 알을 품어 보세요.</div>'}
-  </div>`;
-};
-function dispatchAll(h){ let n=0; S.pets.list.forEach((p,i)=>{ if(!p.out&&i>0){ dispatch(i,h); n++; } });
-  toast(n?`${n}마리를 ${h}시간 파견했습니다.`:"파견할 사역귀가 없습니다 (동행 중인 1마리는 제외)."); }
-function leadPet(i){ const p=S.pets.list.splice(i,1)[0]; S.pets.list.unshift(p); toast(`${p.n}이(가) 동행합니다.`); renderMain(); save(); }
-function namePet(i){
-  const p=S.pets.list[i];
-  modal("이름 짓기",`<label class="f">${p.e} ${p.n}에게 붙일 이름</label>
-    <input class="inp" id="pn2" maxlength="10" value="${esc(p.nick||"")}" placeholder="${p.n}">
-    <div class="row" style="margin-top:12px">
-      <button class="btn pri" onclick="S.pets.list[${i}].nick=document.getElementById('pn2').value.trim();closeModal();renderMain();save()">짓기</button>
-      <button class="btn" onclick="closeModal()">취소</button></div>`);
-}
-
 VIEWS.fishv=()=>{
   return head("제7구역 · 검은 바다",ic("fishing")+" 낚시", `숙련도 Lv ${S.fish.skill}`)+`
   <div class="card pad" style="margin-bottom:14px">
@@ -1450,8 +1270,6 @@ VIEWS.merchant=()=>{
   <div class="card pad">
     <div class="sect-t">잡화</div>
     <div class="grid g3">
-      <div class="sub"><b>업연의 알</b><div class="tiny muted">사역귀가 되는 알. 품는 데 시간이 걸립니다.</div>
-        <button class="btn sm pri" style="margin-top:8px" onclick="buyMisc('egg')">12,000륜</button></div>
       <div class="sub"><b>비료 5개</b><div class="tiny muted">약초밭 작물의 성장 시간을 30% 줄입니다.</div>
         <button class="btn sm pri" style="margin-top:8px" onclick="buyMisc('fert')">3,000륜</button></div>
       <div class="sub"><b>부적가루 40</b><div class="tiny muted">법구 각인에 쓰입니다.</div>
@@ -1466,10 +1284,9 @@ function buyMerch(i){
   toast(`${m.it.name}을(를) 샀습니다.`,"good"); renderTop(); renderMain(); save();
 }
 function buyMisc(k){
-  const c={egg:12000,fert:3000,dust:8000}[k];
+  const c={fert:3000,dust:8000}[k];
   if(S.rin<c){ toast("륜이 부족합니다.","bad"); return; }
   S.rin-=c;
-  if(k==="egg"){ S.pets.eggs++; toast("업연의 알 +1","good"); }
   if(k==="fert"){ S.farm.fert+=5; toast("비료 +5","good"); }
   if(k==="dust"){ S.mat.가루+=40; toast("부적가루 +40","good"); }
   renderTop(); renderMain(); save();
@@ -1484,14 +1301,12 @@ runQuest=function(stage,party){
     const it=mkGear(Math.round(stage*1.2+S.lvl*.3),undefined,true); S.bag.push(it);
     toast(`전리품 · <b style="color:${GRADES[it.grade].c}">${it.name}</b>`,"good");
   }
-  if(Math.random()<.12) S.pets.eggs++;
 };
 
 /* ═══════════ 지도에 새 장소 ═══════════ */
 PLACES.push(
  {id:"farmp", n:"약초 온실", e:ic("herb"), x:6,  y:36, view:"farm"},
  {id:"pier",  n:"부두",      e:ic("fishing"), x:34, y:92, view:"fishv"},
- {id:"pen",   n:"사육장",    e:ic("egg"), x:92, y:48, view:"pets"},
  {id:"hall",  n:"학생 식당", e:ic("stew"), x:62, y:70, view:"kitchen"},
 );
 
