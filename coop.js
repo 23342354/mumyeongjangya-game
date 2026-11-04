@@ -79,6 +79,12 @@ function replayChanges(list){
   }
   const key=op.path[op.path.length-1],current=parent[key];
   const shared=sharedPath(op.path);
+  // 도감은 쌓이기만 하는 공동 목록입니다. 덮어쓰면 비슷한 때 얻은 한쪽이
+  // 지워지므로, 내 기록을 다시 얹을 때도 합집합으로 맞춥니다.
+  if(op.path[0]==='dex'&&Array.isArray(op.to)&&Array.isArray(current)){
+   parent[key]=[...new Set([...current,...op.to])];
+   continue;
+  }
   // Numeric shared changes are relative, so a partner's intervening income/spend is preserved.
   if(shared&&op.had&&op.has&&typeof op.from==='number'&&typeof op.to==='number'){
    const next=Number(current||0)+(op.to-op.from);
@@ -105,6 +111,17 @@ function backupOnFailure(reason,snapshot){
  if(typeof accountSyncBackup==='function')try{accountSyncBackup(clone(snapshot||S),'공동 지갑 미반영 기록',String(reason||''));}catch(_){}
 }
 
+/* 도감은 두 사람이 함께 모으는 목록이라, 통째로 덮으면 비슷한 때 얻은
+   한쪽 항목이 지워집니다. 실제로 영혼 인형을 산 직후 상대 기록이 내려오면
+   방금 산 인형이 사라졌습니다. 쌓이기만 하는 목록이므로 합집합으로 맞춥니다. */
+function mergeDex(incoming){
+ const d=clone(incoming)||{};
+ for(const k of Object.keys(d)){
+  const mine=S.dex[k],theirs=d[k];
+  if(Array.isArray(mine)&&Array.isArray(theirs))S.dex[k]=[...new Set([...mine,...theirs])];
+  else S.dex[k]=theirs;
+ }
+}
 function apply(r){
  if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.peerCache=null;PJ.baseline=null;PJ.pending=[];}return;}
  if(!r.ok){PJ.ready=false;PJ.error=r.message||'공동 기록을 준비하고 있습니다.';return;}
@@ -122,7 +139,7 @@ function apply(r){
  S.balance20.pendingLoot=clone(w.pendingLoot);S.balance20.bossClaims=clone(p.bossClaims||[]);
  for(const k of ['course','examHist','graduated','tower','tower2','run','storyRead','arena'])if(p[k]!==undefined)S[k]=clone(p[k]);
  if(p.life){Object.assign(S.farm,clone(p.life.farm));Object.assign(S.fish,clone(p.life.fish));}
- normalizeEffects();Object.assign(S.quests,clone(p.quests));Object.assign(S.dex,clone(p.dex));
+ normalizeEffects();Object.assign(S.quests,clone(p.quests));mergeDex(p.dex);
  S.pairRoomClaims=clone(p.pairRoomClaims||[]);S.pairShared=r.pairId;S.pairPersonalRev=r.self.pairPersonalRev;
  if(S.pair?.mine&&p.rent_due)S.pair.mine.rent_due=p.rent_due;
  if(typeof RUNTICK!=='undefined'&&RUNTICK){clearInterval(RUNTICK);RUNTICK=null;}
@@ -569,7 +586,7 @@ const LEDGER_LABELS={
  payLocalRent:'일세', payPairRent:'일세'
 };
 /* 기록만 더할 함수들 (위 주석 참고) */
-const LEDGER_EXTRA=['yowaBuySpecial','buyMarket','inviteTeacher','payLocalRent','payPairRent'];
+const LEDGER_EXTRA=['buyMarket','inviteTeacher','payLocalRent','payPairRent'];
 const ledgerLabel=name=>LEDGER_LABELS[name]||String(name||'기타');
 /* 한 줄 적기. 같은 항목이 잇따르면 합쳐서 목록이 길어지지 않게 합니다. */
 function ledgerPush(amount,label){
@@ -613,7 +630,7 @@ function ledgerMeasure(name,run){
  return out;
 }
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
-const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
+const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto','yowaBuySpecial'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;if(name==='fishHook')fishingHook=f;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
  const group=/^(takeExam|runQuest|startRun|climbTower|climbGuard)$/.test(name);

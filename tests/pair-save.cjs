@@ -148,6 +148,13 @@ const script=bundled.split('/* ===== module: pair-play.js ===== */')[1].split('/
  server.progress.run={left:2,total:2,acc:0,done:false,kills:0,logs:[],lastTick:clock};await ctx.PAIR_PLAY.refresh();
  clock+=120000;ctx.S.lastReal=clock;ctx.step(2);await ctx.PAIR_PLAY.queue;
  assert.equal(server.progress.run.done,true,'short runs finish on time instead of waiting for five minutes');
+ // 도감은 두 사람이 함께 쌓는 목록입니다. 한쪽이 새 항목을 얻은 직후 상대의
+ // 기록이 내려와도 서로를 지우면 안 됩니다. 통째로 덮으면 한쪽이 사라집니다.
+ ctx.S.dex.doll=['르셀리아'];await ctx.PAIR_PLAY.refresh();  // 내가 산 인형이 서버에 올라갑니다
+ server.progress.dex={doll:['큰요우']};                      // 그 뒤 상대의 인형만 담긴 기록이 내려옵니다
+ await ctx.PAIR_PLAY.refresh();
+ assert.deepEqual([...ctx.S.dex.doll].sort(),['르셀리아','큰요우'],
+   '내가 방금 얻은 도감 항목과 상대의 항목이 모두 남아야 합니다');
  ctx.Date=RealDate;
- console.log('PASS: personal save, shared wallet save, partner concurrent spend, remote profile reload, CAS retry, in-flight edit, durable lost-response recovery, failed save backup, atomic conflict rejection, chat preservation, queued activities, elapsed clock timeout cooldown and concurrent run clock, five-minute batches, early return and completion');
+ console.log('PASS: personal save, shared wallet save, partner concurrent spend, remote profile reload, CAS retry, in-flight edit, durable lost-response recovery, failed save backup, atomic conflict rejection, chat preservation, queued activities, elapsed clock timeout cooldown and concurrent run clock, five-minute batches, early return and completion, shared collection merge');
 })().catch(e=>{console.error(e);process.exitCode=1;});
