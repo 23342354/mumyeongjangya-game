@@ -491,6 +491,16 @@ function fishCast(){
   drawFish2();
   F.frame=requestAnimationFrame(fishFrame);
 }
+function fishRoll(perfect,random=Math.random){
+  // 금빛 정중앙은 뒤쪽 희귀 어종의 가중치를 높입니다(평소에는 표기된 기본 확률 적용).
+  const weights=FISHES.map((f,i)=>f.w*(perfect?1+i*0.75:1));
+  const r=random()*weights.reduce((a,b)=>a+b,0);
+  let acc=0, got=FISHES[0];
+  for(let i=0;i<FISHES.length;i++){
+    acc+=weights[i]; if(r<=acc){ got=FISHES[i]; break; }
+  }
+  return got;
+}
 function fishHook(){
   const F=FISHGAME;
   if(!F||F.state!=="run") return; // pointerdown 뒤 click 중복 방지
@@ -504,13 +514,7 @@ function fishHook(){
     document.getElementById("fres").innerHTML=`<div class="tiny" style="color:var(--red)">빈 바늘입니다. 금빛 구간에서 챔질해 보세요.</div>`;
     return;
   }
-  // 금빛 정중앙은 뒤쪽 희귀 어종의 가중치를 높입니다(평소에는 표기된 기본 확률 적용).
-  const weights=FISHES.map((f,i)=>f.w*(perfect?1+i*0.75:1));
-  const r=Math.random()*weights.reduce((a,b)=>a+b,0);
-  let acc=0, got=FISHES[0];
-  for(let i=0;i<FISHES.length;i++){
-    acc+=weights[i]; if(r<=acc){ got=FISHES[i]; break; }
-  }
+  const got=fishRoll(perfect);
   S.mat[got.y]+=got.s;
   S.fish.exp+=10;
   S.fish.catches[got.n]=(S.fish.catches[got.n]||0)+1;

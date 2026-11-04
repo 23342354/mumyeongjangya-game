@@ -462,17 +462,21 @@ function fishingStatus(){
  if(label)label.textContent=box.events.length?`어획 ${box.events.length}건 저장 대기 · 낚시는 계속할 수 있습니다.`:PJ.ready?'어획 기록 저장 완료':'서버 연결 대기 · 낚시는 계속할 수 있습니다.';
 }
 function hasFishReceipt(event,state=S){return Number(state.pairFishingReceipts?.[event.client]||0)>=event.seq;}
+function fishingRandom(seed){
+ seed=seed>>>0;
+ return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+}
 function replayFish(event){
  if(Number(event.pairId)!==Number(S.pairShared||PJ.snapshot?.pairId))throw Error('이전 페어의 어획 기록을 보관 중입니다. 연결 상태를 확인해 주세요.');
  if(hasFishReceipt(event))return;
  const live=FISHGAME,bar=fishBarAt,draw=drawFish2,get=document.getElementById,random=Math.random;
- const top=renderTop,main=renderMain,nav=renderNav;let seed=event.seed>>>0;
+ const top=renderTop,main=renderMain,nav=renderNav;const seededRandom=fishingRandom(event.seed);
  const sink={innerHTML:'',textContent:''};
  try{
   FISHGAME={...event.game,state:'run',frame:null};fishBarAt=()=>event.bar;drawFish2=()=>{};
   renderTop=renderMain=renderNav=()=>{};
   document.getElementById=function(id){if(id==='fres'||id==='balance-fish-count')return sink;if(id.startsWith('life-'))return null;return get.call(document,id);};
-  Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  Math.random=seededRandom;
   fishingHook();
   S.pairFishingReceipts={...(S.pairFishingReceipts||{}),[event.client]:event.seq};
  }finally{
@@ -494,6 +498,12 @@ function pumpFishing(){
   if(r?.ok){
    const current=fishingData();
    if(!storeFishing({...current,events:current.events.filter(e=>!hasFishReceipt(e,r.self||{}))}))return;
+   const shown=FISHGAME?.catchVisual;
+   if(shown?.pending&&batch.some(e=>e.id===shown.eventId&&hasFishReceipt(e,r.self||{}))){
+    shown.pending=false;
+    const caption=document.getElementById('life-fishing-caption');
+    if(caption)caption.textContent=shown.name+' · 어획 성공!';
+   }
   }
  }).catch(e=>showError(e)).finally(()=>{
   fishingPump=null;fishingStatus();if(active()&&fishingData().events.length)retryFishing();
@@ -514,8 +524,14 @@ function hookFishingNow(){
  const event={client:fishingClient,seq:++fishingSequence,id:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),pairId:S.pairShared||S.pair?.mine?.id,day:S.balance20?.day,at:Date.now(),seed:Math.floor(Math.random()*4294967296),bar,game:{...F,frame:null}};
  if(!storeFishing({...box,events:[...box.events,event]}))return;
  F.state='idle';if(F.frame)cancelAnimationFrame(F.frame);F.frame=null;
- drawFish2();const result=document.getElementById('fres');
- if(result)result.innerHTML='<div class="sub tiny">챔질 성공 · 어획 기록을 보관했습니다. 보상은 서버 저장 확인 후 반영됩니다.</div>';
+ drawFish2();
+ // Preview exactly the same first seeded roll used by reward replay, without
+ // changing inventory, counters or receipts before the server accepts it.
+ const perfect=Math.abs(bar-(F.target+8))<4;
+ const caught=fishRoll(perfect,fishingRandom(event.seed));
+ if(typeof showFishingCatch==='function')showFishingCatch(caught,{pending:true,eventId:event.id});
+ const result=document.getElementById('fres');
+ if(result)result.innerHTML=`<div class="sub tiny"><b>${caught.e} ${esc(caught.n)}</b> ${perfect?'<span class="tag g">정중앙</span>':''}<br>어획 기록을 보관했습니다. 보상은 서버 저장 확인 후 반영됩니다.</div>`;
  fishingStatus();pumpFishing();
  return {queued:true,id:event.id};
 }

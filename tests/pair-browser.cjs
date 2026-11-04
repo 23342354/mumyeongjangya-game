@@ -53,14 +53,27 @@ const root=path.resolve(__dirname,'..');
  // unrelated server commit is still held, and another cast must be possible.
  await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle','hook resolves before any server response');
  assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),1);
+ const preview=await page.evaluate(()=>({name:FISHGAME.catchVisual.name,pending:FISHGAME.catchVisual.pending,fish:S.fish.catches[FISHGAME.catchVisual.name]||0}));
+ assert.ok(preview.name,'queued hook immediately chooses its deterministic catch preview');
+ assert.equal(preview.pending,true);
+ assert.equal(await page.locator('#life-fishing').evaluate(el=>el.classList.contains('is-caught')),true);
+ assert.equal(await page.locator('.life-caught-fish').getAttribute('aria-label'),preview.name);
+ await page.evaluate(()=>drawFish2());
+ assert.equal(await page.locator('.life-caught-fish').getAttribute('aria-label'),preview.name,'redraw preserves the catch while save is blocked');
+
  await page.evaluate(()=>fishCast());assert.equal(await page.evaluate(()=>FISHGAME.state),'idle','normal ten-second cast cooldown remains');
  await recast();assert.equal(await page.evaluate(()=>FISHGAME.state),'run','second cast does not wait for reward persistence');
+ assert.equal(await page.locator('.life-caught-fish').count(),0,'a new cast clears the previous catch');
+ assert.equal(await page.locator('.life-swimmer').count(),2);
+
  await hook();assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),2);
  await recast();assert.equal(await page.evaluate(()=>FISHGAME.state),'run');
  await page.evaluate(()=>{chatRows([{id:777,tab:'전체',scope:'',from_id:'bob',who:'Bob',body:'새 채팅',created_at:new Date().toISOString(),mode:'RP'}]);});
  release();await page.evaluate(async()=>{await Promise.all([window.delayed,window.lessonJob,window.studyJob,window.farmJob]);});
  await page.waitForFunction(()=>PAIR_PLAY.fishingPending===0);
  assert.equal(await page.evaluate(()=>S.balance20.fish),2,'two queued catches are credited once each');
+ assert.ok(await page.evaluate(p=>(S.fish.catches[p.name]||0)>p.fish,preview),'the displayed species is awarded by deterministic replay');
+
  const activities=await page.evaluate(()=>({run:!!S.run&&!S.run.done,lesson:!!S.lesson,study:!!S.study,msg:S.msgs.some(m=>m.sid===777),fish:FISHGAME?.state,farm:!!S.farm.plots[0]}));
  assert.deepEqual(activities,{run:true,lesson:true,study:true,msg:true,fish:'run',farm:true});
  // A positively acknowledged listing remains successful if its subsequent

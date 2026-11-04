@@ -114,11 +114,26 @@
    <div class="life-fishing-caption" id="life-fishing-caption" role="status">${running?'찌가 움직입니다 · 금빛 구간에서 챈다!':'검은 바다에 낚싯대를 던져 보세요'}</div>
   </div>`;
  }
+ // Keep presentation on the current cast so redraws cannot erase a catch.
+ window.showFishingCatch=function(caught,{pending=false,missed=false,eventId=''}={}) {
+  if(FISHGAME)FISHGAME.catchVisual={name:caught?.n||'',pending,missed,eventId};
+  const stage=document.getElementById('life-fishing');
+  const display=document.getElementById('life-catch-display');
+  const caption=document.getElementById('life-fishing-caption');
+  if(!stage||!display||!caption)return;
+  stage.classList.remove('is-running','is-caught','is-missed');
+  stage.classList.add(caught?'is-caught':'is-missed');
+  display.innerHTML=caught?fish(caught,'life-caught-fish')+growth(5,'어획 성공','life-catch-glint'):'';
+  caption.textContent=caught?caught.n+' · 어획 성공!'+(pending?' · 보상 저장 대기':''):'빈 바늘이에요 · 금빛 구간에서 다시 챔질해 보세요';
+ };
  const originalDraw=drawFish2;
  drawFish2=function () {
+  if(FISHGAME?.state==='run')delete FISHGAME.catchVisual;
   originalDraw.apply(this,arguments);
   const gauge=document.getElementById('fbar')?.parentElement;
   if(gauge){gauge.classList.add('life-fishing-gauge');gauge.insertAdjacentHTML('beforebegin',fishingScene());}
+  const shown=FISHGAME?.catchVisual;
+  if(shown)showFishingCatch(FISHES.find(f=>f.n===shown.name),shown);
  };
  const originalFrame=fishFrame;
  fishFrame=function () {
@@ -133,16 +148,7 @@
   const result=originalHook.apply(this,arguments);
   if(!running)return result;
   const caught=FISHES.find(f=>(S.fish.catches[f.n]||0)>(before[f.n]||0));
-  const stage=document.getElementById('life-fishing');
-  const display=document.getElementById('life-catch-display');
-  const caption=document.getElementById('life-fishing-caption');
-  if(stage&&display&&caption){
-   stage.classList.add(caught?'is-caught':'is-missed');
-   if(caught){
-    display.innerHTML=fish(caught,'life-caught-fish')+growth(5,'어획 성공','life-catch-glint');
-    caption.textContent=caught.n+' · 어획 성공!';
-   }else caption.textContent='빈 바늘이에요 · 금빛 구간에서 다시 챔질해 보세요';
-  }
+  showFishingCatch(caught,{missed:!caught});
   return result;
  };
  // Festival games retain their original hit areas, scoring and risk calculations.
