@@ -562,8 +562,14 @@ const LEDGER_LABELS={
  runQuest:'의뢰', startRun:'의뢰 출발', runReturn:'의뢰 귀환', runClear:'의뢰 완수',
  climbTower:'석탑', climbGuard:'수호탑', hitBoss:'결계 토벌', balanceClaimBoss:'결계 보상',
  arenaGo:'투기장', balanceCollectLoot:'전리품 수령',
- startLesson:'수업', quickLesson:'수업', startStudy:'수행'
+ startLesson:'수업', quickLesson:'수업', startStudy:'수행',
+ /* 아래는 공동 플레이 행동 목록에 없지만 륜이 움직이는 자리입니다.
+    기록만 더하고, 공동 지갑을 다루는 방식은 바꾸지 않습니다. */
+ yowaBuySpecial:'여와 진열대', buyMarket:'장터', inviteTeacher:'교사 초빙',
+ payLocalRent:'일세', payPairRent:'일세'
 };
+/* 기록만 더할 함수들 (위 주석 참고) */
+const LEDGER_EXTRA=['yowaBuySpecial','buyMarket','inviteTeacher','payLocalRent','payPairRent'];
 const ledgerLabel=name=>LEDGER_LABELS[name]||String(name||'기타');
 /* 한 줄 적기. 같은 항목이 잇따르면 합쳐서 목록이 길어지지 않게 합니다. */
 function ledgerPush(amount,label){
@@ -586,12 +592,25 @@ function ledgerMeasure(name,run){
  const label=ledgerLabel(name),before=Number(S.rin)||0;
  const prevLabel=LEDGER.label,prevIncome=LEDGER.income;
  LEDGER.label=label;LEDGER.income=0;
- try{ return run(); }
- finally{
+ let done=false;
+ const close=()=>{
+  if(done)return;done=true;
   const spent=LEDGER.income-((Number(S.rin)||0)-before);
-  if(spent)ledgerPush(-spent,label);
+  if(spent){
+   ledgerPush(-spent,label);
+   // 행동 쪽에서 이미 저장을 마친 뒤라, 혼자 할 때는 한 줄을 더 남겨 둡니다.
+   // 공동 플레이 중에는 거래가 끝날 때 통째로 저장되므로 건드리지 않습니다.
+   if(typeof PJ!=='undefined'&&!PJ.depth&&typeof save==='function')try{save();}catch(_){}
+  }
   LEDGER.label=prevLabel;LEDGER.income=prevIncome;
- }
+ };
+ let out;
+ try{ out=run(); }
+ catch(e){ close(); throw e; }
+ // 월세처럼 서버를 기다리는 행동은 끝난 뒤에 재야 합니다.
+ if(out&&typeof out.then==='function')return out.then(v=>{close();return v;},e=>{close();throw e;});
+ close();
+ return out;
 }
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
@@ -612,6 +631,15 @@ for(const name of actions){const f=window[name];if(typeof f!=='function')continu
  if(PJ.actions.has(key))return PJ.actions.get(key);
  const job=transact(name,()=>ledgerMeasure(name,()=>f.apply(this,args)),true).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
 };}
+/* 행동 목록에 없는 지출·수입도 기입장에는 남깁니다.
+   여기서는 기록만 하고 공동 지갑 처리 흐름은 그대로 둡니다. */
+for(const name of LEDGER_EXTRA){
+ const f=window[name];if(typeof f!=='function')continue;
+ window[name]=function(...args){
+  if(PJ.depth)return f.apply(this,args);
+  return ledgerMeasure(name,()=>f.apply(this,args));
+ };
+}
 const drawFishing=drawFish2;drawFish2=function(){const result=drawFishing.apply(this,arguments);fishingStatus();return result;};
 PJ.flushFishing=()=>pumpFishing();
 for(const n of ['legacyQuestRoom','pairRunHTML']){const f=window[n];if(f)window[n]=function(){return PJ.ready?'':f.apply(this,arguments);};}

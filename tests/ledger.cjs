@@ -118,4 +118,39 @@ function load(rin=10000){
   assert.equal(g.LEDGER.label,'','실패 뒤에도 항목 이름이 남아 있으면 안 됩니다');
 }
 
-console.log('PASS: 지출 기록, 수입 섞인 행동 분리, 순수입, 무변동 제외, 같은 항목 합치기와 시간/부호 분리, 항목 분리, 줄 수 상한, 이름 매핑, 예외 중 기록 보존');
+/* ── 12. 륜을 건드리는 함수가 기입장을 빠뜨리지 않는지 ───
+   이 검사가 없어서 매점의 '여와 진열대' 구매가 기록되지 않았습니다.
+   새 콘텐츠가 S.rin을 건드리면서 목록에 들어가지 않으면 여기서 잡힙니다. */
+{
+  const actions=new Set([...source.matchAll(/const actions=\[([\s\S]*?)\];/g)]
+    .flatMap(m=>[...m[1].matchAll(/'([^']+)'/g)].map(x=>x[1])));
+  const extra=new Set([...source.matchAll(/const LEDGER_EXTRA=\[([\s\S]*?)\];/g)]
+    .flatMap(m=>[...m[1].matchAll(/'([^']+)'/g)].map(x=>x[1])));
+  /* 따로 처리하고 있어 목록에 없어도 되는 것들 */
+  const handled=new Set([
+    'gainRin',              // 수입이 지나가는 한 곳 — 직접 감쌉니다
+    'marketApplyInventory', // 중개소 — 서버가 내려 준 잔액의 차액을 적습니다
+    'aucTick',              // coop.js가 aucTick=function(){}으로 비워 둔 옛 경매
+    'PAIRRENTPROMISE'       // payPairRent 안쪽의 약속 — payPairRent를 감싸므로 함께 잡힙니다
+  ]);
+  const missing=[];
+  for(const file of ['game.js','gameplay.js','community.js','coop.js','visuals.js','social.js']){
+    const lines=fs.readFileSync(path.join(root,file),'utf8').split('\n');
+    let current=null;
+    lines.forEach((line,i)=>{
+      const decl=/^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/.exec(line);
+      if(decl)current=decl[1];
+      else{
+        const assigned=/^\s*(?:const|let|var|window\.)?\s*([A-Za-z0-9_$]+)\s*=\s*(?:async\s*)?(?:function|\([^)]*\)\s*=>)/.exec(line);
+        if(assigned)current=assigned[1];
+      }
+      if(/S\.rin\s*(\+=|-=|=[^=])/.test(line)&&current
+         &&!actions.has(current)&&!extra.has(current)&&!handled.has(current))
+        missing.push(`${current} (${file}:${i+1})`);
+    });
+  }
+  assert.deepEqual(missing,[],
+    '륜을 건드리는데 기입장에 잡히지 않는 함수가 있습니다. coop.js의 actions나 LEDGER_EXTRA에 이름을 넣어 주세요:\n  '+missing.join('\n  '));
+}
+
+console.log('PASS: 지출 기록, 수입 섞인 행동 분리, 순수입, 무변동 제외, 같은 항목 합치기와 시간/부호 분리, 항목 분리, 줄 수 상한, 이름 매핑, 예외 중 기록 보존, 륜을 건드리는 함수 빠짐 없음');
