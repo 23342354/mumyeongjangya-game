@@ -961,8 +961,9 @@ body.auth-gate #mobile-chat-toggle{
 @media(max-width:780px){
   body.mobile-game .res-wrap{grid-row:2}
   body.mobile-game .tb2{grid-row:4}
-  body.mobile-game .mobile-vitals{display:grid;grid-column:1/-1;grid-row:3;gap:7px;padding:10px;background:var(--s1);border:1px solid var(--line);border-radius:10px;min-width:0}
-  .mobile-vital-text{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;line-height:1.5}
+  body.mobile-game .mobile-vitals{display:grid;grid-column:1/-1;grid-row:3;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 8px;background:var(--s1);border:1px solid var(--line);border-radius:10px;min-width:0}
+  .mobile-vital{appearance:none;border:0;padding:0;min-width:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+  .mobile-vital-text{display:flex;justify-content:space-between;align-items:baseline;gap:3px;font-size:10px;line-height:1.5;white-space:nowrap}
   .mobile-vital-text strong{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;overflow-wrap:anywhere}
   .mobile-vital .bar{margin:3px 0 0;height:5px}
   .mobile-vital.critical .mobile-vital-text{color:var(--red)}

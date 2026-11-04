@@ -829,12 +829,12 @@ function renderTop(){
   <div class="mobile-vitals" aria-label="캐릭터 상태">
     ${[
       {key:"hp",label:"체력",value:Math.floor(S.hp),max:100,pct:S.hp},
-      {key:"sn",label:"정신력(이성)",value:Math.floor(S.sn),max:100,pct:S.sn},
+      {key:"sn",label:"정신력",value:Math.floor(S.sn),max:100,pct:S.sn},
       {key:"xp",label:"경험치",value:Math.floor(S.exp),max:expNeed(),pct:S.exp/expNeed()*100}
-    ].map(v=>`<div class="mobile-vital ${v.key}${v.key!=="xp"&&v.pct<=20?" critical":""}">
-      <div class="mobile-vital-text"><span>${v.label}</span><strong>${v.value.toLocaleString("ko-KR")} / ${v.max.toLocaleString("ko-KR")}${v.key==="xp"?` · ${v.pct.toFixed(1)}%`:""}</strong></div>
+    ].map(v=>`<button type="button" class="mobile-vital ${v.key}${v.key!=="xp"&&v.pct<=20?" critical":""}" onclick="openMobileVitals()" aria-label="${v.label} ${v.value.toLocaleString("ko-KR")} / ${v.max.toLocaleString("ko-KR")} · 상세 보기">
+      <div class="mobile-vital-text"><span>${v.label}</span><strong>${v.key==="xp"?`${v.pct.toFixed(1)}%`:`${v.value} / ${v.max}`}</strong></div>
       <div class="bar ${v.key}" role="progressbar" aria-label="${v.label}" aria-valuemin="0" aria-valuemax="${v.max}" aria-valuenow="${v.value}"><i style="width:${Math.max(0,Math.min(100,v.pct))}%"></i></div>
-    </div>`).join("")}
+    </button>`).join("")}
   </div>
   <div class="tb2">
     <span>${c.date}</span>
@@ -844,6 +844,9 @@ function renderTop(){
     ${bookChip}${buffs}
     <span style="margin-left:auto;color:var(--s6)">${c.str}</span>
   </div>`;
+}
+function openMobileVitals(){
+  modal("캐릭터 상태",`<div style="line-height:2">체력 <b>${Math.floor(S.hp)} / 100</b><br>정신력(이성) <b>${Math.floor(S.sn)} / 100</b><br>경험치 <b>${Math.floor(S.exp).toLocaleString("ko-KR")} / ${expNeed().toLocaleString("ko-KR")}</b> (${(S.exp/expNeed()*100).toFixed(1)}%)</div>`);
 }
 function setSpeed(){ /* 시간은 현실과 같은 속도로만 흐릅니다 */ }
 
