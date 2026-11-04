@@ -3480,7 +3480,7 @@ function myRecord(){
     id:S.sb.id, name:S.name, course:S.course, lvl:S.lvl,
     power:power(), dps:c.dps, hpv:c.hp,
     line:S.line, weapon:S.line==="마무기"?(S.weapon||""):"", hall:S.hall, title:S.title,
-    intro:S.intro||"", av:S.av, av_img:(S.avImg||"").slice(0,120000),
+    intro:S.intro||"", color:rosterThemeColor(S.color,"#d85bea"), av:S.av, av_img:(S.avImg||"").slice(0,120000),
     tower:S.tower||0, guard:S.tower2||0, arena_best:S.arena.best||0,
     quest:S.quests.cleared||0, dexp:(typeof dexScore==="function"?dexScore():0),
     ach:(S.ach||[]).length, war:S.war.mine||0,
@@ -3501,7 +3501,14 @@ function syncUp(force){
   const now=Date.now();
   if(!force && S.sb.upAt && now-S.sb.upAt<90000) return Promise.resolve();
   S.sb.upAt=now;
-  return sbSend("POST","students?on_conflict=id", [myRecord()], "resolution=merge-duplicates,return=minimal")
+  const record=myRecord();
+  return sbSend("POST","students?on_conflict=id", [record], "resolution=merge-duplicates,return=minimal")
+    .catch(e=>{
+      // Keep publishing existing profile fields until the optional color column is installed.
+      if(!/(?:color.*(?:column|schema cache)|(?:column|schema cache).*color)/i.test(String(e?.message||e)))throw e;
+      const legacy={...record};delete legacy.color;
+      return sbSend("POST","students?on_conflict=id",[legacy],"resolution=merge-duplicates,return=minimal");
+    })
     .then(()=>{ S.sb.state="ok"; S.sb.err=""; S.sb.raidPublishState="ok"; S.sb.raidPublishError=""; })
     .catch(e=>{
       S.sb.upAt=0; // 저장 실패를 성공한 동기화로 취급하지 않습니다.
@@ -3774,6 +3781,9 @@ function rosterGroupedByPair(rows){
   groups.sort((a,b)=>a.order-b.order);
   return [...groups.flatMap(g=>g.two),...list.filter(r=>!used.has(String(r.id)))];
 }
+function rosterThemeColor(value,fallback="var(--gold)"){
+  return /^#[0-9a-f]{6}$/i.test(String(value||""))?value:fallback;
+}
 VIEWS.roster=()=>{
   if(!sbOn()) return head("사무전 학생 명부",ic("users")+" 학생 명부","공유 기록이 연결되지 않았습니다")+`
     <div class="card pad" style="border-color:var(--gold2)">
@@ -3792,13 +3802,14 @@ VIEWS.roster=()=>{
   ${rows.length?`<div class="roster-viewport"><div class="grid roster-grid">
     ${orderedRows.map(r=>{
       const hall=homeOf(r.hall);
-      const me=r.id===S.sb.id;
+      const me=String(r.id)===String(S.sb.id);
+      const avatarColor=rosterThemeColor(me?S.color:r.color,hall?hall.c:"var(--gold)");
       const paired=typeof SOCIAL!=="undefined" && SOCIAL.ready && SOCIAL.pairs.some(p=>p.status==="accepted"&&[String(p.from_id),String(p.to_id)].includes(String(r.id)));
       return `<div class="sub roster-card ${paired?"roster-card-paired":""}" style="${me?"border-color:var(--gold2)":""}">
         <div class="roster-card-top">
-          ${r.av_img?`<div class="roster-avatar" style="border-color:${hall?hall.c:"var(--gold)"}">
+          ${r.av_img?`<div class="roster-avatar" style="border-color:${avatarColor}">
             <img src="${r.av_img}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
-            :`<div class="roster-avatar" style="border-color:${hall?hall.c:"var(--gold)"};display:grid;place-items:center;background:var(--s0)">${ic(r.av||"lantern",22)}</div>`}
+            :`<div class="roster-avatar" style="border-color:${avatarColor};display:grid;place-items:center;background:var(--s0)">${ic(r.av||"lantern",22)}</div>`}
           <div class="roster-identity">
             <div class="tiny roster-title" style="color:var(--gold)">${esc(r.title||"")}</div>
             <b class="roster-name">${esc(r.name)}</b> ${me?'<span class="tag g">나</span>':""}
