@@ -7,7 +7,7 @@ const progress={life:{farm:{skill:1,exp:0},fish:{skill:1,exp:0,catches:{}}},pair
 server.wallet=copy(wallet);server.progress=copy(progress);
 const snapshot=()=>({ok:true,revision:server.revision,self:{...copy(server.self),pairPersonalRev:server.revision},wallet:copy(server.wallet),progress:copy(server.progress),pairId:9,peer:{name:'Bob',lvl:1,res:{},base:{},gear:{},hp:100,sn:100},peerId:'bob',meta:{},pair:{status:'accepted',id:9,from_id:'alice',to_id:'bob'},passNext:100,bossNext:50});
 let requests=0,backups=[],receipts=new Set(),commits=0;let conflictNext=false,loseResponse=false,onGet=null;const storage=new Map();
-const noop=()=>{}, ctx={AbortController,console,JSON,Object,Array,Map,Set,Date,Promise,Math,Error,Number,String,RegExp,Boolean,crypto:{randomUUID:()=> 'test-'+(++requests)+'-unique'},setTimeout:()=>1,clearTimeout:noop,setInterval:noop,document:{addEventListener:noop,body:{classList:{add:noop,remove:noop}},querySelector:()=>null,createElement:()=>({innerHTML:'',querySelector:()=>null})},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},performance:{now:()=>0},accountSyncSetMeta:noop,accountSyncBackup:(s)=>backups.push(s),ACCT:{id:'alice',tok:'password'},acctIn:()=>true,acctOn:()=>true, S:copy(base),STATS:[],VIEWS:{},FISHGAME:null,BG:null,OUTING:null,RUNTICK:null,VIEW:'plaza',RUNSTEPMIN:3, PAIR_PLAY:null};
+const noop=()=>{}, ctx={AbortController,console,JSON,Object,Array,Map,Set,Date,Promise,Math,Error,Number,String,RegExp,Boolean,crypto:{randomUUID:()=> 'test-'+(++requests)+'-unique'},setTimeout:()=>1,clearTimeout:noop,setInterval:noop,document:{addEventListener:noop,body:{classList:{add:noop,remove:noop}},querySelector:()=>null,getElementById:()=>null,createElement:()=>({innerHTML:'',querySelector:()=>null})},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},performance:{now:()=>0},accountSyncSetMeta:noop,accountSyncBackup:(s)=>backups.push(s),ACCT:{id:'alice',tok:'password'},acctIn:()=>true,acctOn:()=>true, S:copy(base),STATS:[],VIEWS:{},FISHGAME:null,BG:null,OUTING:null,RUNTICK:null,VIEW:'plaza',RUNSTEPMIN:3, PAIR_PLAY:null};
 ctx.window=ctx;
 ctx.acctFetch=async(_path,o)=>{
  const q=JSON.parse(o.body);
@@ -24,6 +24,8 @@ ctx.acctFetch=async(_path,o)=>{
 };
 for(const k of ['save','acctPush','step','offline','C','maxMana','renderTop','renderNav','renderMain','toast','modal','boot','pairFetch','manaRate','power','effStat','gainExp','finishPeriod','finishResearch','damageHP','damageSN','simBattle','examOpponent','towerFoe','guardFoe','startRun','runRealTick','myRecord','pairRentTick','payPairRent','marketRpc','balanceBossData','closeModal','nowMin','syncUp','claimRoom','coopRoomPanel','pairMergeApply','roomCreate','roomJoin','roomRun','legacyQuestRoom','pairRunHTML','normalizeEffects','tick'])ctx[k]=noop;
 ctx.save=()=>{};ctx.acctPush=async()=>true;ctx.maxMana=()=>100;ctx.manaRate=()=>1;ctx.power=()=>10;ctx.effStat=()=>3;ctx.C=()=>({dps:10,atkPow:10,hp:100,def:10,heal:1});ctx.myRecord=()=>({});ctx.marketRpc=async()=>({ok:true});ctx.balanceBossData=()=>({players:[],total:0,week:'2026-11-02'});ctx.nowMin=()=>0;
+ctx.runStep=()=>{const r=ctx.S.run;r.kills=(r.kills||0)+1;r.rin=(r.rin||0)+2;r.exp=(r.exp||0)+3;r.know=(r.know||0)+1;r.logs=(r.logs||[]).concat({t:'one combat turn',time:'test'});};
+ctx.endRun=()=>{ctx.S.run.done=true;};ctx.runReturn=()=>ctx.endRun();ctx.nf=n=>String(n);ctx.runTimeText=n=>String(Math.round(n));ctx.cal=()=>({str:'test'});
 ctx.startLesson=id=>{ctx.S.lesson={id,left:30};ctx.save();};
 ctx.startStudy=id=>{ctx.S.study={id,left:20};ctx.save();};
 ctx.fishCast=()=>{ctx.FISHGAME={state:'run'};};
@@ -101,7 +103,7 @@ const script=bundled.split('/* ===== module: pair-play.js ===== */')[1].split('/
  // startTick writes lastReal every second. Personal elapsed time must use the
  // acknowledged personal clock, otherwise both activities stop during a run.
  server.progress.run={left:60,acc:0,done:false,lastTick:Date.now()};await ctx.PAIR_PLAY.refresh();
- ctx.PAIR_PLAY.clockBasis=Date.now()-60000;ctx.S.lastReal=Date.now();
+ ctx.S.lesson.left=1;server.self.lesson.left=1;ctx.PAIR_PLAY.clockBasis=Date.now()-60000;ctx.S.lastReal=Date.now();
  const elapsedBefore=ctx.elapsedTicks||0;ctx.step(1);await ctx.PAIR_PLAY.queue;
  assert.ok(ctx.elapsedTicks-elapsedBefore>.9,'one minute advances despite per-second lastReal update');
  // A PostgreSQL timeout must not trigger an immediate request storm or close
@@ -116,13 +118,36 @@ const script=bundled.split('/* ===== module: pair-play.js ===== */')[1].split('/
  ctx.PAIR_PLAY.retryAt=0;ctx.acctFetch=goodFetch;assert.equal(await ctx.acctPush(true),true,'same receipt resolves once server recovers');
  // Both partners can reach the same shared-run minute. A rejected tick must
  // recompute from the accepted run clock instead of subtracting that minute twice.
- server.progress.run={left:10,acc:0,done:false,lastTick:Date.now()-60000};
- server.self.lastReal=Date.now()-60000;server.self.lesson={id:'s1',left:30};
+ server.progress.run={left:10,acc:0,done:false,kills:0,logs:[],lastTick:Date.now()-300000};
+ server.self.lastReal=Date.now()-300000;server.self.lesson={id:'s1',left:30};
  await ctx.PAIR_PLAY.refresh();let collision=true;const fetchBeforeTick=ctx.acctFetch;
- ctx.acctFetch=async(...args)=>{const q=JSON.parse(args[1].body);if(q.p_action==='commit'&&collision){collision=false;server.progress.run={left:9,acc:1,done:false,lastTick:Date.now()};server.revision++;return {...snapshot(),conflict:true};}return fetchBeforeTick(...args);};
- ctx.S.lastReal=Date.now();ctx.step(1);await ctx.PAIR_PLAY.queue;
- assert.ok(server.progress.run.left>8.99,'a partner-confirmed run minute is not counted twice');
- assert.ok(server.self.lesson.left>28.99&&server.self.lesson.left<29.01,'personal lesson still advances exactly once');
+ ctx.acctFetch=async(...args)=>{const q=JSON.parse(args[1].body);if(q.p_action==='commit'&&collision){collision=false;server.progress.run={left:5,acc:2,done:false,kills:1,logs:[],lastTick:Date.now()};server.revision++;return {...snapshot(),conflict:true};}return fetchBeforeTick(...args);};
+ ctx.S.lastReal=Date.now();ctx.step(5);await ctx.PAIR_PLAY.queue;
+ assert.ok(server.progress.run.left>4.99,'a partner-confirmed run minute is not counted twice');
+ assert.ok(server.self.lesson.left>24.99&&server.self.lesson.left<25.01,'personal lesson still advances exactly once');
  ctx.acctFetch=fetchBeforeTick;
- console.log('PASS: personal save, shared wallet save, partner concurrent spend, remote profile reload, CAS retry, in-flight edit, durable lost-response recovery, failed save backup, atomic conflict rejection, chat preservation, queued activities, elapsed clock timeout cooldown and concurrent run clock');
+ // Five-minute checkpoints have their own clock; personal saves must not
+ // reset the next checkpoint or force combat on each unrelated click.
+ let clock=Date.now();const RealDate=Date;ctx.Date=class extends RealDate{static now(){return clock;}};
+ server.self.lesson=null;server.self.study=null;server.self.book=null;server.self.lastReal=clock;
+ server.progress.run={left:10,total:10,acc:0,done:false,kills:0,logs:[],lastTick:clock};
+ await ctx.PAIR_PLAY.refresh();const batchCommits=commits;
+ clock+=240000;ctx.S.lastReal=clock;ctx.step(4);await ctx.PAIR_PLAY.queue;
+ assert.equal(commits,batchCommits,'no passive save within the first four quest minutes');
+ clock+=60000;ctx.S.lastReal=clock;ctx.step(1);await ctx.PAIR_PLAY.queue;
+ assert.equal(commits,batchCommits+1,'one checkpoint at five minutes');
+ assert.equal(server.progress.run.left,5);assert.equal(server.progress.run.kills,1,'original combat turn interval is preserved');
+ assert.equal(server.progress.run.logs.length,1,'combat details are condensed into one checkpoint');
+ assert.ok(server.progress.run.logs[0].t.includes('의뢰 진행'));
+ const runStamp=server.progress.run.lastTick;
+ clock+=60000;await ctx.startLesson('s2');
+ assert.equal(server.progress.run.lastTick,runStamp,'starting a lesson does not settle a run checkpoint');
+ clock+=60000;await ctx.runReturn();
+ assert.equal(server.progress.run.left,3,'early return accounts for the pending two minutes');assert.equal(server.progress.run.done,true);
+ server.self.lesson=null;server.self.study=null;server.self.lastReal=clock;
+ server.progress.run={left:2,total:2,acc:0,done:false,kills:0,logs:[],lastTick:clock};await ctx.PAIR_PLAY.refresh();
+ clock+=120000;ctx.S.lastReal=clock;ctx.step(2);await ctx.PAIR_PLAY.queue;
+ assert.equal(server.progress.run.done,true,'short runs finish on time instead of waiting for five minutes');
+ ctx.Date=RealDate;
+ console.log('PASS: personal save, shared wallet save, partner concurrent spend, remote profile reload, CAS retry, in-flight edit, durable lost-response recovery, failed save backup, atomic conflict rejection, chat preservation, queued activities, elapsed clock timeout cooldown and concurrent run clock, five-minute batches, early return and completion');
 })().catch(e=>{console.error(e);process.exitCode=1;});

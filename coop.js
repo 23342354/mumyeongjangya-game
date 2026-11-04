@@ -12,6 +12,8 @@ const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:
 // uses server-side revision checks and request receipts for every paid action.
 const PAIR_POLL_MS=30000;
 const PAIR_PASSIVE_TICK_MIN=2;
+const RUN_BATCH_MIN=5;
+function pollInterval(){return S?.run&&!S.run.done?RUN_BATCH_MIN*60000:PAIR_POLL_MS;}
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
 const CLIENT_KEYS=['msgs','chatReset','chatFrom','chatTab','chatMode','chatFilter','dmWith'];
 function replaceLocalState(target){
@@ -239,7 +241,7 @@ if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta(
 
 function rerender(){renderTop();renderNav();renderMain(true);}
 async function init(){
- if(!active()||PJ.busy||PJ.initQueued||cooling()||Date.now()-PJ.lastPoll<PAIR_POLL_MS)return;
+ if(!active()||PJ.busy||PJ.initQueued||cooling()||Date.now()-PJ.lastPoll<pollInterval())return;
  PJ.initQueued=true;PJ.lastPoll=Date.now();return enqueue(async()=>{
   PJ.busy=true;try{
    await recoverCommit();
@@ -288,7 +290,7 @@ async function transact(tag,fn,queue=true,options={}){
   let oldClock;
   if(options.fishBar!==undefined){oldClock=fishBarAt;fishBarAt=()=>options.fishBar;}
   try{
-   if(tag!=='tick'&&tag!=='offline'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Number(S.lastReal)||Date.now()))/60000));if(elapsed>0)tick(elapsed,false);}
+   if(tag!=='tick'&&tag!=='offline'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Number(S.lastReal)||Date.now()))/60000));if(elapsed>0||tag==='runReturn')tick(elapsed,tag==='runReturn',tag==='runReturn');}
    if(tag==='tick'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Number(S.lastReal)||Date.now()))/60000));tick(elapsed);}else await fn();
   }finally{if(oldClock)fishBarAt=oldClock;PJ.depth--;PJ.combat=previousCombat;PJ.groupAward=false;}
   S.lastReal=Date.now();
@@ -353,29 +355,49 @@ function calculateTick(){
  try{tick(Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Date.now()))/60000)));S.lastReal=Date.now();}
  finally{PJ.depth--;}
 }
-function tick(minutes,advanceRun=true){
+function tick(minutes,advanceRun=true,forceRun=false){
  const absoluteBuffs=clone((S.buffs||[]).filter(b=>b.pairExpiresAt>Date.now())),absoluteMeals={};for(const k of ['eat','dess'])if(S.kit[k]?.pairExpiresAt>Date.now())absoluteMeals[k]=clone(S.kit[k]);
  const tokens={pass:S.pass,tickets:S.wb.tickets,passNext:S.passNext,next:S.wb.next};
  const rate=manaRate,max=maxMana;manaRate=()=>0;maxMana=()=>Number(PJ.snapshot.wallet.mana)+Object.values(PJ.snapshot.meta||{}).reduce((n,v)=>n+Number(v.cap||0),0);
  try{oldStep(minutes);}finally{manaRate=rate;maxMana=max;S.pass=tokens.pass;S.passNext=tokens.passNext;S.wb.tickets=tokens.tickets;S.wb.next=tokens.next;for(const b of absoluteBuffs){S.buffs=S.buffs.filter(x=>!(x.n===b.n&&x.key===b.key));S.buffs.push(b);}Object.assign(S.kit,absoluteMeals);normalizeEffects();}
  if(advanceRun&&S.run&&!S.run.done){
-  const R=S.run,m=Math.min(R.left,Math.max(0,(Date.now()-(R.lastTick||Date.now()))/60000));
+  const elapsed=Math.max(0,(Date.now()-(S.run.lastTick||Date.now()))/60000);
+  if(!forceRun&&elapsed<RUN_BATCH_MIN&&elapsed<S.run.left)return;
+  const R=S.run,previousLogs=(R.logs||[]).slice(),summaryBefore={kills:R.kills||0,rin:R.rin||0,exp:R.exp||0,know:R.know||0,gear:(S.bag||[]).length+(S.balance20.pendingLoot||[]).length};
+  const m=Math.min(R.left,Math.max(0,(Date.now()-(R.lastTick||Date.now()))/60000));
   R.lastTick=Date.now();R.left-=m;R.acc=(R.acc||0)+m;
   const combat=PJ.combat,group=PJ.groupAward;PJ.combat=true;PJ.groupAward=true;
   let guard=0;try{while(S.run&&!S.run.done&&S.run.acc>=RUNSTEPMIN&&guard++<600){S.run.acc-=RUNSTEPMIN;runStep();}if(S.run&&!S.run.done&&S.run.left<=0)endRun(S.run.kills>0);}finally{PJ.combat=combat;PJ.groupAward=group;}
+  // Simulate every original combat turn, but retain one concise checkpoint.
+  // This changes transmission/display frequency, not combat speed or rewards.
+  const ending=R.done?(R.logs||[]).filter(l=>/정산 ·|■/.test(l.t)).slice(-2):[];
+  const gear=Math.max(0,(S.bag||[]).length+(S.balance20.pendingLoot||[]).length-summaryBefore.gear);
+  const summary={t:`<b>${runTimeText(m)} 의뢰 진행</b> · 처치 ${nf((R.kills||0)-summaryBefore.kills)}체 · 륜 +${nf((R.rin||0)-summaryBefore.rin)} · 경험치 +${nf((R.exp||0)-summaryBefore.exp)} · 지식 +${nf((R.know||0)-summaryBefore.know)}${gear?` · 법구 +${gear}점`:''}`,time:cal().str.replace(/^(오전|오후) /,'')};
+  R.logs=[...previousLogs,summary,...ending].slice(-80);
  }
 }
+function updateRunClock(){
+ if(!PJ.ready||!S.run||S.run.done)return;
+ const remaining=Math.max(0,S.run.left-Math.max(0,(Date.now()-(S.run.lastTick||Date.now()))/60000));
+ const clock=document.getElementById('runclock');if(clock)clock.textContent=runTimeText(remaining)+' 남음';
+ const pace=document.getElementById('runpace');if(pace)pace.textContent=`전체 ${runTimeText(S.run.total)} 가운데 ${runTimeText(Math.max(0,S.run.total-remaining))} 지났습니다. 진행과 보상은 5분마다 반영됩니다.`;
+ const bar=document.getElementById('runprog');if(bar)bar.style.width=Math.max(0,Math.min(100,(1-remaining/Math.max(1,S.run.total))*100))+'%';
+}
 function passiveTickThreshold(){
- // Keep urgent gameplay deadlines fast; idle characters need no write every 30s.
- if(S.run&&!S.run.done)return 1;
  let until=PAIR_PASSIVE_TICK_MIN;
- for(const task of [S.lesson,S.study,S.book]){
-  if(task&&Number.isFinite(Number(task.left)))until=Math.min(until,Math.max(.1,Number(task.left)));
+ if(S.run&&!S.run.done){
+  const basis=Number(PJ.clockBasis)||Date.now();
+  const due=(Number(S.run.lastTick)||basis)+Math.min(RUN_BATCH_MIN,Math.max(0,Number(S.run.left)||0))*60000;
+  until=Math.min(RUN_BATCH_MIN,Math.max(1/60,(due-basis)/60000));
  }
- return Math.max(.1,until);
+ for(const task of [S.lesson,S.study,S.book]){
+  if(task&&Number.isFinite(Number(task.left)))until=Math.min(until,Math.max(1/60,Number(task.left)));
+ }
+ return Math.max(1/60,until);
 }
 step=function(minutes){
  if(!active())return oldStep.apply(this,arguments);
+ updateRunClock();
  if(PJ.depth)return tick(minutes);
  PJ.acc+=Math.max(0,Number(minutes)||0);
  // Browsers throttle background tabs, so real elapsed wall time is also checked.
@@ -437,7 +459,7 @@ function card(){
  return `<section class="pair-team-card"><div class="pair-team-top"><b>두 사람의 공동 여정</b><button class="btn sm" title="공동 기록 새로 고침" aria-label="공동 기록 새로 고침" onclick="PAIR_PLAY.lastPoll=0;PAIR_PLAY.refresh()" style="margin-left:auto">↻</button><span class="pair-team-status ${PJ.error?'pair-sync-error':''}">${PJ.ready?(PJ.busy?'공동 기록 반영 중':PJ.pending.length?'공동 기록 저장 대기':'공동 지갑 연결됨'):linked()?'연결 준비 중':'파트너를 기다리는 중'}</span></div><div class="pair-team-members"><div class="pair-team-person"><b>${esc(S.name)}</b><span class="pair-team-state">내 전투력 ${nf(own)}</span></div><span class="pair-team-link">∞</span><div class="pair-team-person"><b>${esc(p?.name||pairName()||'나의 파트너')}</b><span class="pair-team-state">${p?'파트너 전투력 '+nf(p.power):'페어를 맺으면 함께 출발합니다'}</span></div></div><div class="pair-team-state" style="margin-top:9px">파장·지식·재화·재료·바랑 공동 사용 · 수업·수행·착용 장비는 각자 · 시험·의뢰·탑은 한 사람이 진행하면 함께 반영</div>${PJ.error?`<div class="pair-team-state pair-sync-error">${esc(PJ.error)}</div>`:''}</section>`;
 }
 PJ.refresh=()=>{PJ.lastPoll=0;return init();};
-for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
+for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready&&v==='quest')html=html.replace('30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.','진행과 보상은 5분마다 묶어서 반영합니다. 귀환·완료는 바로 정산하며, 접속하지 않은 시간도 다음 갱신 때 합산합니다.');if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
 setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth&&document.visibilityState!=='hidden')init();},10000);
 // A sleeping browser tab does not need background polling. Refresh immediately
 // when the player returns, and flush any locally queued save on tab switch.
