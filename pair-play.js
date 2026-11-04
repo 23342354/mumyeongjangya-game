@@ -3,7 +3,11 @@
 'use strict';
 const clone=x=>JSON.parse(JSON.stringify(x));
 window.bagCapacity=function(){return PAIR_PLAY.ready?Number(S.pairBagCap||80):40+(S.res.r11||0)*5;};
-const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false,baseline:null,pending:[],flushTimer:null};
+const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,lastServerReadAt:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false,baseline:null,pending:[],flushTimer:null,peerCache:null};
+// Passive requests are intentionally slower than real game actions. The RPC still
+// uses server-side revision checks and request receipts for every paid action.
+const PAIR_POLL_MS=30000;
+const PAIR_PASSIVE_TICK_MIN=2;
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
 function linked(){return !!(typeof acctIn==='function'&&acctIn()&&S?.pair?.mine?.status==='accepted');}
 function active(){return linked()||!!S?.pairShared;}
@@ -64,7 +68,7 @@ function markDirty(){
  if(PJ.pending.length){
   if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,localAt:Date.now()});
   clearTimeout(PJ.flushTimer);
-  PJ.flushTimer=setTimeout(()=>{if(PJ.pending.length&&PJ.ready&&!PJ.busy)acctPush(true);},1800);
+  PJ.flushTimer=setTimeout(()=>{if(PJ.pending.length&&PJ.ready&&!PJ.busy)acctPush(true);},3500);
  }else if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:''});
 }
 function backupOnFailure(reason,snapshot){
@@ -72,9 +76,9 @@ function backupOnFailure(reason,snapshot){
 }
 
 function apply(r){
- if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.baseline=null;PJ.pending=[];}return;}
+ if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.peerCache=null;PJ.baseline=null;PJ.pending=[];}return;}
  if(!r.ok){PJ.ready=false;PJ.error=r.message||'공동 기록을 준비하고 있습니다.';return;}
- PJ.snapshot=r;PJ.ready=true;PJ.error='';
+ PJ.snapshot=r;PJ.ready=true;PJ.error='';PJ.peerCache=null;PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;PJ.clockBasis=Number(r.self?.lastReal)||Date.now();
  const keep={};for(const k of ['sb','chatTab','chatMode','chatFilter'])if(S[k]!==undefined)keep[k]=S[k];
  const pairList={inbox:S.pair?.inbox||[],sent:S.pair?.sent||[],partner:S.pair?.partner||null,at:S.pair?.at||0};
  Object.assign(S,clone(r.self),keep);
@@ -99,37 +103,65 @@ function normalizeEffects(){
 }
 function peerView(){
  const p=PJ.snapshot?.peer;if(!p)return null;
+ // A view can query the partner's stats dozens of times. Calculating them once
+ // per accepted snapshot avoids repeatedly cloning the whole save object.
+ if(!PJ.depth&&PJ.peerCache)return PJ.peerCache;
  const own=S;try{
   S={...clone(own),...clone(p),pair:own.pair,sb:own.sb};
-  return {name:p.name||'파트너',power:power(),stats:Object.fromEntries(STATS.map(s=>[s.k,effStat(s.k)])),c:oldC(),rate:manaRate(),cap:personalMax(),level:S.lvl};
+  const view={name:p.name||'파트너',power:power(),stats:Object.fromEntries(STATS.map(s=>[s.k,effStat(s.k)])),c:oldC(),rate:manaRate(),cap:personalMax(),level:S.lvl};
+  if(!PJ.depth)PJ.peerCache=view;
+  return view;
  }finally{S=own;}
 }
 function metadata(){const p=peerView(),m={};m[ACCT.id]={rate:manaRate(),cap:personalMax()};if(p)m[PJ.snapshot.peerId]={rate:p.rate,cap:p.cap};return m;}
 function enqueue(fn){const job=PJ.queue.catch(()=>{}).then(fn);PJ.queue=job.catch(()=>{});return job;}
-async function read(){
- const r=await rpc('get');apply(r);if(!r.ok){const e=Error(r.message||'공동 기록 연결을 확인해 주세요.');e.waiting=!!r.waiting;throw e;}return r;
+function sameSnapshot(r){
+ const prev=PJ.snapshot;
+ if(!PJ.ready||!prev||!r?.ok||r.solo||Number(r.pairId)!==Number(prev.pairId))return false;
+ // A passive fetch can change countdowns without changing the shared revision;
+ // compare actual shared balances and partner data as well.
+ return r.revision===prev.revision
+  &&same(r.wallet,prev.wallet)&&same(r.progress,prev.progress)
+  &&same(r.self,prev.self)&&same(r.peer,prev.peer)
+  &&same(r.pair,prev.pair);
+}
+async function read(quiet=false){
+ const r=await rpc('get');
+ if(quiet&&sameSnapshot(r)){
+  // Do not rebuild the entire UI or overwrite a locally running animation.
+  PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;
+  PJ.snapshot.passNext=r.passNext;PJ.snapshot.bossNext=r.bossNext;
+  S.passNext=r.passNext;S.wb.next=r.bossNext;r.unchanged=true;
+ }else apply(r);
+ if(!r.ok){const e=Error(r.message||'공동 기록 연결을 확인해 주세요.');e.waiting=!!r.waiting;throw e;}return r;
 }
 function showError(e){if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:String(e?.message||e).slice(0,180)});const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
 
 function rerender(){renderTop();renderNav();renderMain(true);}
 async function init(){
- if(!active()||PJ.busy||Date.now()-PJ.lastPoll<10000)return;
+ if(!active()||PJ.busy||Date.now()-PJ.lastPoll<PAIR_POLL_MS)return;
  PJ.lastPoll=Date.now();return enqueue(async()=>{
   PJ.busy=true;try{
    let preflightFailed=false;
    if(!S.pairShared){const ok=await oldPush(true);if(ok===false){preflightFailed=true;backupOnFailure('공동 연결 전 계정 원본 저장 실패');}}
+   let didChange=false;
    if(PJ.ready&&PJ.pending.length){
     const saved=await transact('profile',()=>{},false);
     if(!saved)throw Error(PJ.error||'미반영 기록을 서버에 보관하지 못했습니다.');
-   }else await read();
-   if(PJ.ready&&PJ.offlineNeeded){PJ.offlineNeeded=false;await transact('offline',()=>oldOffline(),false);}
-   cache();
+    // transact() already saved and refreshed the UI.
+    didChange=false;
+   }else{
+    const state=await read(PJ.ready&&!PJ.offlineNeeded);
+    didChange=!state.unchanged;
+   }
+   if(PJ.ready&&PJ.offlineNeeded){PJ.offlineNeeded=false;await transact('offline',()=>oldOffline(),false);didChange=false;}
+   if(didChange)cache();
    if(preflightFailed){
     const warning='공동지갑 연결 직전의 개인 저장에 실패했습니다. 원본을 별도 백업했으니 설정에서 확인해 주세요.';
     if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:warning,errorAt:Date.now()});
     oldToast(warning,'bad');
    }
-   rerender();
+   if(didChange)rerender();
   }catch(e){showError(e);}finally{PJ.busy=false;}
  });
 }
@@ -139,7 +171,12 @@ async function transact(tag,fn,queue=true,options={}){
  PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,hadRead=false,sentState=null;
  try{
   const unsaved=PJ.pending.slice();if(unsaved.length)dirtyLocal=clone(S);
-  await read();hadRead=true;if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
+  // Immediately following an acknowledged server response, we can use that
+  // version for a second click without another GET round-trip. If the other
+  // player has changed it, the commit CAS rejects the stale revision safely.
+  const recent=!!(PJ.ready&&!unsaved.length&&PJ.lastServerReadAt&&Date.now()-PJ.lastServerReadAt<2000);
+  if(!recent)await read();
+  hadRead=true;if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
   if(unsaved.length)replayChanges(unsaved);
   before=clone(S);PJ.rollbackGames={fish:typeof FISHGAME!=='undefined'&&FISHGAME?clone(FISHGAME):null,bg:typeof BG!=='undefined'&&BG?clone(BG):null,outing:typeof OUTING!=='undefined'&&OUTING?clone(OUTING):null};PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.modal=null;
   PJ.depth++;const previousCombat=PJ.combat;PJ.combat=isGroup(tag);PJ.groupAward=isGroup(tag);
@@ -157,7 +194,8 @@ async function transact(tag,fn,queue=true,options={}){
   }
   const request=(crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random());
   const args={p_revision:PJ.snapshot.revision,p_request:request,p_save:clone(S),p_wallet:wallet(),p_progress:progress(),p_xp:PJ.sharedXp,p_meta:metadata(),p_effects:effects,p_loss:PJ.loss};
-  sentState=clone(S);
+  // p_save has already been deep-copied for a stable retry receipt.
+  sentState=args.p_save;
   let r;try{r=await rpc('commit',args);}catch(e){
    // Same receipt id: a lost response can never repeat the transaction.
    try{r=await rpc('commit',args);}catch(_){throw e;}
@@ -165,7 +203,7 @@ async function transact(tag,fn,queue=true,options={}){
   if(r.conflict){Object.assign(S,before);apply(r);throw Error('파트너가 먼저 공동 기록을 갱신했습니다. 최신 상태를 불러왔으니 다시 눌러 주세요.');}
   if(!r||r.ok!==true)throw Error(r?.message||'공동 기록 저장 결과를 확인하지 못했습니다.');
   const laterChanges=changes(sentState,S);
-  apply(r);PJ.pending=[];
+  apply(r);PJ.pending=[];PJ.acc=0;
   if(laterChanges.length){replayChanges(laterChanges);oldSave();markDirty();}else cache();
   for(const m of PJ.messages)oldToast(...m);rerender();
   if(S.home?.auto&&S.hall!=='dorm'&&PJ.snapshot.progress.rent_due>0&&nowMin()>=PJ.snapshot.progress.rent_due)payPairRent(true);
@@ -178,7 +216,11 @@ async function transact(tag,fn,queue=true,options={}){
 toast=function(...args){if(PJ.depth&&PJ.messages){PJ.messages.push(args);return;}return oldToast(...args);};
 modal=function(...args){if(PJ.depth){PJ.modal=args;return oldModal(...args);}return oldModal(...args);};
 save=function(){if(PJ.depth)return;const result=oldSave.apply(this,arguments);markDirty();return result;};
-acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);if(!PJ.ready){init();return Promise.resolve(false);}markDirty();if(!PJ.pending.length){if(!force)return Promise.resolve(true);return enqueue(async()=>{try{await read();cache();return true;}catch(e){showError(e);return false;}});}return transact('profile',()=>{}).then(r=>!!(r&&r.ok));}return oldPush.apply(this,arguments);};
+acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);if(!PJ.ready){init();return Promise.resolve(false);}markDirty();if(!PJ.pending.length){
+ // No changes to upload: a recently confirmed snapshot is already saved.
+ if(!force||Date.now()-PJ.lastServerReadAt<10000)return Promise.resolve(true);
+ return enqueue(async()=>{try{const r=await read(true);if(!r.unchanged){cache();rerender();}return true;}catch(e){showError(e);return false;}});
+ }return transact('profile',()=>{}).then(r=>!!(r&&r.ok));}return oldPush.apply(this,arguments);};
 function cache(){oldSave();if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:'',lastSuccess:Date.now()});if(typeof ACCOUNT_SYNC_LAST_SUCCESS!=='undefined')ACCOUNT_SYNC_LAST_SUCCESS=Date.now();}
 const oldSync=syncUp;syncUp=function(force){if(PJ.depth)return Promise.resolve();return oldSync.apply(this,arguments);};
 const xp=gainExp;gainExp=function(n){const result=xp.apply(this,arguments);if(PJ.depth&&!PJ.personal)PJ.sharedXp+=result;return result;};
@@ -196,11 +238,24 @@ function tick(minutes){
   let guard=0;try{while(S.run&&!S.run.done&&S.run.acc>=RUNSTEPMIN&&guard++<600){S.run.acc-=RUNSTEPMIN;runStep();}if(S.run&&!S.run.done&&S.run.left<=0)endRun(S.run.kills>0);}finally{PJ.combat=combat;PJ.groupAward=group;}
  }
 }
+function passiveTickThreshold(){
+ // Keep urgent gameplay deadlines fast; idle characters need no write every 30s.
+ if(S.run&&!S.run.done)return .5;
+ let until=PAIR_PASSIVE_TICK_MIN;
+ for(const task of [S.lesson,S.study,S.book]){
+  if(task&&Number.isFinite(Number(task.left)))until=Math.min(until,Math.max(.1,Number(task.left)));
+ }
+ return Math.max(.1,until);
+}
 step=function(minutes){
  if(!active())return oldStep.apply(this,arguments);
  if(PJ.depth)return tick(minutes);
  PJ.acc+=Math.max(0,Number(minutes)||0);
- if(PJ.ready&&PJ.acc>=.5&&!PJ.busy){PJ.acc=0;transact('tick',()=>{});}
+ // Browsers throttle background tabs, so real elapsed wall time is also checked.
+ const wallElapsed=PJ.clockBasis?Math.max(0,(Date.now()-PJ.clockBasis)/60000):0;
+ if(PJ.ready&&Math.max(PJ.acc,wallElapsed)>=passiveTickThreshold()&&!PJ.busy){
+  PJ.acc=0;transact('tick',()=>{});
+ }
  if(!PJ.ready)init();
 };
 offline=function(){if(active()){PJ.offlineNeeded=true;return;}return oldOffline.apply(this,arguments);};
@@ -254,5 +309,12 @@ function card(){
 }
 PJ.refresh=()=>{PJ.lastPoll=0;return init();};
 for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
-setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth)init();},15000);
+setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth&&document.visibilityState!=='hidden')init();},10000);
+// A sleeping browser tab does not need background polling. Refresh immediately
+// when the player returns, and flush any locally queued save on tab switch.
+document.addEventListener('visibilitychange',()=>{
+ if(!active())return;
+ if(document.visibilityState==='visible'){PJ.lastPoll=0;init();}
+ else if(PJ.ready&&PJ.pending.length)acctPush(true);
+});
 })();

@@ -43,13 +43,9 @@ const YOWA_DOLLS=[
  {n:"류쉬안",img:"assets/yowa-dolls/18.png"},
 ];
 const YOWA_DEX_REWARD_GROUPS={plush:"agi",doll:"res"};
+// 체력·이성 회복 아이템은 SHOP(p1/p2)에만 판매합니다.
+// 기존 소모품 소지 수량(S.inv.p1/p2)과 구매·사용 동작은 그대로 유지됩니다.
 const YOWA_SPECIALS=[
- {id:"aidbox",n:"구급상자",price:20,kind:"hp",amt:20,
-  art:'🧰',
-  desc:"어떤 상황에서라도 사용할 수 있게 꾸린 구급상자입니다. 사용 즉시 체력을 20 회복합니다."},
- {id:"sedative",n:"안정제",price:20,kind:"sn",amt:10,
-  art:'🧪',
-  desc:"우유처럼 하얀 액체가 든 병입니다. 사용 즉시 이성을 10 회복합니다."},
  {id:"plush",n:"누군가를 닮은 만두 말랑이",price:30,kind:"plush",
   img:"assets/pixel-life/mystery-dumpling.png",pixel:true,
   desc:"랜덤 말랑이. 만지면 부드럽고 기분이 좋다. 대나무 찜기의 뚜껑을 열기 전까지 무엇이 들어있을지 모르는 기대감도 충족 시켜준다."},
@@ -114,7 +110,7 @@ dexAdd=function(kind,name){
 };
 
 // 매점 일반 상품 도트.
-const YOWA_PIXEL_ITEMS={aidbox:0,sedative:1,m1:2,m2:3,m3:4,m4:5,m6:6,m7:7,m8:8,m9:9,m10:10,m11:11,m12:12,p1:13,p2:14,p3:15,p4:1,p5:7,p6:7,p7:10,p8:10,p9:13};
+const YOWA_PIXEL_ITEMS={m1:2,m2:3,m3:4,m4:5,m6:6,m7:7,m8:8,m9:9,m10:10,m11:11,m12:12,p1:0,p2:1,p3:15,p4:1,p5:7,p6:7,p7:10,p8:10,p9:13};
 function yowaPixelArt(id,name,size=64){
  const cell=YOWA_PIXEL_ITEMS[id];if(cell===undefined)return '';
  return `<span role="img" aria-label="${esc(name)} 도트" style="display:inline-block;flex:none;width:${size}px;height:${size}px;image-rendering:pixelated;background-image:url('assets/pixel-life/shop-items.png?v=20261104-shop1');background-size:400% 400%;background-repeat:no-repeat;background-position:${cell%4*100/3}% ${Math.floor(cell/4)*100/3}%"></span>`;
@@ -141,16 +137,7 @@ function yowaBuySpecial(id){
   if(!item) return;
   if(S.rin<item.price){ toast("륜이 부족합니다.","bad"); return; }
   S.rin-=item.price;
-  let msg=`${item.n} 구매 완료`;
-  if(item.kind==="hp"){
-    S.hp=Math.min(100,S.hp+(item.amt||0));
-    msg=`${item.n} 사용 · 체력 +${item.amt}`;
-    toast(msg,"good");
-  }else if(item.kind==="sn"){
-    S.sn=Math.min(100,S.sn+(item.amt||0));
-    msg=`${item.n} 사용 · 이성 +${item.amt}`;
-    toast(msg,"good");
-  }else if(item.kind==="plush"){
+  if(item.kind==="plush"){
     const got=pick(YOWA_DUMPLINGS);
     const isNew=!(S.dex.plush||[]).includes(got.n);
     S.yowa.last={kind:"plush",name:got.n,img:got.img,time:Date.now()};

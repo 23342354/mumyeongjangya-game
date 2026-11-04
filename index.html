@@ -1213,8 +1213,8 @@ const QT_B=["실종자 수색","파장 이상 조사","영혼 밀매소 폐쇄",
 
 /* 매점 품목 */
 const SHOP = [
- {id:"p1", n:"응급 부적",     c:120, d:"체력 30 회복",        type:"heal", v:30},
- {id:"p2", n:"안신향",       c:140, d:"이성 30 회복",        type:"san",  v:30},
+ {id:"p1", n:"구급상자",       c:120, d:"체력 30 회복",        type:"heal", v:30},
+ {id:"p2", n:"안정제",         c:140, d:"이성 30 회복",        type:"san",  v:30},
  {id:"p3", n:"월병",         c:90,  d:"식사 · 경험치 +5% (6시간)", type:"buff", key:"exp", v:.05, dur:360, tag:"식사"},
  {id:"p4", n:"집중의 탕약",   c:300, d:"수업 효율 +24% (4시간)",   type:"buff", key:"study", v:.24, dur:240, tag:"물약"},
  {id:"p5", n:"투지의 탕약",   c:320, d:"공격 +20% (4시간)",        type:"buff", key:"atkP", v:.20, dur:240, tag:"물약"},
@@ -1652,7 +1652,7 @@ function offline(){
 function renderTop(){
   const c=cal(), w=WEATHERS[S.weather];
   const buffs=S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"var(--violet)"}"></span>${esc(b.n)} <span style="color:var(--s7)">${hhmm(b.left)}</span></span>`).join("");
-  const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:var(--s7)">${hhmm(S.book.left)}</span></span>`:"";
+  const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:var(--s7)">${pairLiveTimer('book',S.book.left)}</span></span>`:"";
   $("#topbar").innerHTML=`
   <div class="tb1">
     <div class="logo logo-top" title="無明長夜"></div>
@@ -1929,6 +1929,20 @@ function head(kicker,title,right){
   </div>${right?`<div class="rt">${right}</div>`:""}</div>`;
 }
 
+/* 공동 저장에서 수업과 수행을 분 단위로 서버 확정하더라도,
+   광장의 남은 시간은 별도 서버 요청 없이 부드럽게 표시합니다. */
+function pairDisplayRemaining(left,kind){
+ const pair=window.PAIR_PLAY;
+ if(!pair?.ready)return left;
+ const anchor=kind==='pass'?Number(pair.lastServerReadAt):Number(pair.clockBasis);
+ if(!Number.isFinite(anchor)||anchor<=0)return left;
+ return Math.max(0,Number(left)-Math.max(0,(Date.now()-anchor)/60000));
+}
+function pairLiveTimer(kind,left){
+ const remaining=pairDisplayRemaining(left,kind);
+ if(!window.PAIR_PLAY?.ready)return hhmm(remaining);
+ return `<span class="pair-live-clock" data-clock="${kind}">${hhmm(remaining)}</span>`;
+}
 /* 광장 활동 요약. 의뢰는 별도의 실시간 타이머를 사용하므로 현재 잔여치를 읽습니다. */
 function plazaActivityHTML(){
   if(!S || !S.made) return "";
@@ -1942,22 +1956,22 @@ function plazaActivityHTML(){
   };
   if(S.lesson){
     const sb=SUBJECTS.find(x=>x.id===S.lesson.plan?.[S.lesson.idx]);
-    row("수업",sb?.n||"진행 중인 수업",`${(S.lesson.idx||0)+1} / ${S.lesson.plan?.length||1}교시`,S.lesson.left,"class");
+    row("수업",sb?.n||"진행 중인 수업",`${(S.lesson.idx||0)+1} / ${S.lesson.plan?.length||1}교시`,pairDisplayRemaining(S.lesson.left),"class");
   }
   if(S.run&&!S.run.done){
     const r=S.run;
-    row("의뢰",r.q?.t||r.q?.title||"현장 의뢰",`현재 구간 ${r.stage||r.q?.stage||"?"} · 처치 ${r.kills||0}체`,r.left,"quest");
+    row("의뢰",r.q?.t||r.q?.title||"현장 의뢰",`현재 구간 ${r.stage||r.q?.stage||"?"} · 처치 ${r.kills||0}체`,pairDisplayRemaining(r.left),"quest");
   }
   if(S.study){
     const r=RESEARCH.find(x=>x.id===S.study.id);
-    row("수행",r?.n||"수행 중", "연구 진행 중",S.study.left,"research");
+    row("수행",r?.n||"수행 중", "연구 진행 중",pairDisplayRemaining(S.study.left),"research");
   }
   if(S.book){
     const b=BOOKS.find(x=>x.id===S.book.id);
-    row("고서",b?.n||"고서 열람","열람 효과 유지 중",S.book.left,"research");
+    row("고서",b?.n||"고서 열람","열람 효과 유지 중",pairDisplayRemaining(S.book.left),"research");
   }
   if(coolLeft("rest")>0) row("휴식","보건실 재방문","휴식 재사용 대기시간",coolLeft("rest"),"plaza");
-  if(S.pass<3&&S.passNext>0) row("충전","통행패 발급",`현재 ${S.pass}/3장`,S.passNext,"map");
+  if(S.pass<3&&S.passNext>0) row("충전","통행패 발급",`현재 ${S.pass}/3장`,pairDisplayRemaining(S.passNext,"pass"),"map");
   if(typeof LIVE_AUCTION!=="undefined"&&LIVE_AUCTION.data){
     const auction=LIVE_AUCTION.data;
     const live=(auction.live||[]).find(l=>Date.parse(l.ends_at)>LIVE_AUCTION.offset+Date.now());
@@ -1969,7 +1983,20 @@ function plazaActivityHTML(){
   return rows.join("");
 }
 function plazaActivityRefresh(){
-  if(VIEW!=="plaza"||!S?.made)return;
+  if(!S?.made)return;
+  if(window.PAIR_PLAY?.ready){
+    // Updating a few text nodes avoids a full screen re-render just to advance
+    // a countdown, and prevents 2-minute passive saves from freezing timers.
+    const timers={lesson:S.lesson?.left,study:S.study?.left,book:S.book?.left,pass:S.passNext};
+    document.querySelectorAll('.pair-live-clock').forEach(el=>{
+      const kind=el.getAttribute('data-clock');
+      if(Number.isFinite(Number(timers[kind]))){
+        const text=hhmm(pairDisplayRemaining(timers[kind],kind));
+        if(el.textContent!==text)el.textContent=text;
+      }
+    });
+  }
+  if(VIEW!=="plaza")return;
   const box=document.getElementById("plaza-active-list");
   if(box)box.innerHTML=plazaActivityHTML();
 }
@@ -1982,7 +2009,7 @@ VIEWS.plaza=()=>{
     const sb=SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx]);
     return `<div class="spread" style="background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
       <div><span class="tag j">수업</span> <b>${sb.n}</b>
-        <div class="tiny muted">${S.lesson.idx+1}교시 / ${S.lesson.plan.length} · ${hhmm(S.lesson.left)} 남음</div></div>
+        <div class="tiny muted">${S.lesson.idx+1}교시 / ${S.lesson.plan.length} · ${pairLiveTimer('lesson',S.lesson.left)} 남음</div></div>
       <button class="btn sm" onclick="stopLesson()">중단</button></div>`;
   })():`<div class="tiny muted" style="padding:8px 2px">듣고 있는 수업이 없습니다. <a style="color:var(--gold);cursor:pointer" onclick="go('class')">강의실로 →</a></div>`;
 
@@ -2021,7 +2048,7 @@ VIEWS.plaza=()=>{
         <span class="sbadge" style="color:var(--gold)">${ic("sparkle",12)} ${w.d}</span>
       </div>
       <div class="spread">
-        <span class="sbadge">통행패 ${S.pass}/3 <span style="color:var(--s7)">· 다음 ${hhmm(S.passNext)}</span></span>
+        <span class="sbadge">통행패 ${S.pass}/3 <span style="color:var(--s7)">· 다음 ${pairLiveTimer('pass',S.passNext)}</span></span>
         <button type="button" class="sbadge scene-link-btn" onclick="go('map')" aria-label="지도 열기">지도 열기 ›</button>
       </div>
     </div>
@@ -2060,9 +2087,9 @@ VIEWS.plaza=()=>{
       <div class="bar jd"><i style="width:${S.fest.todayMarks}%"></i></div>
       <hr class="hr">
       <div class="spread"><span class="tiny muted">수행(연구) 자리</span>
-        <span class="tiny">${S.study?`${RESEARCH.find(r=>r.id===S.study.id).n} · ${hhmm(S.study.left)}`:"비어 있음"}</span></div>
+        <span class="tiny">${S.study?`${RESEARCH.find(r=>r.id===S.study.id).n} · ${pairLiveTimer('study',S.study.left)}`:"비어 있음"}</span></div>
       <div class="spread"><span class="tiny muted">열람 중인 고서</span>
-        <span class="tiny">${S.book?`${BOOKS.find(b=>b.id===S.book.id).n} · ${hhmm(S.book.left)}`:"없음"}</span></div>
+        <span class="tiny">${S.book?`${BOOKS.find(b=>b.id===S.book.id).n} · ${pairLiveTimer('book',S.book.left)}`:"없음"}</span></div>
     </div>
   </div>`;
 };
@@ -2213,11 +2240,11 @@ VIEWS.class=()=>{
       <div class="spread" style="margin:4px 0 6px">
         <h3 style="margin:0;font-size:17px">${cur.n} <span class="lv" style="color:var(--gold)">Lv ${S.sub[cur.id].lv}</span></h3>
         <span class="tiny muted">${NPC[cur.pf].n} 교사</span></div>
-      <div class="bar"><i style="width:${(100-S.lesson.left/S.lesson.total*100).toFixed(1)}%"></i></div>
+      <div class="bar"><i style="width:${(100-pairDisplayRemaining(S.lesson.left)/S.lesson.total*100).toFixed(1)}%"></i></div>
       <div class="tiny muted" style="margin-top:6px">
         시간표 「${esc(S.plans[S.lesson.planIdx]?S.plans[S.lesson.planIdx].n:"즉석")}」 ${S.lesson.idx+1}/${S.lesson.plan.length}교시 ·
         다음: ${S.lesson.idx+1<S.lesson.plan.length?SUBJECTS.find(x=>x.id===S.lesson.plan[S.lesson.idx+1]).n:"없음"}</div>
-      <div class="tiny muted">${hhmm(S.lesson.left)} 남음 · 끝나면 1교시 인정 · Lv ${S.sub[cur.id].lv+1}까지 ${subjectLessonsLeft(S.sub[cur.id])}교시 · 지식 +${Math.round(lessonReward(cur.id).know*(1+mod("know")))}</div>
+      <div class="tiny muted">${pairLiveTimer('lesson',S.lesson.left)} 남음 · 끝나면 1교시 인정 · Lv ${S.sub[cur.id].lv+1}까지 ${subjectLessonsLeft(S.sub[cur.id])}교시 · 지식 +${Math.round(lessonReward(cur.id).know*(1+mod("know")))}</div>
       <div class="tiny" style="color:var(--jade);margin-top:4px">수업 보상 ×${eff.toFixed(2)} · 완료 경험치·지식에 적용</div>
     </div>`:"";
 
@@ -2319,7 +2346,7 @@ function editPlan(i){
 function buffStrip(){
   const items=[];
   S.buffs.filter(b=>!b.hide).forEach(b=>items.push(`<span class="buffchip">${b.e||"◉"} ${esc(b.n)} <span class="muted">${hhmm(b.left)}</span></span>`));
-  if(S.book) items.push(`<span class="buffchip">${ic("scroll",13)} ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${hhmm(S.book.left)}</span></span>`);
+  if(S.book) items.push(`<span class="buffchip">${ic("scroll",13)} ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${pairLiveTimer('book',S.book.left)}</span></span>`);
   if(!items.length) return "";
   return `<div class="card pad" style="margin-bottom:12px;padding:9px 14px"><div class="row">${items.join("")}</div></div>`;
 }
@@ -2335,8 +2362,8 @@ VIEWS.research=()=>{
   const curBox=cur?`
     <div class="card pad" style="margin-bottom:14px">
       <div class="spread"><div><span class="tag j">수행</span> <b>${cur.n} ${S.res[cur.id]+1}단계</b></div>
-        <div class="tiny muted">${hhmm(S.study.left)} 남음</div></div>
-      <div class="bar" style="margin:8px 0 6px"><i style="width:${(100-S.study.left/S.study.total*100).toFixed(1)}%"></i></div>
+        <div class="tiny muted">${pairLiveTimer('study',S.study.left)} 남음</div></div>
+      <div class="bar" style="margin:8px 0 6px"><i style="width:${(100-pairDisplayRemaining(S.study.left)/S.study.total*100).toFixed(1)}%"></i></div>
       <div class="row">
         <button class="btn sm" onclick="cutStudy('mana')">파장으로 1시간 단축 · ${nf(cutCost("mana"))}</button>
         <button class="btn sm" onclick="cutStudy('know')">지식으로 1시간 단축 · ${nf(cutCost("know"))}</button>
@@ -2350,7 +2377,7 @@ VIEWS.research=()=>{
     <div class="tiny muted" style="margin:4px 0 10px">지식을 들여 고서를 펼치면 3시간 동안 효과가 적용됩니다. 같은 책을 다시 펼치면 시간이 이어집니다(최대 9시간).</div>
     ${S.book?`<div class="row" style="margin-bottom:10px"><span class="tag g">열람 중</span>
       <b>${BOOKS.find(b=>b.id===S.book.id).n}</b> · ${BOOKS.find(b=>b.id===S.book.id).e}
-      <span class="tiny muted" style="margin-left:auto">${hhmm(S.book.left)}</span></div>`:""}
+      <span class="tiny muted" style="margin-left:auto">${pairLiveTimer('book',S.book.left)}</span></div>`:""}
     <div class="grid g2">
       ${BOOKS.map(b=>{const on=S.book&&S.book.id===b.id;
         return `<div class="spread" style="background:var(--s1);border:1px solid ${on?"var(--gold2)":"var(--line)"};border-radius:7px;padding:7px 11px">
@@ -2935,7 +2962,7 @@ VIEWS.outing=()=>{
   <div class="card pad" style="margin-bottom:14px">
     <div class="tiny muted">통행패는 12시간마다 한 장씩 발급되며 최대 3장까지 모입니다(넘는 발급분은 사라집니다).
     나들이를 나가면 구역 지도가 열리고, 한 번에 이야기를 3개까지 겪을 수 있습니다. 선택에 따라 결과가 달라집니다.</div>
-    ${S.pass===0?`<div class="tiny" style="color:var(--red);margin-top:8px">가진 통행패가 없습니다. 다음 발급까지 ${hhmm(S.passNext)} 남았습니다.</div>`:""}
+    ${S.pass===0?`<div class="tiny" style="color:var(--red);margin-top:8px">가진 통행패가 없습니다. 다음 발급까지 ${pairLiveTimer('pass',S.passNext)} 남았습니다.</div>`:""}
   </div>
   <div class="grid g3">
     ${WARDS.map(w=>{
@@ -3504,7 +3531,7 @@ function drawMe(){
       <div class="grid g2">
         <div class="card pad"><div class="sect-t">적용 중</div>
           ${S.buffs.length?S.buffs.filter(x=>!x.hide).map(x=>`<div class="spread tiny" style="padding:3px 0"><span>${x.e} ${esc(x.n)}</span><span class="muted">${hhmm(x.left)}</span></div>`).join(""):'<div class="tiny muted">없음</div>'}
-          ${S.book?`<div class="spread tiny" style="padding:3px 0"><span>${ic("scroll",12)} ${BOOKS.find(x=>x.id===S.book.id).n}</span><span class="muted">${hhmm(S.book.left)}</span></div>`:""}
+          ${S.book?`<div class="spread tiny" style="padding:3px 0"><span>${ic("scroll",12)} ${BOOKS.find(x=>x.id===S.book.id).n}</span><span class="muted">${pairLiveTimer('book',S.book.left)}</span></div>`:""}
         </div>
         <div class="card pad"><div class="sect-t">소지품</div>
           ${Object.keys(S.inv).filter(k=>S.inv[k]>0).length?Object.keys(S.inv).filter(k=>S.inv[k]>0).map(k=>{
@@ -3939,7 +3966,7 @@ else setTimeout(()=>init(),0);
 <script src="social.js?v=20261104-combat-ui3"></script>
 <script src="part8.js?v=20261104-alert-clear-fix1"></script>
 <script src="part9.js"></script>
-<script src="part10.js?v=20261104-products2"></script>
+<script src="part10.js?v=20261104-shop-dedupe1"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>
 <script src="part12.js?v=20261104-alert-clear-fix1"></script>
 <script src="market.js?v=20261104-pair2"></script>
@@ -3949,7 +3976,7 @@ else setTimeout(()=>init(),0);
 <script src="pixel-scenes.js?v=20261104-shop1"></script>
 <script src="pixel-life.js?v=20261104-simple2"></script>
 <script src="balance20.js?v=20261104-raid-visibility1"></script>
-<script src="pair-play.js?v=20261104-wallet-save-fix1"></script>
+<script src="pair-play.js?v=20261104-pair-speed-fix1"></script>
 <script src="auction-live.js?v=20261104-shared-auction1"></script>
 </body>
 </html>
