@@ -1,0 +1,271 @@
+{
+  "assumptions": "정규화 모형: 동일한 두 캐릭터, 각 유효 능력치 동일, 추가 장비 옵션/주문/치유 보너스 없음. 실제 14일 성장 시뮬레이션 아님.",
+  "profiles": [
+    {
+      "effective_stats": 3,
+      "build": "파괴",
+      "members": 1,
+      "dps": 1600,
+      "hp": 1870,
+      "tower": 0,
+      "guard": 0,
+      "arena_first_season": 0
+    },
+    {
+      "effective_stats": 10,
+      "build": "파괴",
+      "members": 1,
+      "dps": 7779,
+      "hp": 5020,
+      "tower": 3,
+      "guard": 1,
+      "arena_first_season": 3
+    },
+    {
+      "effective_stats": 20,
+      "build": "파괴",
+      "members": 1,
+      "dps": 25080,
+      "hp": 9520,
+      "tower": 18,
+      "guard": 15,
+      "arena_first_season": 7
+    },
+    {
+      "effective_stats": 40,
+      "build": "파괴",
+      "members": 1,
+      "dps": 114140,
+      "hp": 18520,
+      "tower": 36,
+      "guard": 33,
+      "arena_first_season": 13
+    },
+    {
+      "effective_stats": 70,
+      "build": "파괴",
+      "members": 1,
+      "dps": 557307,
+      "hp": 32020,
+      "tower": 54,
+      "guard": 50,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 100,
+      "build": "파괴",
+      "members": 1,
+      "dps": 1867320,
+      "hp": 45520,
+      "tower": 67,
+      "guard": 61,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 3,
+      "build": "수호",
+      "members": 1,
+      "dps": 1429,
+      "hp": 2207,
+      "tower": 0,
+      "guard": 0,
+      "arena_first_season": 0
+    },
+    {
+      "effective_stats": 10,
+      "build": "수호",
+      "members": 1,
+      "dps": 6946,
+      "hp": 5924,
+      "tower": 4,
+      "guard": 10,
+      "arena_first_season": 3
+    },
+    {
+      "effective_stats": 20,
+      "build": "수호",
+      "members": 1,
+      "dps": 22393,
+      "hp": 11234,
+      "tower": 18,
+      "guard": 24,
+      "arena_first_season": 8
+    },
+    {
+      "effective_stats": 40,
+      "build": "수호",
+      "members": 1,
+      "dps": 101911,
+      "hp": 21854,
+      "tower": 36,
+      "guard": 41,
+      "arena_first_season": 13
+    },
+    {
+      "effective_stats": 70,
+      "build": "수호",
+      "members": 1,
+      "dps": 497595,
+      "hp": 37784,
+      "tower": 54,
+      "guard": 57,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 100,
+      "build": "수호",
+      "members": 1,
+      "dps": 1667250,
+      "hp": 53714,
+      "tower": 68,
+      "guard": 68,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 3,
+      "build": "파괴",
+      "members": 2,
+      "dps": 3200,
+      "hp": 3740,
+      "tower": 0,
+      "guard": 0,
+      "arena_first_season": 0
+    },
+    {
+      "effective_stats": 10,
+      "build": "파괴",
+      "members": 2,
+      "dps": 15558,
+      "hp": 10040,
+      "tower": 6,
+      "guard": 3,
+      "arena_first_season": 4
+    },
+    {
+      "effective_stats": 20,
+      "build": "파괴",
+      "members": 2,
+      "dps": 50160,
+      "hp": 19040,
+      "tower": 20,
+      "guard": 18,
+      "arena_first_season": 8
+    },
+    {
+      "effective_stats": 40,
+      "build": "파괴",
+      "members": 2,
+      "dps": 228280,
+      "hp": 37040,
+      "tower": 38,
+      "guard": 35,
+      "arena_first_season": 14
+    },
+    {
+      "effective_stats": 70,
+      "build": "파괴",
+      "members": 2,
+      "dps": 1114614,
+      "hp": 64040,
+      "tower": 56,
+      "guard": 52,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 100,
+      "build": "파괴",
+      "members": 2,
+      "dps": 3734640,
+      "hp": 91040,
+      "tower": 70,
+      "guard": 64,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 3,
+      "build": "수호",
+      "members": 2,
+      "dps": 2858,
+      "hp": 4414,
+      "tower": 0,
+      "guard": 0,
+      "arena_first_season": 0
+    },
+    {
+      "effective_stats": 10,
+      "build": "수호",
+      "members": 2,
+      "dps": 13892,
+      "hp": 11848,
+      "tower": 6,
+      "guard": 13,
+      "arena_first_season": 4
+    },
+    {
+      "effective_stats": 20,
+      "build": "수호",
+      "members": 2,
+      "dps": 44786,
+      "hp": 22468,
+      "tower": 21,
+      "guard": 26,
+      "arena_first_season": 8
+    },
+    {
+      "effective_stats": 40,
+      "build": "수호",
+      "members": 2,
+      "dps": 203822,
+      "hp": 43708,
+      "tower": 39,
+      "guard": 43,
+      "arena_first_season": 14
+    },
+    {
+      "effective_stats": 70,
+      "build": "수호",
+      "members": 2,
+      "dps": 995190,
+      "hp": 75568,
+      "tower": 57,
+      "guard": 59,
+      "arena_first_season": 15
+    },
+    {
+      "effective_stats": 100,
+      "build": "수호",
+      "members": 2,
+      "dps": 3334500,
+      "hp": 107428,
+      "tower": 70,
+      "guard": 71,
+      "arena_first_season": 15
+    }
+  ],
+  "raid_budgets": [
+    {
+      "member_dps": 5000,
+      "weekly_damage": 126000000,
+      "goal": 250000000,
+      "stretch": 1000000000
+    },
+    {
+      "member_dps": 10000,
+      "weekly_damage": 252000000,
+      "goal": 250000000,
+      "stretch": 1000000000
+    },
+    {
+      "member_dps": 25000,
+      "weekly_damage": 630000000,
+      "goal": 250000000,
+      "stretch": 1000000000
+    },
+    {
+      "member_dps": 50000,
+      "weekly_damage": 1260000000,
+      "goal": 250000000,
+      "stretch": 1000000000
+    }
+  ]
+}

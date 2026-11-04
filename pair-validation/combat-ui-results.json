@@ -1,0 +1,92 @@
+{
+  "errors": [],
+  "checks": "two-session shared wallet/course/towers/run/arena; high-DPS low-HP hold loss; star/parenthesis/nested action parser and HTML escaping; hex valid/invalid; navigation unclipped; chat filters unwrapped; actual rpboard/pairboard desktop/mobile layouts",
+  "layouts": [
+    {
+      "view": "plaza",
+      "width": 1440,
+      "overflow": false,
+      "hero": [
+        {
+          "width": 828,
+          "height": 298,
+          "parent": 828,
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "view": "guard",
+      "width": 1440,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "wboss",
+      "width": 1440,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "arena",
+      "width": 1440,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "rpboard",
+      "width": 1440,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "pairboard",
+      "width": 1440,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "plaza",
+      "width": 390,
+      "overflow": false,
+      "hero": [
+        {
+          "width": 360,
+          "height": 218,
+          "parent": 360,
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "view": "guard",
+      "width": 390,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "wboss",
+      "width": 390,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "arena",
+      "width": 390,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "rpboard",
+      "width": 390,
+      "overflow": false,
+      "hero": []
+    },
+    {
+      "view": "pairboard",
+      "width": 390,
+      "overflow": false,
+      "hero": []
+    }
+  ]
+}
