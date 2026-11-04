@@ -38,10 +38,22 @@
       return template.innerHTML;
     };
   });
+  // Decorative weather stays inside the artwork, below the existing controls.
+  function plazaWeather(){
+    const kind=['rain','fog','redmoon','ash','neon','calm'][S.weather]||'calm';
+    const count={rain:28,fog:3,redmoon:0,ash:18,neon:10,calm:8}[kind];
+    const clock=Date.now()/1000;
+    const particles=Array.from({length:count},(_,i)=>{
+      const duration=kind==='rain'?0.7+(i%5)*0.12:kind==='fog'?24+i*6:kind==='neon'?5+i%4:10+i%7;
+      const delay=-((clock+i*1.73)%duration);
+      return `<i style="--x:${(i*37+7)%100}%;--y:${(i*23+13)%100}%;--duration:${duration}s;--delay:${delay.toFixed(3)}s"></i>`;
+    }).join('');
+    return `<div class="plaza-weather plaza-weather-${kind}" style="--phase:-${(clock%12).toFixed(3)}s" aria-hidden="true">${particles}</div>`;
+  }
   // The plaza already contains a weather/time overlay and map link: retain them.
   const originalScene=sceneSVG;
   sceneSVG=function () {
-    return `<div class="pixel-plaza-art" role="img" aria-label="연등과 달빛이 밝히는 사무전 광장"><img src="${root}plaza.png?v=20261104-simple2" alt="" width="1536" height="1024" decoding="async" onerror="this.style.display='none'">${originalScene()}</div>`;
+    return `<div class="pixel-plaza-art" role="img" aria-label="연등과 달빛이 밝히는 사무전 광장"><img src="${root}plaza.png?v=20261104-simple2" alt="" width="1536" height="1024" decoding="async" onerror="this.style.display='none'">${originalScene()}${plazaWeather()}</div>`;
   };
 })();
 
