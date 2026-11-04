@@ -3415,7 +3415,6 @@ openSettings=function(){
     <div class="tiny muted">${boardOn()?`연결됨 · <span style="color:var(--jade)">${esc(S.board.url.slice(0,46))}…</span>`
       :"연결되지 않음 — 내 브라우저에만 저장됩니다"}</div>
     <div class="row" style="margin-top:8px">
-      <button class="btn" onclick="closeModal();boardConnect()">건의함 연결</button>
       <button class="btn" onclick="closeModal();go('board')">건의함 열기</button></div>`;
   const body=document.querySelector(".modal .mbody");
   if(body) body.appendChild(box);
@@ -3987,7 +3986,6 @@ openSettings=function(){
     <div class="tiny muted">${sbOn()?`연결됨 · <span style="color:var(--jade)">${esc(S.sb.url)}</span><br>학생 번호 ${esc(S.sb.id)}`
       :"연결되지 않음 — 학생 명부·랭킹·함께 가기가 혼자 모드입니다"}</div>
     <div class="row" style="margin-top:8px">
-      <button class="btn" onclick="closeModal();sbConnect()">공유 기록 연결</button>
       ${sbOn()?`<button class="btn" onclick="syncUp(true);syncRoster(true);toast('기록을 올렸습니다.')">지금 올리기</button>`:""}
     </div>`;
   body.appendChild(box);
