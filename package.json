@@ -2,7 +2,7 @@
   "name": "mumyeongjangya-game",
   "private": true,
   "scripts": {
-    "test": "node tests/check-files.cjs && node tests/account-network.cjs && node tests/pair-save.cjs && node tests/raid-health.cjs && node tests/social-poll.cjs && node tests/ledger.cjs && node tests/clubs.cjs && node tests/clubs-expand.cjs && node tests/merchant-levels.cjs && node tests/arena-seasons.cjs && node tests/relation-edit.cjs",
+    "test": "node tests/check-files.cjs && node tests/account-network.cjs && node tests/pair-save.cjs && node tests/raid-health.cjs && node tests/social-poll.cjs && node tests/ledger.cjs && node tests/shell.cjs && node tests/clubs.cjs && node tests/clubs-expand.cjs && node tests/merchant-levels.cjs && node tests/arena-seasons.cjs && node tests/relation-edit.cjs",
     "test:browser": "node tests/browser-smoke.cjs",
     "test:combat": "python3 tests/combat-model.py",
     "test:sql": "node tests/pair-sql.cjs",
@@ -12,7 +12,8 @@
     "test:clubs-browser": "node tests/clubs-browser.cjs",
     "test:merchant": "node tests/merchant-levels.cjs",
     "test:merchant-browser": "node tests/merchant-browser.cjs",
-    "test:arena": "node tests/arena-seasons.cjs"
+    "test:arena": "node tests/arena-seasons.cjs",
+    "test:shell": "node tests/shell.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1",
