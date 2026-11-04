@@ -760,7 +760,27 @@ balanceBossData=function(){if(!PJ.ready)return oldBossData();const mine=PJ.snaps
  const players=[...map.values()].sort((a,b)=>b.wb_dmg-a.wb_dmg);return {players,total:players.reduce((n,r)=>n+Number(r.wb_dmg),0),week};};
 function card(){
  const own=power(),p=PJ.ready?peerView():null;
- return `<section class="pair-team-card"><div class="pair-team-top"><b>두 사람의 공동 여정</b><button class="btn sm" title="공동 기록 새로 고침" aria-label="공동 기록 새로 고침" onclick="PAIR_PLAY.lastPoll=0;PAIR_PLAY.refresh()" style="margin-left:auto">↻</button><span class="pair-team-status ${PJ.error?'pair-sync-error':''}">${PJ.ready?(PJ.busy?'공동 기록 반영 중':PJ.pending.length?'공동 기록 저장 대기':'공동 지갑 연결됨'):linked()?'연결 준비 중':'파트너를 기다리는 중'}</span></div><div class="pair-team-members"><div class="pair-team-person"><b>${esc(S.name)}</b><span class="pair-team-state">내 전투력 ${nf(own)}</span></div><span class="pair-team-link">∞</span><div class="pair-team-person"><b>${esc(p?.name||pairName()||'나의 파트너')}</b><span class="pair-team-state">${p?'파트너 전투력 '+nf(p.power):'페어를 맺으면 함께 출발합니다'}</span></div></div><div class="pair-team-state" style="margin-top:9px">파장·지식·재화·재료·바랑 공동 사용 · 수업·수행·착용 장비는 각자 · 시험·의뢰·탑은 한 사람이 진행하면 함께 반영</div>${PJ.error?`<div class="pair-team-state pair-sync-error">${esc(PJ.error)}</div>`:''}</section>`;
+ const status=PJ.ready?(PJ.busy?'공동 기록 반영 중':PJ.pending.length?'공동 기록 저장 대기':'공동 지갑 연결됨')
+   :linked()?'연결 준비 중':'파트너를 기다리는 중';
+ // 짝이 아직 없으면 이름 자리에 안내를 둡니다. 빈 상자를 남기지 않습니다.
+ const partner=p
+   ? `<span class="pair-team-name">${esc(p.name)}</span><span class="pair-team-pow">${nf(p.power)}</span>`
+   : `<span class="pair-team-wait">${esc(pairName()||'페어를 맺으면 함께 출발합니다')}</span>`;
+ return `<section class="pair-team-card">`
+  +`<div class="pair-team-row">`
+   +`<div class="pair-team-duo">`
+    +`<span class="pair-team-link" aria-hidden="true">∞</span>`
+    +`<span class="pair-team-name">${esc(S.name)}</span><span class="pair-team-pow">${nf(own)}</span>`
+    +`<span class="pair-team-sep">·</span>${partner}`
+   +`</div>`
+   +`<div class="pair-team-ctl">`
+    +`<button class="btn sm ghost" title="공동 기록 새로 고침" aria-label="공동 기록 새로 고침" onclick="PAIR_PLAY.lastPoll=0;PAIR_PLAY.refresh()">↻</button>`
+    +`<span class="pair-team-status ${PJ.error?'pair-sync-error':''}">${status}</span>`
+   +`</div>`
+  +`</div>`
+  +`<div class="pair-team-note">파장·지식·재화·재료·바랑 공동 · 수업·수행·착용 장비 각자 · 시험·의뢰·탑은 한 사람이 진행하면 함께 반영</div>`
+  +(PJ.error?`<div class="pair-team-note pair-sync-error">${esc(PJ.error)}</div>`:``)
+ +`</section>`;
 }
 PJ.refresh=()=>{PJ.lastPoll=0;return init();};
 for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready&&v==='quest')html=html.replace('30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.','진행과 보상은 5분마다 묶어서 반영합니다. 귀환·완료는 바로 정산하며, 접속하지 않은 시간도 다음 갱신 때 합산합니다.');if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
