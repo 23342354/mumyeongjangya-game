@@ -157,9 +157,28 @@ window.balanceClaimBoss=function(stretch=false){
  b.bossClaims.push(key);b.bossClaims=b.bossClaims.slice(-16);S.lotus+=reward;
  toast(`주간 공동 목표 달성 · 참여 보상 연등 +${reward}`,'good');save();renderMain();
 };
+// 새로고침 시 쓰기 -> 읽기 순서를 보장하고, 각각의 실패 상태를 화면에 드러냅니다.
+window.raidRefresh=function(){
+ if(!sbOn()){toast('공유 기록 서버가 연결되지 않았습니다. 설정을 확인해 주세요.','bad');return Promise.resolve();}
+ return Promise.resolve(syncUp(true)).then(()=>syncRoster(true));
+};
 VIEWS.wboss=function(){
  const d=balanceBossData(),b=S.balance20,c=C(),claimed=b.bossClaims.includes(d.week),stretchClaimed=b.bossClaims.includes(d.week+':stretch');
- return head('20인 공동 목표 · 매주 월요일 0시 갱신',ic('oni')+' 업귀 토벌','실제 참여 '+d.players.length+'명')+`<div class="card pad"><div class="sect-t">이번 주 공동 토벌</div><div class="tiny muted">명부에 동기화된 이번 주 실제 피해량을 합산합니다. 개인 기록은 즉시 반영되고 다른 학생 기록은 새로 고침 시 반영됩니다.</div><div class="bar hp" style="margin:12px 0"><i style="width:${Math.min(100,d.total/B.bossGoal*100)}%"></i></div><div class="spread tiny"><span>${nf(d.total)} / ${nf(B.bossGoal)}</span><span>내 피해 ${nf(S.wb.dmg)}</span></div><div class="row" style="margin-top:12px"><button class="btn pri" ${S.wb.tickets<1?'disabled':''} onclick="hitBoss()">도전권 ${S.wb.tickets}/3 · 공격</button><button class="btn" onclick="syncUp(true).then(()=>syncRoster(true))">기록 새로 고침</button><button class="btn" ${claimed||d.total<B.bossGoal||!S.wb.dmg?'disabled':''} onclick="balanceClaimBoss()">${claimed?'보상 수령 완료':'공동 달성 연등 20 받기'}</button><button class="btn" ${stretchClaimed||d.total<B.bossStretchGoal||!S.wb.dmg?'disabled':''} onclick="balanceClaimBoss(true)">${stretchClaimed?'추가 목표 수령 완료':'추가 목표 연등 10 받기'}</button></div><div class="tiny muted" style="margin-top:10px">도전권 5시간마다 충전 · 최대 3장 · 예상 피해 ${nf(Math.round(c.dps*30*(1+mod('boss'))))}. 추가 공동 목표 ${nf(B.bossStretchGoal)} 피해 달성 시 연등 10을 더 받을 수 있습니다. 공유 기록을 연결하지 않으면 내 피해만 표시됩니다. 운영 서버의 최종 집계와 차이가 생길 수 있습니다.</div></div><div class="card pad" style="margin-top:12px"><div class="sect-t">실제 참여 기록</div>${d.players.map((r,i)=>`<div class="spread tiny"><span>${i+1}. ${esc(r.name||'이름 없음')}</span><b>${nf(r.wb_dmg)}</b></div>`).join('')||'<div class="tiny muted">아직 참여 기록이 없습니다.</div>'}</div>`;
+ const sb=S.sb||{},connected=sbOn(),fetchStatus=sb.raidFetchState||'idle';
+ const boss=WBOSS[Math.abs(Math.floor(Date.parse(d.week+'T00:00:00Z')/604800000))%WBOSS.length];
+ const hitPlayers=d.players.map((r,i)=>`<div class="spread tiny" style="padding:7px 0;${i?'border-top:1px solid var(--line)':''}"><span>${i+1}. ${esc(r.name||'이름 없음')}</span><b>${nf(r.wb_dmg)}</b></div>`).join('');
+ let state='';
+ if(!connected) state='<div class="tiny" style="color:var(--gold);margin-top:10px">공유 기록 서버가 연결되지 않았습니다. 현재는 내 공격 기록만 표시됩니다. 설정에서 공유 기록 연결을 확인해 주세요.</div>';
+ else if(fetchStatus==='loading') state='<div class="tiny muted" style="margin-top:10px">다른 학생들의 기록을 서버에서 불러오는 중입니다…</div>';
+ else if(fetchStatus==='error') state=`<div class="tiny" style="color:var(--red);margin-top:10px">공동 기록을 불러오지 못했습니다. 연결 상태와 Supabase 설정을 확인한 뒤 다시 새로 고쳐 주세요. ${esc(sb.raidFetchError||'')}</div>`;
+ else if(fetchStatus==='idle'&&!sb.rosterAt) state='<div class="tiny muted" style="margin-top:10px">공동 기록을 아직 조회하지 않았습니다. 새로 고침을 눌러 실제 참여 기록을 확인해 주세요.</div>';
+ else if(!d.players.length) state='<div class="tiny muted" style="margin-top:10px">이번 주에는 아직 공격 기록이 없습니다. 도전권을 사용해 업귀를 공격하면 첫 피해가 기록됩니다.</div>';
+ const publishError=connected&&sb.raidPublishState==='error'
+  ?`<div class="tiny" style="color:var(--red);margin-top:10px">내 공격 기록을 서버에 저장하지 못했습니다. 다른 학생에게 피해량이 표시되지 않을 수 있습니다. ${esc(sb.raidPublishError||'')}</div>`:'';
+ return head('20인 공동 목표 · 매주 월요일 0시(KST) 갱신',ic('oni')+' 업귀 토벌',`실제 참여 ${d.players.length}명`)+
+ `<div class="card pad" style="margin-bottom:12px"><div class="row" style="align-items:center;gap:14px"><div style="font-size:34px;line-height:1">${boss.e}</div><div style="flex:1;min-width:0"><div class="tiny" style="color:var(--gold)">이번 주 업귀 · Ⅴ등급 재해</div><div style="font-weight:700;margin:3px 0">${esc(boss.n)}</div><div class="tiny muted">${esc(boss.d)}</div></div></div></div>`+
+ `<div class="card pad"><div class="sect-t">이번 주 공동 토벌</div><div class="tiny muted">실제 공격 피해만 합산됩니다. 내 피해는 즉시 표시되며, 다른 학생 기록은 서버 조회 후 반영됩니다.</div><div class="bar hp" style="margin:12px 0"><i style="width:${Math.min(100,d.total/B.bossGoal*100)}%"></i></div><div class="spread tiny"><span>${nf(d.total)} / ${nf(B.bossGoal)}</span><span>내 피해 ${nf(S.wb.dmg)}</span></div>${state}${publishError}<div class="row" style="margin-top:12px"><button class="btn pri" ${S.wb.tickets<1?'disabled':''} onclick="hitBoss()">도전권 ${S.wb.tickets}/${window.PAIR_PLAY?.ready?6:3} · 공격</button><button class="btn" onclick="raidRefresh()">기록 새로 고침</button><button class="btn" ${claimed||d.total<B.bossGoal||!S.wb.dmg?'disabled':''} onclick="balanceClaimBoss()">${claimed?'보상 수령 완료':'공동 달성 연등 20 받기'}</button><button class="btn" ${stretchClaimed||d.total<B.bossStretchGoal||!S.wb.dmg?'disabled':''} onclick="balanceClaimBoss(true)">${stretchClaimed?'추가 목표 수령 완료':'추가 목표 연등 10 받기'}</button></div><div class="tiny muted" style="margin-top:10px">도전권 5시간마다 충전 · ${window.PAIR_PLAY?.ready?'페어 최대 6장':'최대 3장'} · 예상 피해 ${nf(Math.round(c.dps*30*(1+mod('boss'))))}. 추가 공동 목표 ${nf(B.bossStretchGoal)} 피해 달성 시 연등 10을 더 받을 수 있습니다. 주간 기록은 실제 피해량만 계산하며 운영 서버의 최종 집계와 차이가 생길 수 있습니다.</div></div>`+
+ `<div class="card pad" style="margin-top:12px"><div class="sect-t">실제 참여 기록</div>${hitPlayers||(!connected?'공유 서버가 연결되면 다른 참가자가 표시됩니다.':fetchStatus==='loading'?'서버 기록을 확인하는 중입니다…':fetchStatus==='error'?'서버 기록 조회에 실패했습니다. 위 오류를 확인해 주세요.':'이번 주 첫 공격을 기다리고 있습니다.')}</div>`;
 };
 for(const key of ['class','exam','research','fishv','hallv']){
  const original=VIEWS[key];if(!original)continue;

@@ -41,7 +41,7 @@ function sbSend(method, path, body, prefer){
 }
 function sbErr(e){
   S.sb.state="err"; S.sb.err=String(e&&e.message||e);
-  if(["roster","rank","hallv","tower","guard","board"].includes(VIEW)) renderMain();
+  if(["roster","rank","hallv","tower","guard","board","wboss"].includes(VIEW)) renderMain(true);
 }
 
 /* ─── 내 기록 올리기 ─── */
@@ -73,19 +73,36 @@ function syncUp(force){
   if(!force && S.sb.upAt && now-S.sb.upAt<90000) return Promise.resolve();
   S.sb.upAt=now;
   return sbSend("POST","students?on_conflict=id", [myRecord()], "resolution=merge-duplicates,return=minimal")
-    .then(()=>{ S.sb.state="ok"; S.sb.err=""; })
-    .catch(sbErr);
+    .then(()=>{ S.sb.state="ok"; S.sb.err=""; S.sb.raidPublishState="ok"; S.sb.raidPublishError=""; })
+    .catch(e=>{
+      S.sb.upAt=0; // 저장 실패를 성공한 동기화로 취급하지 않습니다.
+      S.sb.raidPublishState="error";
+      S.sb.raidPublishError=String(e&&e.message||e).slice(0,180);
+      sbErr(e);
+    });
 }
 /* ─── 명부 불러오기 ─── */
 function syncRoster(force){
-  if(!sbOn()) return;
+  if(!sbOn()) return Promise.resolve();
   const now=Date.now();
-  if(!force && S.sb.rosterAt && now-S.sb.rosterAt<30000) return;
-  S.sb.rosterAt=now;
-  sbGet("students?select=*&order=power.desc&limit=200")
-    .then(rows=>{ S.sb.roster=rows||[]; S.sb.state="ok"; S.sb.err="";
-      if(["roster","rank","hallv","wboss"].includes(VIEW)) renderMain(); save(); })
-    .catch(sbErr);
+  if(!force && S.sb.rosterAt && now-S.sb.rosterAt<30000) return Promise.resolve();
+  const raid=VIEW==="wboss";
+  if(raid){S.sb.raidFetchState="loading";S.sb.raidFetchError="";renderMain(true);}
+  return sbGet("students?select=*&order=power.desc&limit=200")
+    .then(rows=>{
+      S.sb.roster=rows||[];
+      S.sb.rosterAt=Date.now();
+      S.sb.raidFetchState="ok";S.sb.raidFetchError="";
+      S.sb.state="ok"; S.sb.err="";
+      if(["roster","rank","hallv","wboss"].includes(VIEW)) renderMain(true);
+      save();
+    })
+    .catch(e=>{
+      S.sb.rosterAt=0; // 실패 시 새로 고침을 즉시 다시 시도할 수 있게 합니다.
+      S.sb.raidFetchState="error";
+      S.sb.raidFetchError=String(e&&e.message||e).slice(0,180);
+      sbErr(e);
+    });
 }
 /* ─── 방 목록 ─── */
 function syncRooms(force){
@@ -514,6 +531,8 @@ go=function(v){
   _go6(v);
   if(!sbOn()) return;
   if(v==="roster"||v==="rank"||v==="hallv") { syncUp(false); syncRoster(false); }
+  // 공동토벌은 페이지 진입 즉시 실제 러너 피해량을 서버에서 읽습니다.
+  if(v==="wboss") syncUp(false).then(()=>syncRoster(true));
   if(v==="hallv") pairFetch(true);
   if(v==="tower" || v==="guard" || (v==="quest" && S.sb?.myRoom)) syncRooms(true);
 };
