@@ -805,7 +805,7 @@ window.LEDGER_API={push:ledgerPush,rows:ledgerRows,state:LEDGER};
  * 매시 00~15분 KST: 세 가지 귀속 법구가 모든 러너에게 공통으로 등장합니다.
  * 입찰, 환불, 낙찰 수령은 Supabase 함수가 원자적으로 처리합니다.
  * 로컬 가상 NPC 입찰/임의 개시/임의 마감 기능은 비활성화합니다. */
-const LIVE_AUCTION={data:null,loading:false,busy:false,at:0,error:"",offset:0};
+const LIVE_AUCTION={data:null,loading:false,busy:false,at:0,error:"",offset:0,band:null};
 function auctionConnected(){return typeof marketConnected==="function" && marketConnected();}
 function auctionRpc(action,lot,expected,request){
   if(!auctionConnected())return Promise.reject(new Error("실제 경매는 계정 로그인 및 Supabase 연결이 필요합니다."));
@@ -839,7 +839,9 @@ async function auctionFetch(force=false){
   if(LIVE_AUCTION.loading||(!force&&Date.now()-LIVE_AUCTION.at<8000))return;
   LIVE_AUCTION.loading=true;
   try{
-    const r=await auctionRpc("snapshot");
+    const actor=ACCT.id;
+    const r=await auctionRpc("snapshot",LIVE_AUCTION.band===null?Math.floor(Math.max(1,Number(S.lvl)||1)/10)*10:LIVE_AUCTION.band);
+    if(ACCT.id!==actor)return;
     if(!r||r.ok!==true)throw new Error("경매 정보 응답을 확인할 수 없습니다.");
     LIVE_AUCTION.offset=Date.parse(r.server_at)-Date.now();
     LIVE_AUCTION.data=r;
@@ -896,7 +898,12 @@ function auctionPlaceBid(id,expected){
   auctionCommit("bid",id,Number(expected));
 }
 function auctionClaim(id){auctionCommit("claim",id,null);}
-function auctionTierName(t){return ({1:"신입생",2:"중급생",3:"상급생"})[Number(t)]||"경매";}
+function auctionBandName(b){return Number(b)===-1?'기존 경매':Number(b)===0?'1~9레벨':`${Number(b)}레벨대 (${Number(b)}~${Number(b)+9})`;}
+function auctionTierName(t,band){const grade=({1:'희귀',2:'영웅',3:'전설'})[Number(t)]||'경매';return band===undefined?grade:auctionBandName(band)+' · '+grade;}
+function auctionSelectBand(band){
+ if(LIVE_AUCTION.loading||LIVE_AUCTION.busy)return toast('경매 정보를 반영한 뒤 레벨대를 바꿔 주세요.');
+ LIVE_AUCTION.band=band;LIVE_AUCTION.data=null;LIVE_AUCTION.at=0;renderMain();auctionFetch(true);
+}
 function auctionViewTime(iso){
   const t=Date.parse(iso);return Number.isFinite(t)?new Date(t).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Seoul"}):"";
 }
@@ -913,8 +920,9 @@ VIEWS.merchant=()=>{
   return headHTML+`
    <div class="card pad" style="margin-bottom:13px">
      <div class="spread" style="gap:10px;flex-wrap:wrap"><div><b>매시 00분 ~ 15분</b> <span class="tag g">실제 러너 입찰</span>
-       <div class="tiny muted" style="margin-top:5px">모든 러너에게 같은 세 개의 법구가 공개됩니다. 서버 시각 기준으로 마감되며, 끝나기 직전 입찰에는 제한적으로 시간이 연장됩니다.</div></div>
+       <div class="tiny muted" style="margin-top:5px">같은 레벨대를 보는 러너끼리 공통 법구에 입찰합니다. 레벨대마다 희귀·영웅·전설을 한 점씩 진열하며, 해당 구간 안의 레벨로 생성됩니다. 마감 직전 입찰에는 제한적으로 시간이 연장됩니다.</div></div>
        <button class="btn sm" onclick="auctionFetch(true)">↻ 입찰 현황 갱신</button></div>
+     ${Number(d.version)>=2?`<div class="row" style="margin-top:12px;gap:8px"><label for="auction-level-band">진열 레벨대</label><select class="inp" id="auction-level-band" aria-label="떠돌이 상인 레벨대" onchange="this.blur();auctionSelectBand(Number(this.value))">${(d.bands||[]).map(b=>`<option value="${Number(b.band)}" ${Number(d.level_band)===Number(b.band)?'selected':''}>${auctionBandName(b.band)}</option>`).join('')}</select><button class="btn sm" onclick="auctionSelectBand(null)">내 레벨대 보기</button><span class="tiny muted">내 Lv ${S.lvl} · ${auctionBandName(d.level_band)} 진열 중</span></div>`:'<div class="tiny muted" style="margin-top:8px">레벨대별 진열은 상인 서버 업데이트를 적용하면 열립니다.</div>'}
      <div class="tiny muted" style="margin-top:8px">보유 륜 <b style="color:var(--gold)">${nf(S.rin)}</b> · 최고가 입찰 시 전액 보관 · 다른 러너가 입찰하면 자동 환불 · 낙찰 뒤 직접 수령</div>
    </div>
    ${LIVE_AUCTION.error?`<div class="tiny" style="color:var(--red);margin-bottom:12px">${esc(LIVE_AUCTION.error)}</div>`:""}
@@ -923,7 +931,7 @@ VIEWS.merchant=()=>{
        const mine=l.mine,step=Math.max(500,Math.ceil(Number(l.bid_amount||0)*.1));
        const need=Number(l.bid_amount)>0?Number(l.bid_amount)+step:Number(l.start_price);
        const can=!mine&&Number(S.rin)>=need&&!LIVE_AUCTION.busy;
-       return `<article class="card pad auction-lot"><div class="spread"><span class="tag j">${auctionTierName(l.tier)} 경매</span><span class="tiny muted">${Number(l.bid_count||0)}회 입찰</span></div>
+       return `<article class="card pad auction-lot"><div class="spread"><span class="tag j">${auctionTierName(l.tier,l.level_band)} 경매</span><span class="tiny muted">${Number(l.bid_count||0)}회 입찰</span></div>
         <h3 style="color:${G.c};margin:10px 0 4px">${esc(l.item_name)}</h3>
         <div class="tiny muted">${GRADES[item.grade]?.n||"희귀"} · Lv ${Number(item.lv||1)} · ${SLOTS.find(x=>x.k===item.slot)?.n||"법구"} · 귀속</div>
         <div class="tiny" style="color:var(--jade);margin:8px 0;min-height:42px">${gearLine(item)}</div>
@@ -935,14 +943,14 @@ VIEWS.merchant=()=>{
        </article>`}).join("")}</div>`:
      `<div class="card pad" style="margin-bottom:14px"><div class="sect-t">지금은 다음 경매를 준비하고 있습니다.</div>
        <div>다음 개장까지 <b style="color:var(--gold)" data-auction-until="${esc(d.next_at)}">${auctionDeadlineText(d.next_at)}</b></div>
-       <div class="tiny muted" style="margin-top:7px">다음 개장: ${auctionViewTime(d.next_at)} (한국 시간) · 접속한 모든 러너가 동시에 경쟁합니다.</div></div>`}
+       <div class="tiny muted" style="margin-top:7px">다음 개장: ${auctionViewTime(d.next_at)} (한국 시간) · 선택한 레벨대의 러너들과 경쟁합니다.</div></div>`}
    ${pend.length?`<div class="card pad" style="margin-bottom:14px"><div class="sect-t">낙찰품 수령 대기 · ${pend.length}점</div>
      ${pend.map(p=>`<div class="spread auction-pending"><div><b>${esc(p.item_name)}</b>
-       <div class="tiny muted">${auctionTierName(p.tier)} · 최종 ${nf(p.bid_amount)}륜</div></div>
+       <div class="tiny muted">${auctionTierName(p.tier,p.level_band)} · 최종 ${nf(p.bid_amount)}륜</div></div>
        <button class="btn sm pri" ${LIVE_AUCTION.busy?"disabled":""} onclick="auctionClaim(${Number(p.id)})">바랑에 수령</button></div>`).join("")}</div>`:""}
    <div class="card pad"><div class="spread" style="gap:12px"><div class="sect-t" style="margin:0">최근 낙찰 결과</div><span class="tiny muted">서버 공동 기록</span></div>
       ${hist.length?hist.map(p=>`<div class="spread auction-history tiny"><span><b>${esc(p.item_name)}</b>
-          <span class="muted"> · ${esc(p.winner_name||"낙찰자 없음")}</span></span>
+          <span class="muted"> · ${auctionTierName(p.tier,p.level_band)} · ${esc(p.winner_name||"낙찰자 없음")}</span></span>
           <b>${Number(p.bid_amount)>0?nf(p.bid_amount)+"륜":"유찰"}</b></div>`).join(""):
         '<div class="tiny muted" style="margin-top:8px">아직 종료된 경매가 없습니다.</div>'}
    </div>`;
