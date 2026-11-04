@@ -37,10 +37,34 @@ function alertCatOf(t){
   for(const [re,k] of ALERTRULE) if(re.test(s)) return k;
   return "etc";
 }
+/* 알림 삭제 기준은 계정 저장본 + 기기별 복구 표식에 함께 보관합니다.
+   서버 저장이 잠시 실패해 이전 계정 저장본이 내려와도 삭제한 알림은 복원하지 않습니다. */
+const ALERT_CLEAR_PREFIX="mmjy_alert_clear_v1:";
+function alertClearKey(){
+  const id=(typeof acctIn==="function"&&acctIn()&&typeof ACCT!=="undefined"&&ACCT?.id)
+    ? String(ACCT.id) : "local";
+  return ALERT_CLEAR_PREFIX+id;
+}
+function alertClearedAt(){
+  let local=0;
+  try{local=Number(localStorage.getItem(alertClearKey()))||0;}catch(e){}
+  return Math.max(0,Number(S?.alertClearedAt)||0,local);
+}
 function alertsEnsure(){
   if(!Array.isArray(S.alerts)) S.alerts=[];
   if(typeof S.alertSeen!=="number") S.alertSeen=Date.now();
+  const cutoff=alertClearedAt();
+  if(cutoff){
+    if((Number(S.alertClearedAt)||0)<cutoff) S.alertClearedAt=cutoff;
+    // 서버의 오래된 저장본 또는 늦게 도착한 알림 기록에도 삭제 기준을 적용합니다.
+    if(S.alerts.some(a=>!(Number(a?.at)>cutoff)))
+      S.alerts=S.alerts.filter(a=>Number(a?.at)>cutoff);
+  }
   return S.alerts;
+}
+function alertRememberClear(at){
+  S.alertClearedAt=Math.max(alertClearedAt(),at);
+  try{localStorage.setItem(alertClearKey(),String(S.alertClearedAt));}catch(e){}
 }
 function alertPush(cat, text, view){
   if(!S || !S.made) return;
@@ -106,7 +130,23 @@ function alertGo(id){
 }
 function alertClear(){
   if(!confirm("보관 중인 알림을 모두 지울까요? 소식 기록은 그대로 남습니다.")) return;
-  S.alerts=[]; save(); drawAlerts(); alertBadge();
+  alertsEnsure();
+  const at=Date.now();
+  alertRememberClear(at);
+  S.alerts=[];
+  S.alertSeen=at;
+  // 아직 응답하지 않은 RP 목록 요청이 과거 답글을 다시 알리지 않도록 합니다.
+  if(typeof SOCIAL!=="undefined"&&Array.isArray(SOCIAL.posts))
+    S.alertRpMax=SOCIAL.posts.reduce((max,p)=>Math.max(max,Number(p.id)||0),Number(S.alertRpMax)||0);
+  save();
+  drawAlerts();alertBadge();
+  toast("알림함을 비웠습니다. 새로 도착하는 알림은 계속 받을 수 있어요.","good");
+  // 즉시 계정 서버로 보냅니다. 페어 연결 중에는 기존 공동 플레이 저장 큐를 이용합니다.
+  if(typeof acctIn==="function"&&acctIn()&&typeof acctPush==="function"){
+    Promise.resolve(acctPush(true)).then(ok=>{
+      if(!ok) toast("기기에서는 지워졌지만 서버 저장에 실패했습니다. 계정 저장 상태에서 재시도해 주세요.","bad");
+    }).catch(()=>toast("알림 삭제의 서버 반영을 확인하지 못했습니다. 계정 저장 상태를 확인해 주세요.","bad"));
+  }
 }
 function openAlerts(){ ALERTTAB="all"; ALERTSHOW=12; drawAlerts();
   S.alertSeen=Date.now(); save(); alertBadge(); }
@@ -184,6 +224,8 @@ if(_socialFetch8) socialFetch = async function(force){
         if(S.alertReq.includes(l.id)) return;
         S.alertReq.push(l.id);
         if(S.alertReq.length>200) S.alertReq=S.alertReq.slice(-200);
+        const created=Date.parse(String(l.created_at||""));
+        if(Number.isFinite(created)&&created<=alertClearedAt())return;
         alertPush("soc", `[교류] ${socialName(socialPeer(l))} 님이 ${l.kind==="friend"?"친구":"관계"} 신청을 보냈습니다.`, "rel");
       });
   }catch(e){}
@@ -1726,6 +1768,8 @@ function rpAlertHas(postId){
 }
 function rpAlertEmit(p,rootId){
   if(!p||String(p.author_id)===socialId()||rpAlertHas(p.id))return;
+  const created=Date.parse(String(p.created_at||""));
+  if(Number.isFinite(created)&&created<=alertClearedAt())return;
   const parent=(SOCIAL.posts||[]).find(x=>String(x.id)===String(p.parent_id));
   const msg=`[RP 답글] ${socialName(p.author_id)} 님이 ${parent&&String(parent.author_id)===socialId()?"내 글":"내가 시작한 대화"}에 답글을 남겼습니다.`;
   alertPush("soc",msg,"rpboard");rpAlertRemember(p.id);
@@ -1764,6 +1808,9 @@ async function rpAlertServerSync(){
     let added=0;
     for(const r of found){
       if(Number(r.id)>Number(S.alertRpCursor||0))S.alertRpCursor=Number(r.id);
+      // 삭제 중에 시작한 서버 조회가 늦게 끝나도 옛 답글을 재등록하지 않습니다.
+      const created=Date.parse(String(r.created_at||""));
+      if(Number.isFinite(created)&&created<=alertClearedAt())continue;
       if(rpAlertHas(r.post_id))continue;
       const who=socialName(r.actor_id);
       const direct=(SOCIAL.posts||[]).find(x=>String(x.id)===String(r.parent_id));

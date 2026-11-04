@@ -142,10 +142,14 @@ async function push12PullHistory(force=false){
   let changed=false;
   for(const r of [...data.events].reverse()){
    const id='serverpush-'+r.id;
-   if(known.has(id))continue;
+   const created=Date.parse(String(r.created_at||''));
+   // 서버 기록은 알림함 삭제 이후에도 전송 로그로 남아 있을 수 있습니다.
+   // 매번 현재 삭제 시점을 확인하여, 조회와 삭제가 겹쳐도 예전 알림이 부활하지 않게 합니다.
+   if(!Number.isFinite(created)||created<=alertClearedAt()||known.has(id))continue;
    const category=String(r.category||'etc');
    S.alerts.unshift({i:id,c:category,t:'['+String(r.title||'소식')+'] '+String(r.body||''),
-     at:Date.parse(r.created_at)||Date.now(),v:PUSH12_VIEWS.has(r.destination)?r.destination:''});
+     at:created,v:PUSH12_VIEWS.has(r.destination)?r.destination:''});
+   known.add(id);
    changed=true;
   }
   if(changed){S.alerts.sort((a,b)=>b.at-a.at);S.alerts=S.alerts.slice(0,250);alertBadge();save();}
