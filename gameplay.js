@@ -257,25 +257,25 @@ function clubOpt(key){
 /* mod 확장 */
 const _mod=mod;
 mod=function(key){ return _mod(key)+gearOpt(key)+clubOpt(key)+mealOpt(key); };
-function mealOpt(key){
-  let v=0;
-  ["eat","dess"].forEach(s=>{ const m=S.kit&&S.kit[s]; if(!m||m.left<=0) return;
-    const d=DISHES.find(x=>x.id===m.id); if(d) d.buf.forEach(([k,val])=>{ if(k===key) v+=val; }); });
-  return v;
-}
-/* 식사와 디저트는 버프 목록이 아니라 각자의 칸에 들어갑니다. 그래서 효과는
-   적용되는데 상단 띠에는 보이지 않아, 뒤에 마신 탕약만 뜨는 것처럼 보였습니다.
-   칸에 든 것도 같은 띠에 올려 둡니다. 효과가 겹치는지 눈으로 확인할 수 있습니다. */
-function mealChips(){
-  const out=[];
-  for(const s of ["eat","dess"]){
-    const m=S.kit&&S.kit[s]; if(!m||!(m.left>0)) continue;
-    const d=DISHES.find(x=>x.id===m.id); if(!d) continue;
-    out.push({n:d.n, left:m.left, e:d.e||ic("bento"), c:"var(--gold)",
-      slot:s==="eat"?"식사":"디저트",
-      d:(d.buf||[]).map(([k,v])=>OPTNAME(k)+" +"+Math.round(v*100)+"%").join(" · ")});
+// Keep the two existing save/sync slots, but let either hold any dumpling.
+function activeMeals(){
+  const found=new Map();
+  for(const slot of ['eat','dess']){
+    const meal=S.kit?.[slot],dish=meal&&DISHES.find(d=>d.id===meal.id);
+    if(!dish||!(meal.left>0))continue;
+    const previous=found.get(meal.id);
+    if(!previous||meal.left>previous.meal.left)found.set(meal.id,{slot,meal,dish});
   }
-  return out;
+  return [...found.values()];
+}
+function mealOpt(key){
+  return activeMeals().reduce((sum,{dish})=>sum+dish.buf.reduce((v,[k,n])=>v+(k===key?n:0),0),0);
+}
+function mealRuleText(){return '서로 다른 만두는 분류와 관계없이 2종까지 효과가 합산됩니다. 같은 만두는 효과가 중복되지 않고 시간만 연장됩니다(기본 지속시간의 최대 2배). 세 번째 종류는 교체할 효과를 고르며, 선택 전에는 소모하지 않습니다. 물약·탕약 효과도 함께 적용됩니다.';}
+function mealEatLabel(id){return activeMeals().some(x=>x.meal.id===id)?'시간 연장':activeMeals().length>=2?'효과 선택':'먹기';}
+function mealChips(){
+  return activeMeals().map(({meal,dish},i)=>({n:dish.n,left:meal.left,e:dish.e||ic('bento'),c:'var(--gold)',slot:'만두 '+(i+1),
+    d:dish.buf.map(([k,v])=>OPTNAME(k)+' +'+Math.round(v*100)+'%').join(' · ')}));
 }
 /* effStat 재정의 */
 effStat=function(k){
@@ -553,17 +553,33 @@ function cook(id){
   S.kit.have[id]=(S.kit.have[id]||0)+1;
   toast(`${d.n}을(를) 만들었습니다.`,"good"); renderMain(); save();
 }
-function eat(id){
+function eat(id,replaceSlot,expectedId){
   const d=DISHES.find(x=>x.id===id);
-  if(!d){toast("이전 요리 레시피는 더 이상 사용할 수 없습니다.","bad");return;}
-  if(!(S.kit.have[id]>0)){ toast("보유한 요리가 없습니다.","bad"); return; }
-  S.kit.have[id]--;
-  const slot=d.t==="식사"?"eat":"dess";
-  const cur=S.kit[slot];
-  if(cur&&cur.id===id) cur.left=Math.min(d.dur*2,cur.left+d.dur);
-  else S.kit[slot]={id, left:d.dur};
-  toast(`${d.n} · ${d.buf.map(([k,v])=>OPTNAME(k)+" +"+Math.round(v*100)+"%").join(", ")}`,"good");
-  renderTop(); renderMain(); save();
+  if(!d){toast('이전 요리 레시피는 더 이상 사용할 수 없습니다.','bad');return;}
+  if(!(S.kit.have[id]>0)){toast('보유한 만두가 없습니다.','bad');return;}
+  const meals=activeMeals(),same=meals.find(x=>x.meal.id===id);
+  if(replaceSlot&&(!['eat','dess'].includes(replaceSlot)||expectedId&&S.kit[replaceSlot]?.id!==expectedId)){
+    toast('적용 중인 만두가 바뀌었습니다. 효과를 다시 확인해 주세요.');return;
+  }
+  if(same){
+    if(same.meal.left>=d.dur*2-1){toast('최대 지속시간까지 1분 미만 남아 있어 만두를 소모하지 않았습니다.');return;}
+    S.kit.have[id]--;
+    same.meal.left=Math.min(d.dur*2,Number(same.meal.left)+d.dur);
+    toast(d.n+' · 효과는 그대로, 지속시간을 연장했습니다.','good');
+  }else{
+    const occupied=new Set(meals.map(x=>x.slot));
+    const slot=replaceSlot||['eat','dess'].find(k=>!occupied.has(k));
+    if(!slot){
+      modal('만두 효과 선택',`<p>서로 다른 만두는 최대 2종까지 함께 적용됩니다. <b>${esc(d.n)}</b>를 먹고 어떤 효과를 교체할지 골라 주세요.</p>
+        <div class="tiny muted" style="margin-bottom:12px">아직 만두는 소모하지 않았습니다. 취소하면 현재 효과를 유지합니다.</div>
+        <div class="grid g2">${meals.map(x=>`<div class="sub"><b>${esc(x.dish.n)}</b><p class="tiny muted">${hhmm(x.meal.left)} 남음 · ${x.dish.buf.map(([k,v])=>OPTNAME(k)+' +'+Math.round(v*100)+'%').join(' · ')}</p><button class="btn pri sm" onclick="eat('${id}','${x.slot}','${x.meal.id}')">이 효과 대신 먹기</button></div>`).join('')}</div><button class="btn" style="margin-top:12px" onclick="closeModal()">취소</button>`);
+      return;
+    }
+    S.kit.have[id]--;S.kit[slot]={id,left:d.dur};
+    if(replaceSlot)closeModal();
+    toast(d.n+' · '+d.buf.map(([k,v])=>OPTNAME(k)+' +'+Math.round(v*100)+'%').join(', '),'good');
+  }
+  renderTop();renderMain();save();
 }
 
 /* ═══════════ 모임 ═══════════ */
@@ -1291,8 +1307,8 @@ VIEWS.kitchen=()=>{
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="sect-t">지금 먹은 만두</div>
-      ${slot("eat","든든한 만두")}${slot("dess","달콤한 만두")}
-      <div class="tiny muted" style="margin-top:8px">만두의 효과는 일정 시간 지속됩니다. 같은 만두를 다시 먹으면 시간이 연장되고(최대 2배), 같은 칸의 다른 만두를 먹으면 효과가 교체됩니다. 든든한 만두와 달콤한 만두는 한 종류씩 함께 적용할 수 있습니다.</div>
+      ${slot("eat","만두 1")}${slot("dess","만두 2")}
+      <div class="tiny muted" style="margin-top:8px">${mealRuleText()}</div>
     </div>
     <div class="card pad">
       <div class="sect-t">삼장 선생님의 만두 수업</div>

@@ -144,6 +144,19 @@ const root=path.resolve(__dirname,'..');
  await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle');
  assert.equal(await page.evaluate(()=>S.balance20.fish),60);assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),0);
  assert.equal(commitCalls,atLimit,'daily-cap practice needs no reward save');
+ // Distinct dumplings share both existing meal slots, including two desserts.
+ // Restore the real wall clock after the fishing cooldown time-travel fixture.
+ await page.evaluate(()=>{if(window.realFishingNow)Date.now=window.realFishingNow;});
+ await page.evaluate(async()=>{S.kit.eat=null;S.kit.dess=null;S.kit.have={...S.kit.have,d11:1,d15:1,d6:1};save();await acctPush(true);await eat('d11');await eat('d15');});
+ let sharedMeals=(await db.query("select save->'kit' as kit from accounts where id='bob'")).rows[0].kit;
+ assert.equal(sharedMeals.eat.id,'d11');assert.equal(sharedMeals.dess.id,'d15','different desserts both reach the partner');
+ await page.evaluate(async()=>{await eat('d6');});assert.equal(await page.evaluate(()=>S.kit.have.d6),1,'opening replacement choice does not consume shared food');
+ assert.ok(await page.locator('#modalroot').innerText().then(t=>t.includes('만두 효과 선택')));
+ await page.getByRole('button',{name:'이 효과 대신 먹기',exact:true}).first().click();await page.evaluate(async()=>{await PAIR_PLAY.queue;});
+ sharedMeals=(await db.query("select save->'kit' as kit from accounts where id='bob'")).rows[0].kit;
+ assert.equal(sharedMeals.eat.id,'d6');assert.equal(sharedMeals.dess.id,'d15');assert.equal(sharedMeals.have.d6,0,'only the chosen meal is replaced, once');
+ await page.evaluate(async()=>{S.kit.have.d6=2;save();await acctPush(true);await eat('d6');await eat('d6');});
+ assert.equal(await page.evaluate(()=>S.kit.have.d6),1,'same food at duration cap is not consumed twice');
  await page.evaluate(async()=>{if(CLUBNET.busy)await new Promise(r=>setTimeout(r,100));await clubAction('create',{name:'페어 창고 검증'});});
  assert.equal(await page.evaluate(()=>!!clubCurrent()),true);
  await page.evaluate(async()=>{await clubTransfer('deposit',{kind:'rin',qty:10});});

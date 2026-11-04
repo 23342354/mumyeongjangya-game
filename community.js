@@ -2606,7 +2606,7 @@ VIEWS.kitchen=function(){
    <div class="tiny" style="margin:6px 0;color:var(--jade)">${d.buf.map(([k,v])=>OPTNAME(k)+" +"+Math.round(v*100)+"%").join(' · ')} · ${hhmm(d.dur)}</div>
    <div class="tiny muted">${esc(d.d)}</div>
    <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:8px">${Object.entries(d.mat).map(([n,c])=>`<span class="buffchip" style="${inventory11(n)>=c?'':'color:var(--red)'}">${esc(n)} ${inventory11(n)}/${c}</span>`).join('')}</div>
-   <div class="row" style="margin-top:9px"><button class="btn sm ${can?'pri':''}" ${can?'':'disabled'} onclick="cook('${d.id}')">만두 1개 빚기</button><button class="btn sm" ${(S.kit.have[d.id]||0)>0?'':'disabled'} onclick="eat('${d.id}')">먹기 (${S.kit.have[d.id]||0})</button></div></div>`;
+   <div class="row" style="margin-top:9px"><button class="btn sm ${can?'pri':''}" ${can?'':'disabled'} onclick="cook('${d.id}')">만두 1개 빚기</button><button class="btn sm" ${(S.kit.have[d.id]||0)>0?'':'disabled'} onclick="eat('${d.id}')">${mealEatLabel(d.id)} (${S.kit.have[d.id]||0})</button></div></div>`;
  }).join('');
  const stock=(["뿌리","약초","꽃","열매","어물"]).map(cat=>{
   const rows=Object.entries(S.ingredients).filter(([name,num])=>num>0&&((CROPS.find(x=>x.n===name)?.y||FISHES.find(x=>x.n===name)?.y)===cat));
@@ -2616,7 +2616,7 @@ VIEWS.kitchen=function(){
  <div class="card pad" style="margin-bottom:12px"><div class="sect-t">개별 속재료로 빚는 만두</div>
  <div class="tiny muted">레어·에픽·전설 작물이나 드문 어종을 요구하는 만두일수록 효과가 강해집니다. 재료는 실제 품종별로 소모합니다.</div>
  <div class="row" style="gap:5px;margin-top:10px;flex-wrap:wrap">${fills.map(f=>`<button class="btn sm ${DUMPLING_FILL===f?'pri':''}" onclick="DUMPLING_FILL='${f}';renderMain()">${f==='전체'?'전체':f}</button>`).join('')}</div></div>
- <div class="grid g2" style="margin-bottom:12px"><div class="card pad"><div class="sect-t">지금 먹은 만두</div>${slot('eat','든든한 만두')}${slot('dess','달콤한 만두')}</div>
+ <div class="grid g2" style="margin-bottom:12px"><div class="card pad"><div class="sect-t">지금 먹은 만두</div>${slot('eat','만두 1')}${slot('dess','만두 2')}<div class="tiny muted" style="margin-top:8px">${mealRuleText()}</div></div>
  <div class="card pad"><div class="sect-t">삼장 선생님의 만두 수업</div><div class="quote">“만두를 빚는 일도 마음을 가다듬는 수행입니다. 서두르지 마시고, 속이 새지 않도록 차근차근 빚어 보십시오.”</div></div></div>
  <div class="card pad"><div class="spread"><div class="sect-t">레시피 · ${visible.length}종</div><span class="tiny muted">총 ${DISHES.length}종</span></div>
  <div class="grid g2">${items}</div></div>

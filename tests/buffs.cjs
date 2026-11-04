@@ -1,6 +1,6 @@
 /* 효과가 겹치는지, 그리고 겹친 것이 화면에 보이는지 확인합니다.
    건의: "탕약과 물약은 중복 적용이 안 되나요? 나중에 쓴 것만 떠서"
-   실제로는 효과가 겹쳤지만 식사·디저트 칸이 상단 띠에 표시되지 않아
+   실제로는 효과가 겹쳤지만 만두 칸이 상단 띠에 표시되지 않아
    겹치지 않는 것처럼 보였습니다. 그래서 합산과 표시를 함께 검사합니다. */
 const {chromium}=require('playwright');
 const http=require('http'),fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
@@ -63,10 +63,18 @@ const server=http.createServer((q,r)=>{
   out.sameTwice={first:+first.toFixed(4),second:+mod('exp').toFixed(4),
     leftGrew:S.buffs.find(b=>b.pid==='q5').left>firstLeft};
 
-  /* 같은 칸(디저트)끼리는 나중 것으로 바뀝니다 */
+  /* 분류와 무관하게 서로 다른 두 만두를 함께 적용합니다 */
   reset();S.kit.have={d11:1,d15:1};
   eat('d11');eat('d15');
-  out.sameSlot={dess:S.kit.dess.id,칸수:['eat','dess'].filter(s=>S.kit[s]).length};
+  out.sameSlot={dess:S.kit.dess.id,칸수:activeMeals().length,exp:mealOpt('exp')};
+  S.kit.have.d6=1;
+  eat('d6');out.third={left:S.kit.have.d6,unchanged:activeMeals().map(x=>x.meal.id),prompt:document.querySelector('#modalroot').innerText.includes('만두 효과 선택')};
+  closeModal();out.cancelled=S.kit.have.d6;
+  eat('d6','eat','d11');out.replaced={ids:activeMeals().map(x=>x.meal.id),qty:S.kit.have.d6};
+  S.kit.have.d6=3;eat('d6');const extended=S.kit.eat.left;eat('d6');
+  out.sameFood={left:extended,after:S.kit.eat.left,qty:S.kit.have.d6,exp:mealOpt('exp'),cap:DISHES.find(d=>d.id==='d6').dur*2};
+  S.kit.eat.left=0;S.kit.have.d4=1;eat('d4');out.expired={ids:activeMeals().map(x=>x.meal.id),qty:S.kit.have.d4};
+  S.kit.eat={id:'d15',left:100};S.kit.dess={id:'d15',left:200};out.legacyDuplicate={count:activeMeals().length,exp:mealOpt('exp')};
   return out;
  });
 
@@ -87,8 +95,16 @@ const server=http.createServer((q,r)=>{
  assert.equal(r.sameTwice.first,r.sameTwice.second,'같은 물약을 두 번 마셔도 효과는 겹치지 않습니다');
  assert.ok(r.sameTwice.leftGrew,'대신 남은 시간이 늘어나야 합니다');
 
- assert.equal(r.sameSlot.dess,'d15','같은 칸끼리는 나중에 먹은 것으로 바뀝니다');
- assert.equal(r.sameSlot.칸수,1,'디저트만 찼으므로 한 칸이어야 합니다');
+ assert.equal(r.sameSlot.dess,'d15');
+ assert.equal(r.sameSlot.칸수,2,'같은 디저트 분류도 다른 만두 2종은 함께 적용됩니다');
+ assert.equal(r.sameSlot.exp,.19);
+ assert.equal(r.third.left,1,'세 번째 종류는 선택 전 소모하지 않습니다');
+ assert.deepEqual(r.third.unchanged,['d11','d15']);assert.equal(r.third.prompt,true);assert.equal(r.cancelled,1);
+ assert.deepEqual(r.replaced.ids,['d6','d15']);assert.equal(r.replaced.qty,0,'선택한 효과만 교체합니다');
+ assert.equal(r.sameFood.left,r.sameFood.cap);assert.equal(r.sameFood.after,r.sameFood.cap);assert.equal(r.sameFood.qty,2,'최대 시간에는 추가 소모하지 않습니다');
+ assert.equal(+r.sameFood.exp.toFixed(4),.19,'같은 만두를 반복해도 효과는 한 번만 적용됩니다');
+ assert.deepEqual(r.expired.ids,['d4','d15']);assert.equal(r.expired.qty,0);
+ assert.equal(r.legacyDuplicate.count,1);assert.equal(r.legacyDuplicate.exp,.13,'중복된 옛 저장 칸도 효과를 두 번 세지 않습니다');
 
- console.log('PASS: 탕약+물약 합산, 식사·디저트·버프·물약 경험치 합산, 네 가지 모두 상단 띠 표시, 같은 물약은 시간 연장, 같은 칸은 교체');
+ console.log('PASS: 탕약+물약 합산, 식사·디저트·버프·물약 경험치 합산, 네 가지 모두 상단 띠 표시, 같은 물약은 시간 연장, 다른 만두 2종 합산, 세 번째 선택/취소, 선택 교체, 같은 만두는 시간만 연장, 최대 시간 미소모, 만료 칸 재사용과 중복 저장 방지');
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
