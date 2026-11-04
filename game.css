@@ -376,15 +376,55 @@ textarea.inp{min-height:76px;resize:vertical}
 .mobile-ui{display:none}
 .top-actions{display:flex;align-items:center;gap:7px}
 .top-avatar{flex:none}
+.tb-mini{display:none}
+.me-lv{display:none}
 @media(max-width:780px){
-  body.mobile-game #topbar{position:relative;display:grid;grid-template-columns:26px 34px minmax(0,1fr) auto;align-items:center;gap:10px 7px;padding:14px 12px 12px}
+  /* 접은 상단 — 한 줄만 두고 나머지는 tb-mini 로 폅니다. 펼친 상태는 .top-open. */
+  body.mobile-game{--topH:57px}
+  body.mobile-game #topbar{position:sticky;top:0;z-index:66;display:grid;
+    grid-template-columns:26px 30px minmax(0,1fr) auto auto;align-items:center;
+    gap:10px 7px;padding:11px 12px}
+  body.mobile-game.top-open #topbar{position:relative;grid-template-columns:26px 34px minmax(0,1fr) auto auto;padding:14px 12px 12px}
+
+  body.mobile-game .tb-mini{display:flex;align-items:center;gap:7px;grid-column:4;grid-row:1;
+    border:1px solid var(--line);border-radius:var(--r-pill);background:var(--resBg);
+    padding:4px 9px 4px 8px;color:var(--tx);font:inherit;font-size:12px;cursor:pointer;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  body.mobile-game .tb-mini.low{border-color:var(--redD)}
+  .tb-pips{display:flex;align-items:flex-end;gap:3px;height:16px;
+    padding-right:8px;margin-right:1px;border-right:1px solid var(--lineSoft)}
+  .tb-pip{display:block;width:4px;height:100%;border-radius:var(--r-pill);
+    background:var(--s4);overflow:hidden;position:relative}
+  .tb-pip b{position:absolute;left:0;right:0;bottom:0;display:block;border-radius:var(--r-pill)}
+  .tb-rin{display:flex;align-items:center;gap:4px;font-weight:700}
+  .tb-rin svg{flex:none;opacity:.85}
+  .tb-caret{display:grid;place-items:center;color:var(--dim)}
+  body.mobile-game.top-open .tb-caret{transform:rotate(180deg)}
+
+  /* 접혀 있을 때 — 신분·자원·막대·날짜줄을 감춥니다. 알림과 내 정보만 남습니다. */
+  body.mobile-game:not(.top-open) .res-wrap,
+  body.mobile-game:not(.top-open) .mobile-vitals,
+  body.mobile-game:not(.top-open) .tb2,
+  body.mobile-game:not(.top-open) .top-actions .act-theme,
+  body.mobile-game:not(.top-open) .top-actions .act-settings,
+  body.mobile-game:not(.top-open) .pair-wallet-badge{display:none}
+  body.mobile-game:not(.top-open) .me-sub,
+  body.mobile-game:not(.top-open) .me-name .muted{display:none}
+  body.mobile-game:not(.top-open) .me-lv{display:inline;margin-left:5px;font-size:11.5px;
+    font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+  /* 펼치면 막대와 자원이 아래에 그대로 나오므로, 요약은 접는 손잡이만 남깁니다. */
+  body.mobile-game.top-open .tb-pips,
+  body.mobile-game.top-open .tb-rin{display:none}
+  body.mobile-game.top-open .tb-mini{padding:5px 7px}
+  body.mobile-game:not(.top-open) .me-name{font-size:14px}
+
   body.mobile-game .tb1{display:contents}
   body.mobile-game .logo-top{grid-column:1;grid-row:1;width:26px;height:30px}
   body.mobile-game .top-avatar{grid-column:2;grid-row:1}
   body.mobile-game .top-identity{grid-column:3;grid-row:1;min-width:0}
   body.mobile-game .me-name{font-size:15px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   body.mobile-game .me-sub{font-size:10px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  body.mobile-game .top-actions{grid-column:4;grid-row:1;gap:4px}
+  body.mobile-game .top-actions{grid-column:5;grid-row:1;gap:4px}
   body.mobile-game .top-actions .btn{width:30px;height:32px;padding:0;display:grid;place-items:center;border-radius:var(--r-m)}
   body.mobile-game .tb2{grid-column:1/-1;grid-row:2;gap:5px 9px;padding:0;border:0;font-size:10px;line-height:1.6}
   body.mobile-game .top-weather>span{display:none}
@@ -398,6 +438,8 @@ textarea.inp{min-height:76px;resize:vertical}
   body.mobile-game #main{min-width:0}
   body.mobile-game #mobile-subnav{display:flex;position:sticky;top:0;z-index:65;overflow-x:auto;scrollbar-width:none;gap:4px;margin:0 -14px 20px;padding:12px 14px;background:var(--s0);border-bottom:1px solid var(--line)}
   body.mobile-game #mobile-subnav:empty{display:none}
+  /* 접은 머리글이 붙어 있으므로 세부 메뉴는 그 아래에서 멈춥니다. */
+  body.mobile-game:not(.top-open) #mobile-subnav{top:var(--topH)}
   #mobile-subnav button{flex:none;border:0;border-radius:var(--r-s);padding:10px 14px;background:transparent;color:var(--dim);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
   #mobile-subnav button.on{background:var(--accSoft);color:var(--gold);font-weight:800;box-shadow:inset 0 0 0 1px var(--accEdge)}
   body.mobile-game .page-head{display:block;padding-bottom:16px;margin-bottom:16px}

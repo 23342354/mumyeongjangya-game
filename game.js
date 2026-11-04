@@ -810,7 +810,7 @@ function renderTop(){
     <div class="logo logo-top" title="無明長夜"></div>
     <div class="top-avatar">${avatarHTML(34)}</div>
     <div class="top-identity">
-      <div class="me-name">${esc(S.name)} <span class="muted tiny">·</span></div>
+      <div class="me-name">${esc(S.name)} <span class="muted tiny">·</span><span class="me-lv">Lv ${S.lvl}</span></div>
       <div class="me-sub">${homeOf(S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
     </div>
     <div class="res-wrap">
@@ -820,10 +820,11 @@ function renderTop(){
       <div class="res" title="사리 — 정화된 영혼의 결정">${ic("orb",13)}<b style="color:var(--violet)">사리</b> ${nf(S.sari)}</div>
       <div class="res" title="연등 — 축제와 업적">${ic("lantern",13)}<b style="color:var(--red)">연등</b> ${nf(S.lotus)}</div>
     </div>
+    ${topBrief()}
     <div class="top-actions">
-      <button class="btn sm ghost" onclick="openMe()" title="내 정보">${ic("user",15)}</button>
-      <button class="btn sm ghost" onclick="toggleTheme()" title="${THEME==="light"?"어두운 테마로":"밝은 테마로"}">${ic(THEME==="light"?"moonDark":"lens",15)}</button>
-      <button class="btn sm ghost" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
+      <button class="btn sm ghost act-me" onclick="openMe()" title="내 정보">${ic("user",15)}</button>
+      <button class="btn sm ghost act-theme" onclick="toggleTheme()" title="${THEME==="light"?"어두운 테마로":"밝은 테마로"}">${ic(THEME==="light"?"moonDark":"lens",15)}</button>
+      <button class="btn sm ghost act-settings" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
     </div>
   </div>
   <div class="mobile-vitals" aria-label="캐릭터 상태">
@@ -844,6 +845,30 @@ function renderTop(){
     ${bookChip}${buffs}
     <span style="margin-left:auto;color:var(--s6)">${c.str}</span>
   </div>`;
+}
+/* 접은 상단 — 작은 화면에서 머리글이 본문을 밀어내지 않도록, 한 줄로 줄인 요약입니다.
+   체력·정신력·경험치를 작은 막대 셋으로, 륜을 숫자로 보여 주고, 나머지(자원 전부,
+   막대 상세, 날짜·날씨·보건실·효과)는 눌러서 폅니다. 넓은 화면에서는 숨겨집니다. */
+function topBrief(){
+  const open=document.body.classList.contains("top-open");
+  const pips=[
+    {k:"hp", c:"var(--red)",    p:S.hp},
+    {k:"sn", c:"var(--violet)", p:S.sn},
+    {k:"xp", c:"var(--gold)",   p:S.exp/expNeed()*100}
+  ];
+  const low=pips.slice(0,2).some(v=>v.p<=20);
+  const bars=pips.map(v=>`<i class="tb-pip ${v.k}${v.k!=="xp"&&v.p<=20?" critical":""}"><b style="height:${Math.max(4,Math.min(100,v.p))}%;background:${v.c}"></b></i>`).join("");
+  return `<button type="button" class="tb-mini${low?" low":""}" onclick="toggleTop()"
+    aria-expanded="${open}" aria-controls="topbar"
+    title="체력 ${Math.floor(S.hp)} · 정신력 ${Math.floor(S.sn)} · 륜 ${nf(S.rin)} — 눌러서 ${open?"접기":"펼치기"}">
+    <span class="tb-pips" aria-hidden="true">${bars}</span>
+    <span class="tb-rin">${ic("coin",12)}${nf(S.rin)}</span>
+    <span class="tb-caret" aria-hidden="true">${ic("chevD",13)}</span>
+  </button>`;
+}
+function toggleTop(){
+  document.body.classList.toggle("top-open");
+  renderTop();
 }
 function openMobileVitals(){
   modal("캐릭터 상태",`<div style="line-height:2">체력 <b>${Math.floor(S.hp)} / 100</b><br>정신력(이성) <b>${Math.floor(S.sn)} / 100</b><br>경험치 <b>${Math.floor(S.exp).toLocaleString("ko-KR")} / ${expNeed().toLocaleString("ko-KR")}</b> (${(S.exp/expNeed()*100).toFixed(1)}%)</div>`);
