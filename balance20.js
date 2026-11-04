@@ -1,7 +1,7 @@
 /* 無明長夜 · 20인/14일 생활형 시즌 밸런스. 기존 계정·소지품 보존. */
 (function(){
 'use strict';
-window.BALANCE20={version:1,players:20,days:14,fishDaily:60,castSeconds:10,bossGoal:2500000000,bossStretchGoal:15000000000};
+window.BALANCE20={version:1,players:20,days:14,fishDaily:60,castSeconds:10,bossGoal:250000000,bossStretchGoal:1000000000};
 const B=window.BALANCE20;
 COURSES.forEach((c,i)=>c.need=[3,5,7,9,12,15,18][i]);
 subjectLessonCount=lv=>lv<5?1:lv<12?2:3;
@@ -116,14 +116,14 @@ drawFish2=function(){oldDrawFish.apply(this,arguments);const b=balanceEnsure();d
 // Dps defense already includes mod(defP) in effStat(def): do not multiply twice.
 const oldC=C;C=function(){const c=oldC();c.def=Math.round(effStat('def')*98);return c;};
 window.balanceStoreLoot=function(it,preserve=false){
- const cap=40+(S.res.r11||0)*5;
+ const cap=bagCapacity();
  if(S.bag.length<cap){S.bag.push(it);return true;}
  if(preserve){balanceEnsure().pendingLoot.push(it);toast('바랑이 가득 차 특별 법구 보상을 보관했습니다. 바랑에서 받을 수 있습니다.');return false;}
  const dust=2+Math.max(0,it.grade||0)*2;S.mat.가루+=dust;
  toast(`바랑이 가득 차 새 전리품을 부적가루 ${dust}개로 받았습니다. 기존 법구는 보존됩니다.`);return false;
 };
 window.balanceCollectLoot=function(){
- const b=balanceEnsure(),cap=40+(S.res.r11||0)*5;let count=0;
+ const b=balanceEnsure(),cap=bagCapacity();let count=0;
  while(b.pendingLoot.length&&S.bag.length<cap){S.bag.push(b.pendingLoot.shift());count++;}
  toast(count?`특별 보상 법구 ${count}개를 받았습니다.`:'바랑 공간을 먼저 비워 주세요.');save();renderMain();
 };
@@ -140,9 +140,9 @@ const oldExchange=exchangeMark;exchangeMark=function(n){if(n!==10&&n!==50)return
 const oldMart=martBuy;
 martBuy=function(id){
  const b=balanceEnsure(),m=MART.find(x=>x.id===id);if(!m)return;
- if(id==='m8'&&S.wb.tickets>=3){toast('도전권이 가득 찼습니다. 먼저 사용해 주세요.');return;}
+ if(id==='m8'&&S.wb.tickets>=(window.PAIR_PLAY?.ready?6:3)){toast('도전권이 가득 찼습니다. 먼저 사용해 주세요.');return;}
  if(id==='m9'&&S.res.r11>=10){toast('바랑 확장을 모두 마쳤습니다.');return;}
- if(m.give.gear&&S.bag.length>=40+(S.res.r11||0)*5){toast('바랑을 비운 뒤 구매해 주세요.');return;}
+ if(m.give.gear&&S.bag.length>=bagCapacity()){toast('바랑을 비운 뒤 구매해 주세요.');return;}
  oldMart.apply(this,arguments);
  if(id==='m8'){b.martWeek.count=S.mart.m8;save();}
 };

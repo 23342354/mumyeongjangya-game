@@ -133,7 +133,7 @@ function marketBuy(id){
   if(!item)return toast("이미 팔린 매물일 수 있어요. 목록을 새로 불러오세요.","bad");
   if(String(item.seller_id)===String(ACCT.id))return toast("내가 올린 매물은 살 수 없습니다.","bad");
   if(Number(S.rin)<Number(item.price))return toast("륜이 부족합니다.","bad");
-  if(item.kind==="gear" && S.bag.length>=40+(S.res?.r11||0)*5)return toast("바랑이 가득 찼습니다.","bad");
+  if(item.kind==="gear" && S.bag.length>=bagCapacity())return toast("바랑이 가득 찼습니다.","bad");
   if(!confirm(`「${item.item_name}」 ×${item.quantity} · ${nf(item.price)}륜에 구매할까요?`))return;
   marketCommit("buy",{id:Number(id)},"아이템을 구매했습니다. 바랑에서 확인하세요.");
 }
@@ -150,7 +150,7 @@ function marketViewItem(m,isMine=false){
   const slot=gear?SLOTS.find(s=>s.k===gear.slot):null;
   const own=String(m.seller_id)===String(ACCT.id);
   const options=gear&&gear.main?`<div class="tiny" style="color:var(--jade)">${esc(gearLine(gear))}</div>`:"";
-  const canBuy=Number(S.rin)>=Number(m.price) && (kind!=="gear"||S.bag.length<40+(S.res?.r11||0)*5);
+  const canBuy=Number(S.rin)>=Number(m.price) && (kind!=="gear"||S.bag.length<bagCapacity());
   return `<article class="market-offer ${own?"market-mine":""}">
    <div class="spread" style="gap:8px;align-items:flex-start"><div class="row" style="align-items:center;gap:5px;flex-wrap:wrap">
      <span class="tag">${MARKET_TYPES[kind]||"아이템"}</span>${gear?gradeTag(gear.grade):""}${own?'<span class="tag j">내 매물</span>':""}

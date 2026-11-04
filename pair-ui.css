@@ -40,3 +40,23 @@ body.pair-action-busy #main button,body.pair-action-busy #modalroot button{point
 #main [onclick^="inviteParty"],#main [onclick^="inviteTeacher"]{display:none}
 #toasts{max-width:min(330px,calc(100vw - 24px));max-height:55vh;overflow:hidden}
 @media(max-width:780px){.pair-wallet-badge{display:none}}
+/* Chat and long navigation groups must never compress into vertical text. */
+#navcol .nav-sub.open{max-height:none;overflow:visible;transition:none}
+#navcol>.card:first-child{padding-bottom:22px;scroll-padding-bottom:22px;overscroll-behavior:contain}
+.chat-panel{min-width:0;overflow:hidden}
+.chat-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+#chatfilters{justify-self:start;display:inline-flex;flex-shrink:0}
+#chatfilters button,.chat-compose-mode button,.ctab{white-space:nowrap;word-break:keep-all;min-width:42px;padding:6px 10px}
+.chat-scope{grid-column:1/-1;margin:0;text-align:left;line-height:1.5;word-break:keep-all;overflow-wrap:break-word}
+.chat-tabs{padding:10px 10px 0;gap:5px}
+.ctab{border-radius:7px}
+.chat-log{padding:10px 12px;line-height:1.85}
+.cmsg{padding:7px 0;border-bottom:1px solid var(--line)}
+.chat-in{padding:10px;align-items:center}
+.chat-in input{min-height:38px}
+.chat-in button{white-space:nowrap;min-height:38px}
+.rp-action{color:var(--jade);font-style:normal;background:color-mix(in srgb,var(--jade) 7%,transparent);border-radius:3px;padding:1px 2px;line-height:inherit}
+:root[data-theme="light"] .rp-action{color:#216953}
+.hex-color-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.hex-color-controls input[type=text]{width:125px;font-family:monospace}
+.hex-color-controls input[type=color]{width:36px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}

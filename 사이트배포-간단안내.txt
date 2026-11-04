@@ -1,7 +1,13 @@
-無明長夜 Web Push 사이트 배포본
+無明長夜 · 로그인 복구 + 로그 소설형 수정 통합본 (2026-11-04)
 
-1. 이 ZIP에는 운영용 config.js가 포함되지 않았습니다. 기존 GitHub Pages의 config.js는 유지하세요.
-2. ZIP의 index.html, part12.js, notification-worker.js, manifest.webmanifest 및 나머지 사이트 파일을 루트에 업로드합니다.
-3. 운영진 서버 설치 ZIP에 있는 README-WebPush-설치순서.md를 따라 Supabase SQL / Edge Function / Webhook / Cron을 구성합니다.
-4. 로그인 → 상단 알림함 → '푸시 알림 켜기' → 허용 → '서버 시험 발송'을 확인합니다.
-5. 로그인 비밀번호나 VAPID 개인키 / Webhook 비밀값을 GitHub에 업로드하지 마세요.
+[필독] 배포용 ZIP에는 config.js를 의도적으로 넣지 않았습니다.
+기존 GitHub Pages 루트의 config.js 파일을 절대로 삭제하거나 빈 예시 파일로 덮어쓰지 마세요.
+서버 연결 설정이 비었다면 GitHub의 이전 커밋 History에서 기존 config.js를 복구해야 합니다.
+
+1. 설정 파일을 백업하고 확인합니다.
+2. ZIP의 모든 **사이트 실행 파일**을 GitHub Pages 루트에 배포합니다 (config.js 보존).
+3. https://ignorance.site/ 를 강력 새로고침해서 로그인 화면을 확인합니다.
+4. 새로 내보낸 RP/둘의 기록/페어 채팅 HTML에서 소설형 버튼을 시험합니다.
+5. 자세한 사항: 로그인복구-소설형수정-배포안내.md
+
+추가 SQL 불필요. VAPID/서비스 비밀키는 GitHub에 업로드하지 않습니다.

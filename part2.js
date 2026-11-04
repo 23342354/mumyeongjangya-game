@@ -717,7 +717,7 @@ VIEWS.gear=()=>{
   </div>
 
   <div class="card pad">
-    <div class="spread"><div class="sect-t" style="margin:0">바랑 ${S.bag.length} / ${40+S.res.r11*5}</div>
+    <div class="spread"><div class="sect-t" style="margin:0">바랑 ${S.bag.length} / ${bagCapacity()}</div>
       <div class="row">
         <span class="tiny muted">일괄</span>
         ${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('sell',${g})">${GRADES[g].n} 이하 판매</button>`).join("")}
@@ -752,7 +752,7 @@ VIEWS.bag=()=>{
     return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
       <div><b>${p.n}</b> ×${S.inv[k]}<div class="tiny muted">${p.d}</div></div>
       <button class="btn sm pri" onclick="useItem('${k}');renderMain()">사용</button></div>`}).join("");
-  return head("소지품 · 보관품",ic("bag")+" 바랑", `${S.bag.length} / ${40+S.res.r11*5}칸`)+`
+  return head("소지품 · 보관품",ic("bag")+" 바랑", `${S.bag.length} / ${bagCapacity()}칸`)+`
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="sect-t">재료</div>${matRows}
@@ -872,20 +872,20 @@ gainExp=function(n){
 /* ═══════════════════════════════════════════════════
    화면 — 석탑 · 결계의 탑 · 업귀 토벌 · 연무제
    ═══════════════════════════════════════════════════ */
-function towerFoe(n){ return {hp:Math.round(42000*Math.pow(1.078,n)), dps:Math.round(900*Math.pow(1.075,n)), n:n}; }
-function guardFoe(n){ return {dps:Math.round(1500*Math.pow(1.085,n)), n:n}; }
+function towerFoe(n){ return {hp:Math.round(36000*Math.pow(1.07,n)), dps:Math.round(720*Math.pow(1.065,n)), n:n}; }
+function guardFoe(n){ return {dps:Math.round(240*Math.pow(1.07,n)), n:n}; }
 
 VIEWS.tower=()=>{
   const fl=(S.tower||0)+1, f=towerFoe(fl), c=C();
   const sec=f.hp/Math.max(1,c.dps);
   const canKill=sec<=60;
   const survive=c.hp/Math.max(1,f.dps*Math.max(0,1-c.def/(c.def+9000)));
-  const win=canKill&&survive>=Math.min(60,sec);
-  return head("끝없이 이어지는, 혼자 오르는 탑",ic("tower")+" 석탑", `최고 ${S.tower||0}층`)+`
+  const win=canKill&&survive>=Math.min(60,sec)&&(fl%50!==0||sec<=45);
+  return head("끝없이 이어지는, 파트너와 함께 오르는 탑",ic("tower")+" 석탑", `최고 ${S.tower||0}층`)+`
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div><b>석탑</b> <span class="tag g">최고 ${S.tower||0}층</span></div>
-      <span class="tiny muted">도전 횟수 제한 없음</span></div>
+      <span class="tiny muted">도전 횟수 제한 없음 · 연속 도전 최대 10층</span></div>
     <div class="tiny muted" style="margin:6px 0 10px">석탑 내부에는 명계 전역의 파장을 모으는 감응 장치와 결계의 핵이 있다.
     층마다 봉인된 것이 하나씩 깨어나며, 한 번에 한 층씩 싸운다. 초당 피해가 되는 만큼 오를 수 있고, 오른 층은 줄어들지 않는다(60초 제한).</div>
     <h3 style="margin:4px 0 2px;font-size:18px">${fl}층</h3>
@@ -893,7 +893,7 @@ VIEWS.tower=()=>{
     <div class="tiny muted">${Math.round(fl*1.6)}단계 수준 · 체력 ${nf(f.hp)} · 초당 피해 ${nf(f.dps)}</div>
     <div class="tiny" style="color:${win?"var(--jade)":"var(--red)"};margin-top:4px">
       ${win?`약 ${sec.toFixed(1)}초에 제압 예상`:canKill?`쓰러뜨리기 전에 무너집니다 (버티는 시간 약 ${survive.toFixed(1)}초)`:"아직 버겁습니다"}</div>
-    <div class="tiny muted" style="margin-top:4px">이 층 보상 <span style="color:var(--gold)">륜 ${nf(1200+fl*260)}</span> · 사리 ${fl%5===0?1:0} · 법구 1</div>
+    <div class="tiny muted" style="margin-top:4px">이 층 보상 <span style="color:var(--gold)">륜 ${nf(500+fl*110)}</span> · 사리 ${fl%5===0?1:0} · 법구 1</div>
     <div class="spread" style="margin-top:12px">
       <span class="tiny muted">150층 돌파 시 칭호 「첨탑의 대마도사」 · 연등 30 · 상급 법구 상자</span>
       <div class="row">
@@ -917,7 +917,7 @@ function towerName(n){
 }
 function climbTower(chain){
   let gained=0, logs=[], rin=0, sari=0, drops=[];
-  for(let k=0;k<(chain?80:1);k++){
+  for(let k=0;k<(chain?10:1);k++){
     const fl=(S.tower||0)+1, f=towerFoe(fl), c=C();
     const sec=f.hp/Math.max(1,c.dps);
     const mit=Math.max(0,1-c.def/(c.def+9000));
@@ -927,7 +927,7 @@ function climbTower(chain){
     logs.push(`<span class="${win?"s":"h"}">${fl}층 ${towerName(fl)}</span> — 제압 ${sec<=60?sec.toFixed(1)+"초":"실패"} / 버팀 ${survive.toFixed(1)}초 → ${win?"돌파":"패배"}`);
     if(!win) break;
     S.tower=fl; gained++;
-    rin+=1200+fl*260; if(fl%5===0) sari++; S.mat.가루+=2;
+    rin+=500+fl*110; if(fl%5===0) sari++; S.mat.가루+=2;
     if(fl%3===0) drops.push(mkGear(Math.round(fl*1.4),undefined,true));
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
@@ -956,7 +956,7 @@ VIEWS.guard=()=>{
   ${buffStrip()}
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div><b>결계의 탑</b> <span class="tag g">최고 ${S.tower2||0}층</span></div>
-      <span class="tiny muted">도전 횟수 제한 없음</span></div>
+      <span class="tiny muted">도전 횟수 제한 없음 · 연속 도전 최대 10층</span></div>
     <div class="tiny muted" style="margin:6px 0 10px">끝없이 몰려오는 업귀 떼에서 30초 동안 결계를 지키면 한 층을 오른다.
     적을 쓰러뜨릴 수 없으므로 화력보다 생명력·방어력·치유·보호막이 중요하다. 성향과 관계없이 기록은 하나이며, 오른 층은 줄어들지 않는다.</div>
     <div class="card pad" style="background:var(--s1);margin-bottom:10px">
@@ -968,7 +968,7 @@ VIEWS.guard=()=>{
     <div class="tiny muted">${Math.round(fl*1.4)}단계 수준 · 30초 버티기 · 적 초당 피해 ${nf(f.dps)}</div>
     <div class="tiny" style="color:${win?"var(--jade)":"var(--red)"};margin-top:4px">
       ${win?`30초를 버틸 수 있습니다 (예상 ${Math.min(99,sustain).toFixed(1)}초)`:`아직 버겁습니다 — 약 ${sustain.toFixed(1)}초`}</div>
-    <div class="tiny muted" style="margin-top:4px">이 층 보상 <span style="color:var(--gold)">륜 ${nf(700+fl*210)}</span></div>
+    <div class="tiny muted" style="margin-top:4px">이 층 보상 <span style="color:var(--gold)">륜 ${nf(400+fl*90)}</span></div>
     <div class="spread" style="margin-top:12px">
       <span class="tiny muted">100층 돌파 시 칭호 「무너지지 않는 방벽」 · 연등 30</span>
       <div class="row">
@@ -979,14 +979,14 @@ VIEWS.guard=()=>{
 };
 function climbGuard(chain){
   let gained=0, logs=[], rin=0, drops=[];
-  for(let k=0;k<(chain?80:1);k++){
+  for(let k=0;k<(chain?10:1);k++){
     const fl=(S.tower2||0)+1, f=guardFoe(fl), c=C();
     const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
     const sustain=c.hp*c.heal/Math.max(1,f.dps*mit);
     const win=sustain>=30;
     logs.push(`<span class="${win?"s":"h"}">${fl}층</span> — 버틴 시간 ${Math.min(99,sustain).toFixed(1)}초 / 30초 → ${win?"방어 성공":"붕괴"}`);
     if(!win) break;
-    S.tower2=fl; gained++; rin+=700+fl*210;
+    S.tower2=fl; gained++; rin+=400+fl*90;
     if(fl%4===0) drops.push(mkGear(Math.round(fl*1.3),undefined,true));
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
@@ -1063,15 +1063,20 @@ function hitBoss(){
   renderTop(); renderNav(); save();
 }
 
+function arenaFoe(r,sn){
+ const scale=window.PAIR_PLAY?.ready?1.7:1;
+ return {hp:Math.round(25000*Math.pow(1.30,r)*Math.pow(2,sn-1)*scale),dps:Math.round(450*Math.pow(1.25,r)*Math.pow(1.8,sn-1)*scale)};
+}
 VIEWS.arena=()=>{
   const r=S.arena.round, sn=S.arena.season||1;
   const foe=ARENAFOES[Math.min(r,15)-1]||"???";
   const c=C();
-  const fhp=Math.round(30000*Math.pow(1.45,r)*Math.pow(2.6,sn-1)), fdps=Math.round(800*Math.pow(1.38,r)*Math.pow(2.2,sn-1));
+  const opponent=arenaFoe(r,sn),fhp=opponent.hp,fdps=opponent.dps;
   const sec=fhp/Math.max(1,c.dps);
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
   const sust=c.hp*c.heal/Math.max(1,fdps*mit*1.5);
-  const killOK=sec<=45, holdOK=sust>=45;
+  const killSust=c.hp*c.heal/Math.max(1,fdps*mit);
+  const killOK=sec<=45&&killSust>=sec, holdOK=sust>=Math.min(45,sec);
   return head("라이벌과 차례로 겨루는",ic("arena")+" 연무제", `제 ${sn}회 · 최고 기록 ${S.arena.best} / 15`)+`
   ${buffStrip()}
   <div class="grid g2" style="margin-bottom:14px">
@@ -1083,9 +1088,9 @@ VIEWS.arena=()=>{
       :`<h3 style="margin:4px 0 2px;font-size:19px">${foe}</h3>
       <div class="tiny muted">${r<=11?"졸업생 · 조교":"사무전 교직원"} · ${Math.round(r*6.5*sn)}단계 수준${sn>1?` · <span style="color:var(--gold)">제 ${sn}회</span>`:""}</div>
       <div class="quote" style="margin:8px 0">${ARENALINE[Math.min(r,15)-1]}</div>
-      <div class="tiny"><b>처치</b> <span style="color:${killOK?"var(--jade)":"var(--red)"}">${killOK?`승산 높음 — 약 ${sec.toFixed(1)}초`:`승산 낮음 — 45초 안에 체력의 약 ${Math.round(c.dps*45/fhp*100)}%`}</span></div>
+      <div class="tiny"><b>처치</b> <span style="color:${killOK?"var(--jade)":"var(--red)"}">${killOK?`승산 높음 — 약 ${sec.toFixed(1)}초`:sec<=45?`생존력 부족 — 약 ${killSust.toFixed(1)}초`:`승산 낮음 — 45초 안에 체력의 약 ${Math.min(100,Math.round(c.dps*45/fhp*100))}%`}</span></div>
       <div class="tiny"><b>버티기</b> <span style="color:${holdOK?"var(--jade)":"var(--red)"}">${holdOK?"45초를 버틸 수 있습니다":`약 ${sust.toFixed(1)}초`}</span>
-        <span class="muted">수호·축복 성향 전용 · 상대 공격 ×1.5 · 45초를 버티거나 그 전에 쓰러뜨리면 승리</span></div>
+        <span class="muted">모든 성향 도전 가능 · 상대 공격 ×1.5 · 45초를 버티거나 그 전에 쓰러뜨리면 승리</span></div>
       <div class="tiny muted" style="margin-top:4px">보상 · 순위 · 대기시간은 두 방식이 같습니다</div>
       <div class="row" style="margin-top:10px">
         <button class="btn pri" onclick="arenaGo('kill')">처치로 도전</button>
@@ -1117,16 +1122,16 @@ function arenaGo(mode){
   const r=S.arena.round;
   const c=C();
   const sn=S.arena.season||1;
-  const fhp=Math.round(30000*Math.pow(1.45,r)*Math.pow(2.6,sn-1)), fdps=Math.round(800*Math.pow(1.38,r)*Math.pow(2.2,sn-1));
+  const opponent=arenaFoe(r,sn),fhp=opponent.hp,fdps=opponent.dps;
   const sec=fhp/Math.max(1,c.dps);
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
   const sust=c.hp*c.heal/Math.max(1,fdps*mit*(mode==="hold"?1.5:1));
-  const win = mode==="kill" ? (sec<=45 && sust>=Math.min(45,sec)) : (sust>=45 || sec<=45);
+  const win = mode==="kill" ? (sec<=45 && sust>=Math.min(45,sec)) : (sust>=Math.min(45,sec));
   damageHP(rnd(4,14)); damageSN(rnd(3,10));
   let rew="";
   if(win){
     S.arena.round++; S.arena.best=Math.max(S.arena.best,r);
-    const rin=gainRin((900+r*520)*sn), ex=gainExp((500+r*240)*sn);
+    const rin=gainRin((700+r*300)*Math.min(sn,3)), ex=gainExp((400+r*180)*Math.min(sn,3));
     S.lotus+=1; addMark(10);
     const drop=mkGear(Math.round(r*4+S.lvl*.4+sn*20),undefined,true); balanceStoreLoot(drop);
     rew=`륜 +${nf(rin)} · 경험치 +${nf(ex)} · 연등 +1 · 법구 「${drop.name}」`;

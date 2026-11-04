@@ -1247,7 +1247,7 @@ function pairPostReply(id,quote=false){
       <div class="mm-reply-snippet">${fmtChat(p.body)}</div></div>
     <label for="pb-reply-${p.id}" class="tiny muted">답글은 선택한 글에 직접 연결됩니다.</label>
     <textarea class="inp" id="pb-reply-${p.id}" rows="5" maxlength="1000" style="width:100%;margin-top:8px"
-      placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
+      placeholder="대사와 *행동* 또는 (행동)으로 이어 써 주세요"></textarea>
     <div class="spread" style="margin-top:10px">
       <span class="tiny muted">1000자까지 · Ctrl + Enter 등록</span>
       <button class="btn pri" id="pb-submit-${p.id}" onclick="pairPostSend(${p.id})">답글 등록</button>
@@ -1409,7 +1409,7 @@ VIEWS.pairboard=()=>{
       <div class="mm-compose-line">${faceHTML(pairMe(),44)}
         <div class="mm-compose-area"><div class="mm-compose-to">${esc((you&&you.name)||"페어")} 님과 나누는 기록</div>
           <textarea class="inp" id="pb-write" rows="3" maxlength="1000" style="width:100%"
-            placeholder="무슨 일이 있었나요? 대사와 *행동*을 남겨 보세요."></textarea>
+            placeholder="무슨 일이 있었나요? 대사와 *행동* 또는 (행동)을 남겨 보세요."></textarea>
           <div class="mm-compose-actions"><span class="tiny muted">1000자까지 · Ctrl + Enter 등록</span>
             <div class="row"><button class="btn sm ghost" onclick="pairPostFetch(true)">새로 고침</button>
               <button class="btn pri" id="pb-compose-submit" onclick="pairPostSend(null)">게시</button></div></div>
@@ -1671,7 +1671,7 @@ VIEWS.rpboard=()=>{
     +socialStatus()+`<div class="rp-board">
       <div class="rp-compose"><div class="rp-compose-row">${faceHTML(profile,42)}
         <div class="rp-compose-main"><label class="tiny muted" for="rp-compose">새 RP 작성 · 최대 500자</label>
-        <textarea id="rp-compose" class="inp" rows="3" maxlength="500" placeholder="대사와 *행동*을 남겨 주세요."></textarea>
+        <textarea id="rp-compose" class="inp" rows="3" maxlength="500" placeholder="대사와 *행동* 또는 (행동)을 남겨 주세요."></textarea>
         <div class="rp-compose-actions"><span class="tiny muted">Ctrl + Enter로 게시</span>
           <button class="btn pri" onclick="rpPost()">게시</button></div></div></div></div>
       <div class="rp-tools"><div class="rp-filter-row">${[["all","전체"],["bookmark","북마크"],["mine","내 글"],["replies","내가 답한 대화"]]
@@ -1694,7 +1694,7 @@ rpReply=function(id){
     <div class="tiny muted">${esc(socialName(p.author_id))} · ${esc(pairPostWhen(p.created_at))}</div>
     <div class="mm-reply-snippet">${fmtChat(p.body)}</div></div>
     <textarea class="inp" id="rp-reply-${Number(id)}" maxlength="500" rows="5" style="width:100%"
-      placeholder="대사와 *행동*으로 이어 써 주세요"></textarea>
+      placeholder="대사와 *행동* 또는 (행동)으로 이어 써 주세요"></textarea>
     <div class="rp-compose-actions"><span class="tiny muted">이 글에 직접 연결되는 답글입니다.</span>
       <button class="btn pri" onclick="rpPost(${Number(id)}).then(ok=>{if(ok)closeModal()})">답글 게시</button></div>`);
 };

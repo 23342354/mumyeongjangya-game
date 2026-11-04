@@ -36,7 +36,7 @@ create or replace function public.pp_wallet(s jsonb) returns jsonb language sql 
 $$;
 create or replace function public.pp_progress(s jsonb) returns jsonb language sql immutable as $$
  select jsonb_build_object('life',jsonb_build_object('farm',jsonb_build_object('skill',coalesce(s#>'{farm,skill}','1'),'exp',coalesce(s#>'{farm,exp}','0')),'fish',jsonb_build_object('skill',coalesce(s#>'{fish,skill}','1'),'exp',coalesce(s#>'{fish,exp}','0'),'catches',coalesce(s#>'{fish,catches}','{}'))),'pairRoomClaims',coalesce(s->'pairRoomClaims','[]'),'sharedHome',jsonb_build_object('hall',coalesce(s->>'hall','dorm'),'stage',coalesce(s#>'{home,stage}','0')),'wbDmg',coalesce(s#>'{wb,dmg}','0'),'wbWeek',coalesce(s#>'{wb,balanceWeek}','""'),'course',coalesce(s->'course','1'),'examHist',coalesce(s->'examHist','{}'),
- 'graduated',coalesce(s->'graduated','false'),'tower',coalesce(s->'tower','0'),'tower2',coalesce(s->'tower2','0'),
+ 'arena',coalesce(s->'arena','{"round":1,"season":1,"best":0}'),'graduated',coalesce(s->'graduated','false'),'tower',coalesce(s->'tower','0'),'tower2',coalesce(s->'tower2','0'),
  'quests',coalesce(s->'quests','{}')-'room'-'pick'-'durIdx','run',coalesce(s->'run','null'),
  'storyRead',coalesce(s->'storyRead','[]'),'dex',coalesce(s->'dex','{}')-'title'-'wards',
  'bossClaims',coalesce(s#>'{balance20,bossClaims}','[]'))
@@ -118,6 +118,8 @@ begin
   pr:=pr||jsonb_build_object('wbDmg',coalesce((a.save#>>'{wb,dmg}')::numeric,0)+coalesce((b.save#>>'{wb,dmg}')::numeric,0),'wbWeek',to_char(date_trunc('week',now() at time zone 'Asia/Seoul'),'YYYY-MM-DD'),'course',greatest((pr->>'course')::int,(y->>'course')::int),
    'tower',greatest((pr->>'tower')::int,(y->>'tower')::int),'tower2',greatest((pr->>'tower2')::int,(y->>'tower2')::int),
    'examHist',coalesce(y->'examHist','{}')||coalesce(pr->'examHist','{}'),'graduated',coalesce((pr->>'graduated')::boolean,false) or coalesce((y->>'graduated')::boolean,false),'run','null'::jsonb,'rent_due',greatest(coalesce(p.rent_due,0),coalesce((a.save#>>'{home,due}')::numeric,0),coalesce((b.save#>>'{home,due}')::numeric,0)));
+  if coalesce((y#>>'{arena,season}')::int,1)*100+coalesce((y#>>'{arena,round}')::int,1)>coalesce((pr#>>'{arena,season}')::int,1)*100+coalesce((pr#>>'{arena,round}')::int,1) then pr:=jsonb_set(pr,'{arena}',y->'arena');end if;
+  pr:=jsonb_set(pr,'{arena,best}',to_jsonb(greatest(coalesce((pr#>>'{arena,best}')::int,0),coalesce((y#>>'{arena,best}')::int,0))));
   for k in select jsonb_object_keys(coalesce(y->'examHist','{}')) loop
    if coalesce((y#>>array['examHist',k,'score'])::numeric,0)>coalesce((pr#>>array['examHist',k,'score'])::numeric,0) then pr:=jsonb_set(pr,array['examHist',k],y#>array['examHist',k]);end if;
   end loop;
@@ -302,4 +304,15 @@ revoke all on function public.pair_play(text,text,text,bigint,text,jsonb,jsonb,j
 grant execute on function public.pair_play(text,text,text,bigint,text,jsonb,jsonb,jsonb,bigint,jsonb,jsonb,jsonb) to anon,authenticated;
 revoke all on function public.mm_account_save(text,text,jsonb,text) from public;
 grant execute on function public.mm_account_save(text,text,jsonb,text) to anon,authenticated;
+
+-- Existing shared wallets: migrate only the arena cursor, never award old victories again.
+do $$ declare t public.pair_play_state; chosen jsonb;begin
+ for t in select * from public.pair_play_state where not closed and not(progress ? 'arena') for update loop
+  select coalesce(a.save->'arena','{"round":1,"season":1,"best":0}'::jsonb) into chosen
+   from public.accounts a join public.pairs p on a.id in(p.from_id,p.to_id) where p.id=t.pair_id
+   order by coalesce((a.save#>>'{arena,season}')::int,1) desc,coalesce((a.save#>>'{arena,round}')::int,1) desc limit 1;
+  update public.pair_play_state set progress=jsonb_set(progress,'{arena}',coalesce(chosen,'{"round":1,"season":1,"best":0}'::jsonb)),revision=revision+1 where pair_id=t.pair_id;
+ end loop;
+end $$;
+
 commit;

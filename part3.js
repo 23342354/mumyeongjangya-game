@@ -350,7 +350,7 @@ function runStep(){
       pushRun(`<span class="s">부서진 부적 조각을 쓸어 담았다. 부적가루 +${dd}</span>`); }
     R.foes=[];
   }
-  if(R.me.hp<=0) endRun(false);
+  if([R.me,...R.allies].every(f=>f.hp<=0)) endRun(false);
 }
 function endRun(ok){
   const R=S.run; if(!R||R.done) return;

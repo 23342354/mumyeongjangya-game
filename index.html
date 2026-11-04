@@ -783,6 +783,26 @@ body.pair-action-busy #main button,body.pair-action-busy #modalroot button{point
 #main [onclick^="inviteParty"],#main [onclick^="inviteTeacher"]{display:none}
 #toasts{max-width:min(330px,calc(100vw - 24px));max-height:55vh;overflow:hidden}
 @media(max-width:780px){.pair-wallet-badge{display:none}}
+/* Chat and long navigation groups must never compress into vertical text. */
+#navcol .nav-sub.open{max-height:none;overflow:visible;transition:none}
+#navcol>.card:first-child{padding-bottom:22px;scroll-padding-bottom:22px;overscroll-behavior:contain}
+.chat-panel{min-width:0;overflow:hidden}
+.chat-toolbar{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+#chatfilters{justify-self:start;display:inline-flex;flex-shrink:0}
+#chatfilters button,.chat-compose-mode button,.ctab{white-space:nowrap;word-break:keep-all;min-width:42px;padding:6px 10px}
+.chat-scope{grid-column:1/-1;margin:0;text-align:left;line-height:1.5;word-break:keep-all;overflow-wrap:break-word}
+.chat-tabs{padding:10px 10px 0;gap:5px}
+.ctab{border-radius:7px}
+.chat-log{padding:10px 12px;line-height:1.85}
+.cmsg{padding:7px 0;border-bottom:1px solid var(--line)}
+.chat-in{padding:10px;align-items:center}
+.chat-in input{min-height:38px}
+.chat-in button{white-space:nowrap;min-height:38px}
+.rp-action{color:var(--jade);font-style:normal;background:color-mix(in srgb,var(--jade) 7%,transparent);border-radius:3px;padding:1px 2px;line-height:inherit}
+:root[data-theme="light"] .rp-action{color:#216953}
+.hex-color-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px}
+.hex-color-controls input[type=text]{width:125px;font-family:monospace}
+.hex-color-controls input[type=color]{width:36px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
 
 </style>
 </head>
@@ -1770,7 +1790,7 @@ function renderChat(bottom=false){
   update("chatmodes",["RP","오너"].map(t=>`<button class="${S.chatMode===t?"on":""}" aria-pressed="${S.chatMode===t}" onclick="setChatMode('${t}')">${t}</button>`).join(""));
   $("#chatscope").textContent=S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="이웃"?homeOf(S.hall).n:S.chatTab==="페어"?"페어끼리":S.chatTab==="1:1"?(S.dmWith?.name||"상대 선택"):"전원 · 교직원 NPC는 RP에만 등장";
   update("chatcontext",typeof chatContextHTML==="function"?chatContextHTML():"");
-  $("#chatinput").placeholder=S.chatMode==="RP"?"대사를 입력하고 *행동*은 별표 사이에":"오너 대화를 입력하세요";
+  $("#chatinput").placeholder=S.chatMode==="RP"?"대사와 *행동* 또는 (행동)을 입력하세요":"오너 대화를 입력하세요";
   chatLayout();
   const list=chatMessages(), log=$("#chatlog");
   const view=JSON.stringify([S.chatTab,typeof chatScope==="function"?chatScope(S.chatTab):"",S.chatFilter]);
@@ -1799,7 +1819,21 @@ function setChatMode(m){
   if(["RP","오너"].includes(S.chatFilter)) S.chatFilter=S.chatMode;
   renderChat(); save();
 }
-function fmtChat(s){ return esc(s).replace(/\*([^*]+)\*/g,"<em>$1</em>"); }
+function fmtChat(value){
+ const text=String(value??'');let out='',i=0,plain='';
+ const flush=()=>{out+=esc(plain);plain='';};
+ while(i<text.length){
+  if(text[i]==='*'&&text[i+1]!=='*'&&text[i-1]!=='*'){
+   const end=text.indexOf('*',i+1);
+   if(end>i+1&&text[end+1]!=='*'){flush();out+='<span class="rp-action">'+esc(text.slice(i+1,end))+'</span>';i=end+1;continue;}
+  }
+  if(text[i]==='('){let depth=1,j=i+1;for(;j<text.length&&depth;j++){if(text[j]==='(')depth++;else if(text[j]===')')depth--;}
+   if(!depth){flush();out+='<span class="rp-action">'+esc(text.slice(i,j))+'</span>';i=j;continue;}
+  }
+  plain+=text[i++];
+ }
+ flush();return out.replace(/\n/g,'<br>');
+}
 function addMsg(tab,who,body,c,title,extra){
   const m=Object.assign({tab,who,body,c,title,mode:chatModeOf(S.chatMode),ts:Date.now(),
     time:cal().str.replace(/^(오전|오후) /,"")}, extra||{});
@@ -3411,7 +3445,7 @@ function drawMe(){
         <input class="inp" id="e_name" maxlength="10" value="${esc(S.name)}">
         <label class="f">테마 컬러 — 영혼과 파장을 대표하는 색</label>
         <div class="row">${["var(--gold)","var(--red)","var(--jadeD)","var(--violet)","var(--blue)","var(--ok)","var(--pink)","var(--gold)"].map(c=>
-          `<button class="btn sm" style="background:${c};border-color:${c};width:30px;height:26px;padding:0" onclick="setColor('${c}')"></button>`).join("")}</div>
+          `<button class="btn sm" style="background:${c};border-color:${c};width:30px;height:26px;padding:0" onclick="setColor('${c}')"></button>`).join("")}</div>${hexColorControls('profile',S.color)}
       </div></div>
       <label class="f">계통</label>
       <div class="row"><span class="seg">
@@ -3433,7 +3467,7 @@ function drawMe(){
   }
 
   if(METAB==="꾸미기"){
-    b=`<div class="sect-t">칭호 도감 (${TITLES.filter((t,i)=>titleUnlocked(i)).length} / ${TITLES.length})</div>
+    b=`<div class="sect-t">테마 컬러</div>${hexColorControls('profile',S.color)}<hr class="hr"><div class="sect-t">칭호 도감 (${TITLES.filter((t,i)=>titleUnlocked(i)).length} / ${TITLES.length})</div>
       <div class="row">${TITLES.map((t,i)=>{const open=titleUnlocked(i);
         return `<button class="btn sm ${S.title===t?"pri":""}" ${open?"":"disabled"} onclick="setTitle('${t}')">${open?t:"???"}</button>`}).join("")}</div>
       <hr class="hr">
@@ -3475,6 +3509,16 @@ function drawMe(){
     </div></div>`;
 }
 function setAv(e){ S.av=e; drawMe(); }
+function hexColorControls(scope,value){
+ const color=/^#[0-9a-f]{6}$/i.test(value||'')?value:'#d85bea';
+ return `<div class="hex-color-controls"><input type="color" aria-label="테마 색상 선택" value="${color}" oninput="document.getElementById('${scope}-hex').value=this.value"><input class="inp" type="text" id="${scope}-hex" aria-label="테마 색상 코드" maxlength="7" value="${color}" placeholder="#000000" onkeydown="if(event.key==='Enter'){event.preventDefault();applyHexColor('${scope}')}"><button class="btn sm" onclick="applyHexColor('${scope}')">색상 적용</button></div>`;
+}
+function applyHexColor(scope){
+ const input=document.getElementById(scope+'-hex'),value=input?.value.trim();
+ if(!/^#[0-9a-f]{6}$/i.test(value||'')){toast('색상은 #000000 형식의 여섯 자리 코드로 입력해 주세요.','bad');input?.focus();return false;}
+ if(scope==='create'){MK.color=value.toUpperCase();drawCreate();}else{S.color=value.toUpperCase();renderTop();renderNav();save();toast('테마 색상을 적용했습니다.','good');}
+ return true;
+}
 function setColor(c){ S.color=c; drawMe(); }
 function setLine(l){ S.line=l; drawMe(); }
 function setHall(h){ S.hall=h; drawMe(); renderTop(); renderNav(); save(); }
@@ -3571,7 +3615,7 @@ function drawCreate(){
             `<button class="btn sm ${MK.av===e&&!MK.avImg?"pri":""}" onclick="MK.av='${e}';drawCreate()">${ic(e,18)}</button>`).join("")}</div>
           <label class="f">테마 컬러</label>
           <div class="row">${["var(--gold)","var(--red)","var(--jadeD)","var(--violet)","var(--blue)","var(--ok)","var(--pink)"].map(c=>
-            `<button class="btn sm" style="background:${c};border-color:${MK.color===c?"#fff":c};width:30px;height:26px;padding:0" onclick="MK.color='${c}';drawCreate()"></button>`).join("")}</div>
+            `<button class="btn sm" style="background:${c};border-color:${MK.color===c?"#fff":c};width:30px;height:26px;padding:0" onclick="MK.color='${c}';drawCreate()"></button>`).join("")}</div>${hexColorControls('create',MK.color)}
           <label class="f">한 줄 소개 (40자)</label>
           <input class="inp" id="c_intro" value="${esc(MK.intro)}" maxlength="40" oninput="MK.intro=this.value"
             placeholder="예: 6구역 출신, 야간 순찰 자원병">
@@ -3789,14 +3833,14 @@ else setTimeout(()=>init(),0);
 </script>
 <script src="config.js?v=20261104-login-restore1"></script>
 <script src="notifications.js"></script>
-<script src="part2.js?v=20261104-pair2"></script>
+<script src="part2.js?v=20261104-combat-ui3"></script>
 <script src="part3.js?v=20261104-pair2"></script>
 <script src="part4.js"></script>
 <script src="part5.js"></script>
 <script src="part6.js?v=20261104-pair2"></script>
 <script src="part7.js?v=20261104-login-restore1"></script>
-<script src="social.js"></script>
-<script src="part8.js?v=20261103-pairthread-unlimited1"></script>
+<script src="social.js?v=20261104-combat-ui3"></script>
+<script src="part8.js?v=20261104-combat-ui3"></script>
 <script src="part9.js"></script>
 <script src="part10.js?v=20261104-products2"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>
@@ -3807,7 +3851,7 @@ else setTimeout(()=>init(),0);
 <script src="part14.js?v=20261104-novel-layout-fix1"></script>
 <script src="pixel-scenes.js?v=20261104-shop1"></script>
 <script src="pixel-life.js?v=20261104-simple2"></script>
-<script src="balance20.js?v=20261104-pair2"></script>
-<script src="pair-play.js?v=20261104-pair2"></script>
+<script src="balance20.js?v=20261104-combat-ui3"></script>
+<script src="pair-play.js?v=20261104-combat-ui3"></script>
 </body>
 </html>
