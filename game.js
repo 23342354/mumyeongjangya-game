@@ -810,7 +810,7 @@ function renderTop(){
     <div class="logo logo-top" title="無明長夜"></div>
     <div class="top-avatar">${avatarHTML(34)}</div>
     <div class="top-identity">
-      <div class="me-name">${esc(S.name)} <span class="muted tiny">·</span><span class="me-lv">Lv ${S.lvl}</span></div>
+      <div class="me-name">${esc(S.name)}${S.line?` <span class="me-line tiny" style="color:var(--s6)">· ${esc(S.line)}</span>`:""}<span class="me-lv">Lv ${S.lvl}</span></div>
       <div class="me-sub">${homeOf(S.hall).n} · ${S.course}과정 · Lv ${S.lvl}</div>
     </div>
     <div class="res-wrap">
