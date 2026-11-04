@@ -129,6 +129,30 @@ const EXPANDED_MIN=180;
   d=await desk();
   ok('다시 펴진다', !d.off&&d.main.w===openMain, `${d.main.w}`);
 
+  /* 과목 격자 — 화면 너비가 아니라 본문 칸 너비(#main 은 container)를 따릅니다. */
+  console.log('과목 격자');
+  const cols=async w=>{
+    await p.setViewportSize({width:w,height:900});
+    await p.evaluate(()=>{VIEW='class';renderMain(true);});
+    await p.waitForTimeout(120);
+    return p.evaluate(()=>{
+      const g=document.querySelector('.sub-grid'); if(!g) return null;
+      const acts=[...document.querySelectorAll('.sub-grid .sub')].slice(0,4)
+        .map(e=>Math.round(e.querySelector('.sub-act').getBoundingClientRect().top));
+      return {n:getComputedStyle(g).gridTemplateColumns.split(' ').length,
+        main:Math.round(document.getElementById('main').getBoundingClientRect().width),
+        card:Math.round(g.querySelector('.sub').getBoundingClientRect().width),
+        // 한 행의 단추 줄이 같은 높이에 놓이는지 — 설명 길이가 제각각이라 쉽게 어긋납니다.
+        aligned:new Set(acts).size===1, acts};
+    });
+  };
+  let g=await cols(1500);
+  ok('넓은 화면에서 네 칸', g.n===4, `${g.n}칸 · 카드 ${g.card}px (본문 ${g.main}px)`);
+  ok('카드가 읽을 만한 너비를 지킨다', g.card>=200, `${g.card}px`);
+  ok('한 행의 단추 줄이 바닥에서 맞는다', g.aligned, g.acts.join(' / '));
+  g=await cols(900);  ok('태블릿에서 두 칸', g.n===2, `${g.n}칸 · ${g.card}px`);
+  g=await cols(430);  ok('작은 화면에서 한 칸', g.n===1, `${g.n}칸 · ${g.card}px`);
+
   ok('콘솔 오류 없음', errors.length===0, errors.join(' | '));
 
   await b.close();server.close();
