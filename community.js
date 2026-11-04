@@ -2115,6 +2115,7 @@ const YOWA_DUMPLINGS=[
  {n:"염라",img:"assets/yowa-dumplings/21.png"},
  {n:"양귀비",img:"assets/yowa-dumplings/22.png"},
  {n:"강시",img:"assets/yowa-dumplings/23.png"},
+ {n:"렌야",img:"assets/yowa-dumplings/24.png"},
 ];
 const YOWA_DOLLS=[
  {n:"큰요우",img:"assets/yowa-dolls/01.png"},
@@ -2132,6 +2133,7 @@ const YOWA_DOLLS=[
  {n:"사쿠",img:"assets/yowa-dolls/15.png"},
  {n:"레이",img:"assets/yowa-dolls/17.png"},
  {n:"류쉬안",img:"assets/yowa-dolls/18.png"},
+ {n:"렌야",img:"assets/yowa-dolls/10.png"},
 ];
 const YOWA_DEX_REWARD_GROUPS={plush:"agi",doll:"res"};
 // 체력·이성 회복 아이템은 SHOP(p1/p2)에만 판매합니다.
@@ -2152,14 +2154,26 @@ function ensureV10(){
   if(!Array.isArray(S.dex.doll)) S.dex.doll=[];
   if(!S.yowa) S.yowa={last:null};
   // Retain a private migration archive; retired collectibles no longer count or appear.
-  const retired=['지영원','영원','우건하','건하','야나기 렌야','야나기렌야','렌야'];
+  const retired=['지영원','영원','우건하','건하'];
+  const renyaNames=['야나기 렌야','야나기렌야','렌야'];
   for(const kind of ['plush','doll']){
+    // Renya has returned: restore archived discoveries without losing other retirements.
+    const archived=S.yowa.retired?.[kind]||[];
+    S.dex[kind]=[...new Set(S.dex[kind].map(n=>renyaNames.includes(n)?'렌야':n))];
+    if(archived.some(n=>renyaNames.includes(n))){
+      if(!S.dex[kind].includes('렌야'))S.dex[kind].push('렌야');
+      S.yowa.retired[kind]=archived.filter(n=>!renyaNames.includes(n));
+    }
     const removed=S.dex[kind].filter(n=>retired.includes(n));
     if(removed.length){
       if(!S.yowa.retired)S.yowa.retired={};
       S.yowa.retired[kind]=[...new Set([...(S.yowa.retired[kind]||[]),...removed])];
       S.dex[kind]=S.dex[kind].filter(n=>!retired.includes(n));
     }
+  }
+  if(S.yowa.last&&renyaNames.includes(S.yowa.last.name)){
+    S.yowa.last.name='렌야';
+    S.yowa.last.img=S.yowa.last.kind==='plush'?'assets/yowa-dumplings/24.png':'assets/yowa-dolls/10.png';
   }
   if(S.yowa.last&&retired.includes(S.yowa.last.name))S.yowa.last=null;
 }
