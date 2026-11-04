@@ -1,0 +1,12 @@
+{
+  "name": "mumyeongjangya-game",
+  "private": true,
+  "scripts": {
+    "test": "node tests/check-files.cjs && node tests/pair-save.cjs",
+    "test:browser": "node tests/browser-smoke.cjs",
+    "test:combat": "python3 tests/combat-model.py"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
