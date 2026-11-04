@@ -1003,6 +1003,20 @@ function chatLayout(){
     log._layoutObserver.observe(log);
   }
 }
+/* 대화 칸 접기 — 넓은 화면에서 대화가 비어 있을 때 본문에 자리를 돌려줍니다.
+   선택은 이 브라우저에 남습니다. 좁은 화면에서는 쓰이지 않습니다. */
+const CHATFOLDKEY="mmjy.chatFold";
+function chatFolded(){ try{ return localStorage.getItem(CHATFOLDKEY)==="1"; }catch(e){ return false; } }
+function applyChatFold(){
+  const off=chatFolded();
+  document.body.classList.toggle("chat-off", off);
+  const b=document.querySelector(".chat-fold");
+  if(b){ b.title=off?"대화 칸 펴기":"대화 칸 접기"; b.setAttribute("aria-expanded", String(!off)); }
+}
+function toggleChat(){
+  try{ localStorage.setItem(CHATFOLDKEY, chatFolded()?"0":"1"); }catch(e){}
+  applyChatFold();
+}
 function renderChat(bottom=false){
   const host=$("#chatcol"); if(!host) return;
   S.chatMode=chatModeOf(S.chatMode);
@@ -1010,6 +1024,8 @@ function renderChat(bottom=false){
   /* 입력칸은 다시 만들지 않습니다. 새 글을 받아도 초안·커서·한글 조합이 유지됩니다. */
   if(!host.querySelector(".chat-panel")) host.innerHTML=`
   <section class="card chat-panel" aria-label="채팅">
+    <button type="button" class="chat-fold" onclick="toggleChat()" aria-expanded="true"
+      aria-controls="chatlog" title="대화 칸 접기"><span>대화</span>${ic("chevR",12)}</button>
     <div class="chat-tabs" id="chattabs" aria-label="채팅 채널"></div>
     <div class="chat-toolbar">
       <span class="tiny muted">보기</span><span class="seg" id="chatfilters" aria-label="대화 필터"></span>
@@ -1025,6 +1041,7 @@ function renderChat(bottom=false){
       </div>
     </div>
   </section>`;
+  if(!host._chatFoldReady){ host._chatFoldReady=true; applyChatFold(); }
   const update=(id,html)=>{ const el=document.getElementById(id); if(el._chatHTML!==html){el.innerHTML=html;el._chatHTML=html;} };
   update("chattabs",CHATTABS.map(t=>`<button class="ctab ${S.chatTab===t?"on":""}" aria-pressed="${S.chatTab===t}" onclick="setChatTab('${t}')">${t}</button>`).join(""));
   update("chatfilters",["모두","RP","오너"].map(t=>`<button class="${S.chatFilter===t?"on":""}" aria-pressed="${S.chatFilter===t}" onclick="setChatFilter('${t}')">${t}</button>`).join(""));

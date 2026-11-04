@@ -1035,3 +1035,85 @@ body.auth-gate #mobile-chat-toggle{
 .pair-housing-row>.card{min-width:0;margin-bottom:0!important;padding:12px}
 .pair-housing-row .sect-t{margin-bottom:6px}
 @media(max-width:600px){.pair-housing-row{grid-template-columns:minmax(0,1fr);gap:8px}}
+
+/* ═══ 넓은 화면 재구성 — 가운데에 무게 싣기 ═══
+   세 칸이 모두 같은 카드 틀이라 화면이 같은 무게의 판 셋으로 읽혔습니다.
+   양옆은 틀을 벗겨 바탕에 얹고, 카드는 본문에만 남깁니다. */
+@media(min-width:1181px){
+  #app{grid-template-columns:184px minmax(0,1fr) 300px;gap:28px;padding:20px 30px;max-width:1640px}
+
+  /* 양옆 — 틀 없이 */
+  #chatcol{background:none}
+  #navcol>.card,#chatcol>.card{background:none;border:0;backdrop-filter:none;border-radius:0}
+  #navcol>.card{padding:0}
+  #navcol>.card+.card{margin-top:20px;padding-top:18px;border-top:1px solid var(--lineSoft)}
+
+  /* 안내도 — 세로 리듬을 조이고 고른 칸에 등뼈를 세웁니다 */
+  #navcol .sect-t{margin-bottom:10px;font-size:10.5px;letter-spacing:.08em;color:var(--dim2)}
+  #navcol .nav-g{margin-bottom:1px}
+  #navcol .nav-h{padding:7px 10px;font-size:13px;border-radius:var(--r-s)}
+  #navcol .nav-h.on{background:var(--accSoft);box-shadow:inset 3px 0 0 var(--gold)}
+  #navcol .nav-i{padding:5px 10px 5px 35px;font-size:12.5px}
+
+  /* 머리글 — 890px 칸에 22px 제목은 작습니다 */
+  #main .page-head{align-items:baseline;padding:2px 0 16px;margin-bottom:20px;min-height:0;
+    border-bottom:1px solid var(--lineSoft)}
+  #main .page-kicker{display:block;width:100%;margin-bottom:3px;color:var(--gold2);
+    font-size:11px;letter-spacing:.07em}
+  #main h1.page{font-size:30px;line-height:1.25;letter-spacing:-.02em;margin:0}
+  #main .page-head .rt{align-self:flex-end;font-size:12px;color:var(--dim2)}
+
+  /* 대화 칸 — 글은 읽히되 틀은 사라지게 */
+  #chatcol .chat-log{border-top:1px solid var(--lineSoft)}
+  #chatcol .chat-compose{background:none;border-top:1px solid var(--lineSoft)}
+  #chatcol .chat-tabs{padding:0 0 2px}
+  #chatcol .chat-toolbar,#chatcol .chat-compose-mode,#chatcol .chat-context{padding-left:0;padding-right:0}
+  #chatcol .chat-log{padding:10px 0}
+  #chatcol .chat-in{padding:8px 0 0}
+}
+
+/* 대화 칸 접기 — 넓은 화면에서만. 접으면 세로 손잡이 하나만 남습니다. */
+.chat-fold{display:none}
+@media(min-width:1181px){
+  #chatcol .chat-panel{position:relative}
+  .chat-fold{display:flex;align-items:center;gap:5px;position:absolute;top:0;right:0;z-index:2;
+    border:0;background:none;color:var(--dim2);font:inherit;font-size:11px;
+    letter-spacing:.04em;padding:3px 2px 3px 8px;cursor:pointer}
+  .chat-fold:hover{color:var(--gold)}
+  .chat-fold svg{transform:rotate(180deg)}
+  #chatcol .chat-tabs{padding-right:52px}
+
+  body.chat-off #app{grid-template-columns:184px minmax(0,1fr) 34px}
+  body.chat-off #chatcol>.card>*:not(.chat-fold){display:none}
+  body.chat-off .chat-fold{position:static;flex-direction:column;gap:7px;width:34px;padding:12px 0;
+    writing-mode:vertical-rl;color:var(--dim);border:1px solid var(--lineSoft);
+    border-radius:var(--r-s);background:var(--resBg)}
+  body.chat-off .chat-fold svg{transform:rotate(-90deg)}
+  body.chat-off .chat-fold:hover{border-color:var(--accEdge)}
+}
+
+/* 안내도 — 틀이 사라졌으므로 고른 칸은 면이 아니라 글자색과 등뼈로 가립니다. */
+@media(min-width:1181px){
+  #navcol .nav-i.on{background:none;color:var(--gold);font-weight:600;box-shadow:inset 2px 0 0 var(--accEdge)}
+  #navcol .nav-i:hover{background:none;color:var(--tx)}
+  #navcol .nav-h:hover{background:var(--accSoft)}
+  /* 기숙사 혜택 설명 — 벽처럼 보이지 않게 띄웁니다. */
+  #navcol .card:last-child>:last-child{margin-top:12px;padding-top:11px;
+    border-top:1px solid var(--lineSoft);color:var(--dim2);line-height:1.75}
+}
+
+/* 배경 그림을 머리띠로 — 넓은 화면에서만.
+   온 화면에 깔고 가림막으로 눌러 두니, 위에서는 흐릿하고 아래에서는 글과 겹쳐
+   번잡하기만 했습니다. 위쪽 제목 뒤에서만 보이고 본문에 닿기 전에 사라집니다. */
+@media(min-width:1181px){
+  body::before{
+    -webkit-mask-image:linear-gradient(180deg,#000 0,#000 200px,transparent 520px);
+    mask-image:linear-gradient(180deg,#000 0,#000 200px,transparent 520px)}
+  body::after{background:
+    radial-gradient(1000px 440px at 20% 0%, var(--wash1), transparent 62%),
+    radial-gradient(820px 400px at 92% 2%, var(--wash2), transparent 62%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--s0) 42%, transparent) 0,
+      color-mix(in srgb, var(--s0) 74%, transparent) 240px,
+      var(--s0) 540px, var(--s0) 100%)}
+}
