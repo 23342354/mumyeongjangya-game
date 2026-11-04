@@ -838,8 +838,9 @@ textarea.inp{min-height:76px;resize:vertical}
 :root{--cardA:#171023f2;--cardB:#130c20f5;--subBg:#21172eea;--dim:#c6b5d6;--dim2:#a38bb7;--scrim2:rgba(8,4,18,.84)}
 :root[data-theme="light"]{--cardA:#fffefdf5;--cardB:#faf6fff7;--subBg:#f1eaf8f2;--dim:#59416f;--dim2:#766085;--scrim2:rgba(245,239,252,.88)}
 #navcol .nav-i{padding-top:9px;padding-bottom:9px}
-#navcol>.card:first-child{max-height:calc(100dvh - 150px);overflow:auto;scrollbar-width:thin}
-#chatcol{height:calc(100dvh - 130px);max-height:850px;top:112px;background:var(--s0)}
+#navcol>.card:first-child{max-height:calc(100dvh - var(--chat-top,112px) - 16px);overflow:auto;scrollbar-width:thin}
+/* Share the measured header offset: buff chips can wrap onto several rows. */
+#chatcol{height:calc(100dvh - var(--chat-top,112px) - 16px);max-height:850px;top:var(--chat-top,112px);background:var(--s0)}
 #main .farm-crop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:13px;border-bottom:1px solid var(--line)}
 #main .farm-crop-row .life-sprite{width:42px;height:42px}
 #main .farm-crop-row button{max-width:100%}

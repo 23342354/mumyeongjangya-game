@@ -955,6 +955,15 @@ function chatLayout(){
   if(!CHATRESIZE&&typeof ResizeObserver!=="undefined"){
     CHATRESIZE=new ResizeObserver(fit); CHATRESIZE.observe(top);
   }
+  const log=document.getElementById("chatlog");
+  if(log&&!log._layoutObserver&&typeof ResizeObserver!=="undefined"){
+    // Keep the latest message visible when buffs change the available height.
+    // Reading older messages and the compose input remain untouched.
+    let follow=log.scrollHeight-log.clientHeight-log.scrollTop<48;
+    log.addEventListener("scroll",()=>{follow=log.scrollHeight-log.clientHeight-log.scrollTop<48;},{passive:true});
+    log._layoutObserver=new ResizeObserver(()=>{if(follow)log.scrollTop=log.scrollHeight;});
+    log._layoutObserver.observe(log);
+  }
 }
 function renderChat(bottom=false){
   const host=$("#chatcol"); if(!host) return;
