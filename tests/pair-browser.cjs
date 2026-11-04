@@ -114,6 +114,9 @@ const root=path.resolve(__dirname,'..');
  await page.evaluate(async()=>{step(1/60);await PAIR_PLAY.queue;});
  assert.equal(commitCalls,countAtFour+1,'one combat checkpoint at five minutes');
  assert.equal(await page.evaluate(()=>S.run.logs.some(l=>l.t.includes('의뢰 진행'))),true,'real attack logs summarized');
+ await checkpoint(5);await page.evaluate(async()=>{step(1/60);await PAIR_PLAY.queue;});
+ assert.equal(await page.evaluate(()=>S.run.logs.some(l=>/10분 .*의뢰 진행/.test(l.t))),true,'checkpoints show total elapsed time instead of resetting to five minutes');
+
  // A background statement timeout must leave the modal and received chat intact.
  timeout=true;const before=commitCalls;await page.evaluate(async()=>{S.bio='timeout state';save();await acctPush(true);});assert.equal(commitCalls,before+1);
  const writesBeforeRead=commitCalls;const walletBeforeRead=await page.evaluate(()=>JSON.stringify({rin:S.rin,bag:S.bag,rev:S.marketRev}));
@@ -179,6 +182,22 @@ const root=path.resolve(__dirname,'..');
  blockPairReads=false;await page.evaluate(async()=>{PAIR_PLAY.retryAt=0;await PAIR_PLAY.refresh();});
  assert.equal(Number((await db.query('select vault from runner_clubs')).rows[0].vault.rin),22);
  assert.equal(await page.evaluate(()=>S.rin),Number((await db.query('select wallet from pair_play_state where pair_id=1')).rows[0].wallet.rin),'later refresh applies authoritative shared wallet');
+ // An ended quest keeps its pouch in shared progress until either partner claims it.
+ const stored=(await db.query('select progress from pair_play_state where pair_id=1')).rows[0].progress;
+ stored.run.done=true;stored.run.left=0;stored.run.rewardVersion=2;stored.run.settled=false;
+ stored.run.pending={rin:123,exp:250,know:17,gear:[],mat:{가루:3},ing:{먼지:2},bmat:{},sari:1,marks:2};
+ await db.query('update pair_play_state set progress=$1,revision=revision+1 where pair_id=1',[stored]);
+ await page.evaluate(async()=>{await PAIR_PLAY.refresh();});
+ const claimBefore=(await db.query('select wallet from pair_play_state where pair_id=1')).rows[0].wallet;
+ await page.evaluate(async()=>{PAIR_PLAY.clockBasis=Date.now();await runClear();});
+ const claimed=(await db.query('select wallet,progress from pair_play_state where pair_id=1')).rows[0];
+ assert.equal(Number(claimed.wallet.rin)-Number(claimBefore.rin),123,'shared settlement awards the exact stored currency');
+ assert.equal(Number(claimed.wallet.know)-Number(claimBefore.know),17);
+ assert.equal(Number(claimed.wallet.mat.가루||0)-Number(claimBefore.mat.가루||0),3);
+ assert.equal(claimed.progress.run,null,'shared pouch is consumed atomically');
+ await page.evaluate(async()=>{await runClear();});
+ const repeated=(await db.query('select wallet from pair_play_state where pair_id=1')).rows[0].wallet;
+ assert.equal(repeated.rin,claimed.wallet.rin,'second settlement cannot pay twice');
  assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown recovery, five-minute combat checkpoints, immediate hooks, durable fishing outbox, save-independent marketplace reads, trade acknowledgement/recovery and reload deduplication');
  }finally{await browser.close();server.close();await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

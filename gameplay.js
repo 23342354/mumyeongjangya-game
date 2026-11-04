@@ -966,8 +966,8 @@ function setTend(t){ S.tendency=t; renderMain(); renderNav(); renderTop(); save(
 
 /* 수행 단계 상승 시 포인트 */
 const _gainExp=gainExp;
-gainExp=function(n){
-  const before=S.lvl; const r=_gainExp(n);
+gainExp=function(n,exact=false){
+  const before=S.lvl; const r=_gainExp(n,exact);
   if(S.lvl>before) S.pts+=(S.lvl-before)*2;
   return r;
 };
@@ -1885,6 +1885,7 @@ const RUNFLAVOR=[
  "향 냄새가 채 가시기 전에 납땜 연기가 끼어든다.",
 ];
 function startRun(stage,party,mins){
+  if(S.run?.done&&S.run.rewardVersion===2&&!S.run.settled){toast("이전 의뢰의 보상을 먼저 정산해 주세요.","bad");return;}
   if(!questCheck(stage)) return;
   if(S.run&&!S.run.done){ toast("이미 의뢰를 나가 있습니다.","bad"); return; }
   const q=questAt(stage);
@@ -1905,11 +1906,55 @@ function startRun(stage,party,mins){
   allies.forEach((a,i)=>{ a.pos=(room.party[i].pos)||"후열"; a.teacher=room.party[i].teacher; a.lv=room.party[i].lv; });
   S.run={stage, q, pos, me, allies, foes:[enemyFor(stage,q.rank.r==="Ⅴ")],
          logs:[], left:dur, total:dur, eff, kills:0, rin:0, exp:0, know:0,
-         acc:0, done:false, party:!!party};
+         acc:0, done:false, party:!!party, rewardVersion:2, pending:runEmptyRewards()};
   pushRun(`<b>${stage}단계 ${q.ward.n}로 ${allies.length?allies.map(a=>a.n).join(" · ")+"과 함께 ":""}출발했다.</b>`);
   if(party) S.quests.room=null;
   go("quest");
-  toast(`출동했습니다. <b>${hhmm(dur)}</b>짜리 의뢰입니다${eff<1?` · 효율 ${Math.round(eff*100)}%`:""}. 처치할 때마다 륜과 경험치가 바로 들어오고, 창을 닫아 두어도 시계대로 진행됩니다.`);
+  toast(`출동했습니다. <b>${hhmm(dur)}</b>짜리 의뢰입니다${eff<1?` · 효율 ${Math.round(eff*100)}%`:""}. 보상은 의뢰 완료·귀환 후 정산할 때 지급되며, 창을 닫아 두어도 시계대로 진행됩니다.`);
+}
+function runEmptyRewards(){return {rin:0,exp:0,know:0,gear:[],mat:{},ing:{},bmat:{},sari:0,marks:0};}
+function runRewards(R=S.run){
+  if(!R)return null;
+  // Old runs keep rewards already paid. Only future drops enter this pouch.
+  if(R.rewardVersion!==2){R.rewardVersion=2;R.pending=runEmptyRewards();}
+  return R.pending||(R.pending=runEmptyRewards());
+}
+function runReward(key,base){
+  const n=Math.round(base*(1+mod({rin:'gold',exp:'exp',know:'know'}[key])));
+  runRewards()[key]+=n;return n;
+}
+function runMaterial(group,key,n){const p=runRewards();p[group][key]=(p[group][key]||0)+n;}
+function runRewardText(R=S.run){
+  const p=R?.pending;if(!p)return '새로 누적된 보상이 없습니다';
+  const parts=[`륜 ${nf(p.rin)} · 경험치 ${nf(p.exp)} · 지식 ${nf(p.know)}`];
+  if(p.gear.length)parts.push(`법구 ${p.gear.length}점: `+p.gear.map(it=>esc(it.name)).join(', '));
+  for(const group of ['mat','ing','bmat'])for(const [k,n] of Object.entries(p[group]||{})){
+    const name=group==='ing'?(ING.find(x=>x.k===k)?.n||k):group==='bmat'?(BRAW.find(x=>x.k===k)?.n||k):k==='가루'?'부적가루':k;
+    if(n)parts.push(`${esc(name)} ${nf(n)}`);
+  }
+  if(p.sari)parts.push(`사리 ${p.sari}`);if(p.marks)parts.push(`축제 표식 최대 ${p.marks}`);
+  return parts.join(' · ');
+}
+function runRemaining(R=S.run){
+  if(!R)return 0;if(R.done)return Math.max(0,R.left);
+  const elapsed=R.lastTick?Math.max(0,(Date.now()-R.lastTick)/60000):0;
+  return Math.max(0,R.left-elapsed);
+}
+function updateRunDisplay(){
+  const R=S.run;if(!R)return;
+  const left=runRemaining(R),elapsed=Math.max(0,R.total-left);
+  const clock=document.getElementById('runclock');if(clock)clock.textContent=R.done?'종료 · 정산 대기':runTimeText(left)+' 남음';
+  const pace=document.getElementById('runpace');if(pace)pace.textContent=`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(elapsed)} 지났습니다. 보상은 완료·귀환 후 정산할 때 지급됩니다.`;
+  const bar=document.getElementById('runprog');if(bar)bar.style.width=clamp(elapsed/Math.max(1,R.total)*100,0,100)+'%';
+  const kills=document.getElementById('runkills');if(kills)kills.textContent=`처치 ${R.kills}체 · 누적 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)} · 정산 대기`;
+}
+function settleRunRewards(R){
+  if(!R||!R.done||R.settled||R.rewardVersion!==2)return;
+  const p=runRewards(R);
+  gainRin(p.rin,true);gainExp(p.exp,true);gainKnow(p.know,true);
+  for(const group of ['mat','ing','bmat'])for(const [key,n] of Object.entries(p[group]||{})){S[group]||={};S[group][key]=(S[group][key]||0)+n;}
+  p.gear.forEach(it=>balanceStoreLoot(it,true));S.sari+=p.sari||0;S.war.mine=(S.war.mine||0)+(p.war||0);if(p.marks)addMark(p.marks);
+  R.settled=true;achCheck();toast('의뢰 보상을 정산했습니다.','good');
 }
 function pushRun(t){
   if(!S.run) return;
@@ -1945,19 +1990,19 @@ function runStep(){
   pushRun(log[0]||"");
   if(foe.hp<=0){
     R.kills++; ct("mon");
-    /* 한 체 쓰러뜨릴 때마다 그 자리에서 바로 들어옵니다 — 끝날 때 몰아 주지 않습니다 */
+    /* 획득 시점의 배율로 계산하고 정산 전까지 의뢰 주머니에 보관합니다. */
     const ef=R.eff||1;
-    const got=gainRin(Math.round((40+R.stage*14)*R.q.rank.mul*ef));
-    const exg=gainExp(Math.round((60+R.stage*22)*0.6*ef));
-    const kng=gainKnow(Math.round((10+R.stage*4)*0.5*ef));
+    const got=runReward("rin",Math.round((40+R.stage*14)*R.q.rank.mul*ef));
+    const exg=runReward("exp",Math.round((60+R.stage*22)*0.6*ef));
+    const kng=runReward("know",Math.round((10+R.stage*4)*0.5*ef));
     R.rin+=got; R.exp=(R.exp||0)+exg; R.know=(R.know||0)+kng;
     pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(got)} · 경험치 +${nf(exg)} · 지식 +${nf(kng)}</span>`);
     if(foe.boss){ ct("boss"); }
     if(Math.random()<(0.14+mod("loot"))){
-      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); balanceStoreLoot(it);
+      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); runRewards().gear.push(it);
       pushRun(`<span class="s">${GRADES[it.grade].n} 법구 「${esc(it.name)}」를 주웠다.</span>`);
     }
-    if(Math.random()<0.18){ const dd=rnd(1,3)+Math.floor(R.stage/12); S.mat.가루+=dd;
+    if(Math.random()<0.18){ const dd=rnd(1,3)+Math.floor(R.stage/12); runMaterial("mat","가루",dd);
       pushRun(`<span class="s">부서진 부적 조각을 쓸어 담았다. 부적가루 +${dd}</span>`); }
     R.foes=[];
   }
@@ -1965,7 +2010,7 @@ function runStep(){
 }
 function endRun(ok){
   const R=S.run; if(!R||R.done) return;
-  R.done=true;
+  runRewards(R);R.done=true;
   const q=R.q;
   const cleared=ok&&R.left<=0&&R.kills>0; // 관문은 끝까지 버틴 뒤에만 통과
   let hpL=rnd(q.rank.hp[0],q.rank.hp[1]), snL=rnd(q.rank.sn[0],q.rank.sn[1]);
@@ -1974,30 +2019,31 @@ function endRun(ok){
   if(S.ward){ hpL=Math.round(hpL*.5); snL=Math.round(snL*.5); S.ward=false; }
   if(!ok){ hpL=Math.round(hpL*1.7); snL=Math.round(snL*1.6); }
   damageHP(hpL); snL=damageSN(snL);
-  /* 처치 보상은 그때그때 이미 들어갔습니다. 여기서는 해결 보너스만 더합니다. */
+  /* 해결 보너스도 주머니에 합치고 수령 버튼에서만 지급합니다. */
   const ef=R.eff||1;
-  const rin=cleared?gainRin(Math.round((120+R.stage*48)*ef)):0;
-  const ex =cleared?gainExp(Math.round((90+R.stage*34)*ef)):0;
+  const rin=cleared?runReward("rin",Math.round((120+R.stage*48)*ef)):0;
+  const ex =cleared?runReward("exp",Math.round((90+R.stage*34)*ef)):0;
   const kn =0;
+  R.rin+=rin;R.exp=(R.exp||0)+ex;
   if(cleared){
     questRecordClear(R.stage);
     ct("quest");
-    if(q.rank.r==="Ⅳ"&&Math.random()<.3) S.sari++;
-    if(q.rank.r==="Ⅴ") S.sari++;
-    addMark(Math.round(6*q.rank.mul));
+    if(q.rank.r==="Ⅳ"&&Math.random()<.3) runRewards().sari++;
+    if(q.rank.r==="Ⅴ") runRewards().sari++;
+    runRewards().marks+=Math.round(6*q.rank.mul);
     pushNews(`[의뢰] ${S.name} 학생이 사건 ${q.no}(${q.rank.r}등급)을 해결했습니다.`);
   }
-  pushRun(`<span class="turn">정산 · 처치 ${R.kills}체 · 륜 ${nf(R.rin||0)}${rin?` +해결 ${nf(rin)}`:""} · 경험치 ${nf(R.exp||0)}${ex?` +해결 ${nf(ex)}`:""} · 지식 ${nf(R.know||0)} · 체력 −${hpL} · 이성 −${snL}</span>`);
+  pushRun(`<span class="turn">정산 대기 · 처치 ${R.kills}체 · ${runRewardText(R)} · 체력 −${hpL} · 이성 −${snL}</span>`);
   pushRun(cleared?`<span class="s">■ 의뢰를 해결하고 사무전으로 돌아왔다.</span>`
-    :ok?`<span class="turn">■ 의뢰 도중 귀환했다. 모은 몫만 정산되며 다음 구간은 열리지 않는다.</span>`
+    :ok?`<span class="turn">■ 의뢰 도중 귀환했다. 모은 몫을 정산할 수 있으며 다음 구간은 열리지 않는다.</span>`
     :`<span class="h">■ 더 버티지 못하고 현장에서 철수했다.</span>`);
   S.quests.log.unshift({no:q.no,t:q.t,win:cleared,time:cal().str});
   if(S.quests.log.length>30) S.quests.log.pop();
-  S.war.mine=(S.war.mine||0)+Math.round(12*q.rank.mul);
-  achCheck(); renderTop(); renderNav(); save();
+  runRewards().war=Math.round(12*q.rank.mul);
+  renderTop(); renderNav(); save();
 }
 function runReturn(){ if(S.run&&!S.run.done) endRun(S.run.kills>0); renderMain(); }
-function runClear(){ S.run=null; renderMain(); }
+function runClear(){ if(S.run&&!S.run.done)return;settleRunRewards(S.run);S.run=null;renderTop();renderNav();renderMain();save(); }
 
 /* ═══════════ 틱 3 ═══════════ */
 const _step3=step;
@@ -2391,7 +2437,7 @@ const _quest=VIEWS.quest;
 VIEWS.quest=()=>{
   let head1="";
   if(S.run){
-    const R=S.run, q=R.q;
+    const R=S.run, q=R.q, remaining=runRemaining(R);
     const bar=(f,i)=>`<div class="spread" style="padding:4px 0">
       <div style="width:150px"><span class="tag ${f.pos==="선봉"?"r":f.pos==="지원"?"j":""}">${f.pos||"후열"}</span>
         <b style="color:${f.c}">${esc(f.n)}</b></div>
@@ -2400,15 +2446,15 @@ VIEWS.quest=()=>{
     head1=`<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
       <div class="spread">
         <div><div class="sect-t" style="margin:0">의뢰 일지 <span class="muted">${q.stage}단계 · ${q.ward.n}</span></div>
-          <div class="tiny muted" id="runkills">처치 ${R.kills}체 · 받은 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}</div></div>
-        <div class="tiny muted" id="runclock">${R.done?"종료됨":runTimeText(R.left)+" 남음"}</div></div>
-      <div class="bar" style="margin:8px 0 2px"><i id="runprog" style="width:${clamp((1-R.left/Math.max(1,R.total))*100,0,100)}%"></i></div>
-      <div class="tiny muted" id="runpace">${R.done?"":`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(Math.max(0,R.total-R.left))} 지났습니다. 현실 시계와 같은 속도로 흐릅니다.`}</div>
-      ${runAwayHTML()}
+          <div class="tiny muted" id="runkills">처치 ${R.kills}체 · 누적 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}</div></div>
+        <div class="tiny muted" id="runclock">${R.done?"종료됨":runTimeText(remaining)+" 남음"}</div></div>
+      <div class="bar" style="margin:8px 0 2px"><i id="runprog" style="width:${clamp((1-remaining/Math.max(1,R.total))*100,0,100)}%"></i></div>
+      <div class="tiny muted" id="runpace">${R.done?"":`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(Math.max(0,R.total-remaining))} 지났습니다. 보상은 완료·귀환 후 정산할 때 지급됩니다.`}</div>
+      ${R.pending?`<div class="sub tiny" style="margin-top:10px;line-height:1.8"><b>누적 보상 · 정산 대기</b><br>${runRewardText(R)}</div>`:runAwayHTML()}
       <div class="log" id="runlog" style="margin:10px 0;height:clamp(190px,34vh,300px);max-height:none">
         ${R.logs.map(l=>`<div><span class="muted" style="font-size:10.5px">${l.time}</span> ${l.t}</div>`).reverse().join("")}
       </div>
-      <div class="tiny muted" style="margin-bottom:6px"><b>새 줄이 맨 위</b>에 적힙니다 · 30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.</div>
+      <div class="tiny muted" style="margin-bottom:6px"><b>새 줄이 맨 위</b>에 적힙니다 · 진행은 5분마다 누적 기록합니다. 보상은 완료·귀환 후 정산할 때 한꺼번에 받습니다.</div>
       ${bar(R.me)}
       ${R.allies.map(a=>bar(a)).join("")}
       ${R.foes.filter(f=>f.hp>0).map(f=>`<div class="spread" style="padding:4px 0">
@@ -2416,9 +2462,9 @@ VIEWS.quest=()=>{
         <div style="flex:1"><div class="bar hp"><i style="width:${clamp(f.hp/f.max*100,0,100)}%"></i></div></div>
         <span class="tiny muted" style="width:120px;text-align:right">HP ${nf(Math.max(0,f.hp))} / ${nf(f.max)}</span></div>`).join("")}
       <div class="row" style="margin-top:10px">
-        ${R.done?`<button class="btn pri" onclick="runClear()">일지 닫기</button>`
+        ${R.done?`<button class="btn pri" onclick="runClear()">${R.rewardVersion===2&&!R.settled?"보상 정산":"일지 닫기"}</button>`
           :`<button class="btn" onclick="runReturn()">혼자 귀환</button>
-            <span class="tiny muted">지금 돌아가면 그때까지 모은 몫만 정산됩니다.</span>`}
+            <span class="tiny muted">귀환 후 보상 정산을 누르면 그때까지 모은 몫을 받습니다.</span>`}
         ${!R.done&&R.stage%10===0?'<span class="tiny muted">관문은 도중에 귀환하면 통과로 인정되지 않습니다.</span>':""}
       </div></div>`;
   }
@@ -2993,7 +3039,7 @@ runStep=function(){
   if(S.run && S.run.kills>before && Math.random()<0.16){
     const g=ING.filter(x=>!/심연|종루/.test(x.w));
     const it=pick(g), amt=rnd(1,2)+Math.floor(S.run.stage/25);
-    S.ing[it.k]=(S.ing[it.k]||0)+amt;
+    runMaterial("ing",it.k,amt);
     pushRun(`<span class="s">${it.e} ${it.n}을(를) 챙겼다. +${amt}</span>`);
   }
 };

@@ -22,9 +22,10 @@ ctx.acctFetch=async(_path,o)=>{
  if(q.p_action==='rent')return snapshot();
  throw Error('unknown rpc');
 };
-for(const k of ['save','acctPush','step','offline','C','maxMana','renderTop','renderNav','renderMain','toast','modal','boot','pairFetch','manaRate','power','effStat','gainExp','finishPeriod','finishResearch','damageHP','damageSN','simBattle','examOpponent','towerFoe','guardFoe','startRun','runRealTick','myRecord','pairRentTick','payPairRent','marketRpc','clubInventoryRpc','clubApplyInventory','balanceBossData','closeModal','nowMin','syncUp','claimRoom','coopRoomPanel','pairMergeApply','roomCreate','roomJoin','roomRun','legacyQuestRoom','pairRunHTML','normalizeEffects','tick','drawFish2'])ctx[k]=noop;
+for(const k of ['save','acctPush','step','offline','C','maxMana','renderTop','renderNav','renderMain','toast','modal','boot','pairFetch','manaRate','power','effStat','gainExp','finishPeriod','finishResearch','damageHP','damageSN','simBattle','examOpponent','towerFoe','guardFoe','startRun','runRealTick','myRecord','pairRentTick','payPairRent','marketRpc','clubInventoryRpc','clubApplyInventory','balanceBossData','closeModal','nowMin','syncUp','claimRoom','coopRoomPanel','pairMergeApply','roomCreate','roomJoin','roomRun','legacyQuestRoom','pairRunHTML','normalizeEffects','tick','drawFish2','updateRunDisplay'])ctx[k]=noop;
 ctx.save=()=>{};ctx.acctPush=async()=>true;ctx.maxMana=()=>100;ctx.manaRate=()=>1;ctx.power=()=>10;ctx.effStat=()=>3;ctx.C=()=>({dps:10,atkPow:10,hp:100,def:10,heal:1});ctx.myRecord=()=>({});ctx.marketRpc=async()=>({ok:true});ctx.balanceBossData=()=>({players:[],total:0,week:'2026-11-02'});ctx.nowMin=()=>0;
 ctx.runStep=()=>{const r=ctx.S.run;r.kills=(r.kills||0)+1;r.rin=(r.rin||0)+2;r.exp=(r.exp||0)+3;r.know=(r.know||0)+1;r.logs=(r.logs||[]).concat({t:'one combat turn',time:'test'});};
+ctx.runRewardText=()=>'';
 ctx.endRun=()=>{ctx.S.run.done=true;};ctx.runReturn=()=>ctx.endRun();ctx.nf=n=>String(n);ctx.runTimeText=n=>String(Math.round(n));ctx.cal=()=>({str:'test'});
 ctx.startLesson=id=>{ctx.S.lesson={id,left:30};ctx.save();};
 ctx.startStudy=id=>{ctx.S.study={id,left:20};ctx.save();};

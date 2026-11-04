@@ -392,25 +392,21 @@ function tick(minutes,advanceRun=true,forceRun=false){
  if(advanceRun&&S.run&&!S.run.done){
   const elapsed=Math.max(0,(Date.now()-(S.run.lastTick||Date.now()))/60000);
   if(!forceRun&&elapsed<RUN_BATCH_MIN&&elapsed<S.run.left)return;
-  const R=S.run,previousLogs=(R.logs||[]).slice(),summaryBefore={kills:R.kills||0,rin:R.rin||0,exp:R.exp||0,know:R.know||0,gear:(S.bag||[]).length+(S.balance20.pendingLoot||[]).length};
+  const R=S.run,previousLogs=(R.logs||[]).slice();
   const m=Math.min(R.left,Math.max(0,(Date.now()-(R.lastTick||Date.now()))/60000));
   R.lastTick=Date.now();R.left-=m;R.acc=(R.acc||0)+m;
   const combat=PJ.combat,group=PJ.groupAward;PJ.combat=true;PJ.groupAward=true;
   let guard=0;try{while(S.run&&!S.run.done&&S.run.acc>=RUNSTEPMIN&&guard++<600){S.run.acc-=RUNSTEPMIN;runStep();}if(S.run&&!S.run.done&&S.run.left<=0)endRun(S.run.kills>0);}finally{PJ.combat=combat;PJ.groupAward=group;}
   // Simulate every original combat turn, but retain one concise checkpoint.
-  // This changes transmission/display frequency, not combat speed or rewards.
-  const ending=R.done?(R.logs||[]).filter(l=>/정산 ·|■/.test(l.t)).slice(-2):[];
-  const gear=Math.max(0,(S.bag||[]).length+(S.balance20.pendingLoot||[]).length-summaryBefore.gear);
-  const summary={t:`<b>${runTimeText(m)} 의뢰 진행</b> · 처치 ${nf((R.kills||0)-summaryBefore.kills)}체 · 륜 +${nf((R.rin||0)-summaryBefore.rin)} · 경험치 +${nf((R.exp||0)-summaryBefore.exp)} · 지식 +${nf((R.know||0)-summaryBefore.know)}${gear?` · 법구 +${gear}점`:''}`,time:cal().str.replace(/^(오전|오후) /,'')};
+  // Combat remains unchanged; checkpoints list the whole unclaimed pouch.
+  const ending=R.done?(R.logs||[]).filter(l=>/정산 대기 ·|■/.test(l.t)).slice(-2):[];
+  const summary={t:`<b>${runTimeText(Math.max(0,R.total-R.left))} 의뢰 진행</b> · 누적 처치 ${nf(R.kills||0)}체 · ${runRewardText(R)} · 정산 대기`,time:cal().str.replace(/^(오전|오후) /,'')};
   R.logs=[...previousLogs,summary,...ending].slice(-80);
  }
 }
 function updateRunClock(){
  if(!PJ.ready||!S.run||S.run.done)return;
- const remaining=Math.max(0,S.run.left-Math.max(0,(Date.now()-(S.run.lastTick||Date.now()))/60000));
- const clock=document.getElementById('runclock');if(clock)clock.textContent=runTimeText(remaining)+' 남음';
- const pace=document.getElementById('runpace');if(pace)pace.textContent=`전체 ${runTimeText(S.run.total)} 가운데 ${runTimeText(Math.max(0,S.run.total-remaining))} 지났습니다. 진행과 보상은 5분마다 반영됩니다.`;
- const bar=document.getElementById('runprog');if(bar)bar.style.width=Math.max(0,Math.min(100,(1-remaining/Math.max(1,S.run.total))*100))+'%';
+ updateRunDisplay();
 }
 function passiveTickThreshold(){
  let until=PAIR_PASSIVE_TICK_MIN;
@@ -447,6 +443,7 @@ const battle=simBattle;simBattle=function(me,allies,foes,turns,opts){if(PJ.comba
 const opponent=examOpponent;examOpponent=function(){const f=opponent();if(PJ.ready){f.hp=Math.round(f.hp*1.7);f.max=f.hp;}return f;};
 for(const name of ['towerFoe','guardFoe']){const f=window[name];window[name]=function(...args){const result=f.apply(this,args);if(PJ.combat&&PJ.ready){if(result.hp)result.hp=Math.round(result.hp*1.7);result.dps=Math.round(result.dps*1.7);}return result;};}
 const start=startRun;startRun=function(stage,party,minutes){
+ if(S.run?.done&&S.run.rewardVersion===2&&!S.run.settled){oldToast("이전 의뢰의 보상을 먼저 정산해 주세요.","bad");return;}
  if(PJ.ready){S.quests.room={stage,pos:S.quests.room?.pos||'후열',party:[{n:PJ.snapshot.peer.name||'파트너',lv:PJ.snapshot.peer.lvl||1}]};party=true;}
  start(stage,party,minutes);if(PJ.ready&&S.run&&!S.run.done){const p=partnerFighter();S.run.allies=p?[p]:[];S.run.pairId=PJ.snapshot.pairId;}
 };
@@ -783,7 +780,7 @@ function card(){
  +`</section>`;
 }
 PJ.refresh=()=>{PJ.lastPoll=0;return init();};
-for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready&&v==='quest')html=html.replace('30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.','진행과 보상은 5분마다 묶어서 반영합니다. 귀환·완료는 바로 정산하며, 접속하지 않은 시간도 다음 갱신 때 합산합니다.');if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
+for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready&&v==='quest')html=html.replace('30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.','진행은 5분마다 누적 기록합니다. 보상은 완료·귀환 후 정산할 때 한꺼번에 받습니다.');if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
 setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth&&document.visibilityState!=='hidden')init();},10000);
 // A sleeping browser tab does not need background polling. Refresh immediately
 // when the player returns, and flush any locally queued save on tab switch.

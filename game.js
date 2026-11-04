@@ -687,16 +687,16 @@ function power(){
   return Math.round(p*(1+mod("atkP")*.5));
 }
 function expNeed(){ return Math.round(260*Math.pow(1.11,S.lvl-1)); }
-function gainExp(n){
-  n=Math.round(n*(1+mod("exp")));
+function gainExp(n,exact=false){
+  n=exact?Math.round(n):Math.round(n*(1+mod("exp")));
   S.exp+=n;
   let up=0;
   while(S.exp>=expNeed()){ S.exp-=expNeed(); S.lvl++; up++; }
   if(up) toast(`수행 단계 상승 · <b>Lv ${S.lvl}</b>`,"good");
   return n;
 }
-function gainRin(n){ n=Math.round(n*(1+mod("gold"))); S.rin+=n; return n; }
-function gainKnow(n){ n=Math.round(n*(1+mod("know"))); S.know+=n; return n; }
+function gainRin(n,exact=false){ n=exact?Math.round(n):Math.round(n*(1+mod("gold"))); S.rin+=n; return n; }
+function gainKnow(n,exact=false){ n=exact?Math.round(n):Math.round(n*(1+mod("know"))); S.know+=n; return n; }
 
 function damageHP(n){ S.hp=Math.max(1,S.hp-n);
   if(S.hp<=1){ toast("체력이 바닥났습니다. 전투 불능 상태로 퇴장합니다.","bad"); } }

@@ -7,7 +7,7 @@
     "test:combat": "python3 tests/combat-model.py",
     "test:sql": "node tests/pair-sql.cjs",
     "test:pair-browser": "node tests/pair-browser.cjs",
-    "test:behavior": "node tests/quest-outing.cjs && node tests/buffs.cjs",
+    "test:behavior": "node tests/quest-outing.cjs && node tests/buffs.cjs && node tests/quest-settlement.cjs",
     "test:clubs": "node tests/clubs.cjs && node tests/clubs-expand.cjs",
     "test:clubs-browser": "node tests/clubs-browser.cjs",
     "test:merchant": "node tests/merchant-levels.cjs",

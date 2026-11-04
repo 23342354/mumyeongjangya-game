@@ -352,7 +352,7 @@ runStep = function(){
   if(S.run && S.run.kills>before && Math.random()<0.7){
     const x=pick(BRAW);
     const amt=rnd(2,4)+Math.floor((S.run.stage||1)/12);
-    S.bmat[x.k]=bHave(x.k)+amt;
+    runMaterial("bmat",x.k,amt);
     pushRun(`<span class="s">${x.e} ${x.n}을(를) 챙겼다. +${amt}</span>`);
   }
 };
@@ -916,13 +916,7 @@ setInterval(()=>{
     renderMain(true);
     return;
   }
-  clock.textContent=runTimeText(R.left)+" 남음";
-  const bar=document.getElementById("runprog");
-  if(bar) bar.style.width=clamp((1-R.left/Math.max(1,R.total))*100,0,100)+"%";
-  const pace=document.getElementById("runpace");
-  if(pace) pace.textContent=`전체 ${runTimeText(R.total)} 가운데 ${runTimeText(Math.max(0,R.total-R.left))} 지났습니다. 현실 시계와 같은 속도로 흐릅니다.`;
-  const kills=document.getElementById("runkills");
-  if(kills) kills.textContent=`처치 ${R.kills}체 · 받은 륜 ${nf(R.rin||0)} · 경험치 ${nf(R.exp||0)}`;
+  updateRunDisplay();
 }, 1000);
 
 /* ───────────────────────────────────────────────────
