@@ -2457,10 +2457,6 @@ VIEWS.quest=()=>{
       <div class="tiny muted" style="margin-bottom:6px"><b>새 줄이 맨 위</b>에 적힙니다 · 진행은 5분마다 누적 기록합니다. 보상은 완료·귀환 후 정산할 때 한꺼번에 받습니다.</div>
       ${bar(R.me)}
       ${R.allies.map(a=>bar(a)).join("")}
-      ${R.foes.filter(f=>f.hp>0).map(f=>`<div class="spread" style="padding:4px 0">
-        <div style="width:150px"><span class="tag r">적</span> <b style="color:${f.c}">${esc(f.n)}</b></div>
-        <div style="flex:1"><div class="bar hp"><i style="width:${clamp(f.hp/f.max*100,0,100)}%"></i></div></div>
-        <span class="tiny muted" style="width:120px;text-align:right">HP ${nf(Math.max(0,f.hp))} / ${nf(f.max)}</span></div>`).join("")}
       <div class="row" style="margin-top:10px">
         ${R.done?`<button class="btn pri" onclick="runClear()">${R.rewardVersion===2&&!R.settled?"보상 정산":"일지 닫기"}</button>`
           :`<button class="btn" onclick="runReturn()">혼자 귀환</button>
