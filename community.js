@@ -7,7 +7,7 @@
    無明長夜 · 사무전 — 확장 8
 
    ① 상단 알림함 (30일 보관 · 갈래별 추리기 · 더 보기)
-   ② 페어 합사 — 둘이 맺어지면 더 좋은 집으로 자동으로 함께 들어갑니다
+   ② 페어 동거 — 둘이 맺어지면 더 좋은 집으로 자동으로 함께 들어갑니다
    ③ 친구와 관계를 따로 — 신청도 목록도 각각
    ④ 건축자재 — 의뢰에서 모아 목석 공방에서 합판·석재·철물로 다듬습니다
    ⑤ 합동 전투 일지 — 피해가 들어가는 과정이 보입니다
@@ -358,7 +358,7 @@ runStep = function(){
 };
 
 /* ───────────────────────────────────────────────────
-   ③ 페어 합사 — 더 좋은 집으로 자동으로 함께 듭니다
+   ③ 페어 동거 — 더 좋은 집으로 자동으로 함께 듭니다
    ─────────────────────────────────────────────────── */
 /* 집의 「좋기」 — 구역 특화 배율 × 성장 배율. 성장 0인 집은 아무리 비싼 구역이어도 지지 않습니다. */
 function homeWorth(hall, stage){
@@ -366,7 +366,7 @@ function homeWorth(hall, stage){
   const st=clamp(Number(stage)||0, 0, homeMax(h));
   return (HALLMULT[h]||1) * (HOMESTAGE[st]||0);
 }
-/* 두 집 가운데 합사할 집을 고릅니다 — 좋은 쪽, 같으면 일세가 비싼 쪽, 그래도 같으면 신청한 쪽 */
+/* 두 집 가운데 동거할 집을 고릅니다 — 좋은 쪽, 같으면 일세가 비싼 쪽, 그래도 같으면 신청한 쪽 */
 function pairSharedHome(){
   const P=(typeof pairEnsure==="function")?pairEnsure():null;
   if(!sbOn() || !P || !P.mine) return null;
@@ -385,7 +385,7 @@ function pairSharedHome(){
   return {hall:win.hall, stage:win.stage, ownerId:win.id, ownerName:win.name,
           mine:win.id===mine.id, worth:Math.max(wm,wy)};
 }
-/* 합사 적용 — 내 쪽이 아니면 상대의 집으로 들어갑니다 */
+/* 동거 적용 — 내 쪽이 아니면 상대의 집으로 들어갑니다 */
 let PAIRMERGEAT=0;
 function pairMergeApply(){
   const sh=pairSharedHome();
@@ -400,9 +400,9 @@ function pairMergeApply(){
   syncHall();
   if(Date.now()-PAIRMERGEAT>5000 && !(typeof QUIET!=="undefined"&&QUIET)){
     PAIRMERGEAT=Date.now();
-    toast(`페어와 합사했습니다 · ${homeOf(sh.hall).n} ${h.stage}단계 (${esc(sh.ownerName||"페어")} 님의 집)`,"good");
+    toast(`페어와 동거했습니다 · ${homeOf(sh.hall).n} ${h.stage}단계 (${esc(sh.ownerName||"페어")} 님의 집)`,"good");
   }
-  pushNews(`[거처] ${S.name} 학생이 페어와 ${homeOf(sh.hall).n}에 합사했습니다.`);
+  pushNews(`[거처] ${S.name} 학생이 페어와 ${homeOf(sh.hall).n}에 동거했습니다.`);
   renderTop(); renderNav();
   if(VIEW==="hallv"||VIEW==="pairhub") renderMain(true);
   save();
@@ -432,14 +432,14 @@ pairBreak = function(){
     }
   }, 1500);
 };
-/* 합사 중에는 거처를 혼자 옮길 수 없다는 점을 먼저 알립니다 */
+/* 동거 중에는 거처를 혼자 옮길 수 없다는 점을 먼저 알립니다 */
 const _moveHall8 = moveHall;
 moveHall = function(id){
   const sh=pairSharedHome();
   if(sh){
     const worth=homeWorth(id,0);
     if(worth<=sh.worth){
-      toast(`페어와 합사 중입니다. ${homeOf(sh.hall).n} ${sh.stage}단계가 더 좋은 집이라 곧 다시 그리로 합사됩니다. 옮기려면 먼저 페어를 풀어 주세요.`,"bad");
+      toast(`페어와 동거 중입니다. ${homeOf(sh.hall).n} ${sh.stage}단계가 더 좋은 집이라 곧 다시 그리로 동거됩니다. 옮기려면 먼저 페어를 풀어 주세요.`,"bad");
       return;
     }
     if(!confirm(`지금 옮기면 페어도 함께 ${homeOf(id).n}로 들어옵니다. 두 사람 모두 집 단계가 0이 되고 일세도 이곳 기준으로 바뀝니다. 옮기시겠습니까?`)) return;
@@ -463,17 +463,17 @@ if(typeof pairBtn==="function"){
     return _pairBtn8(r);
   };
 }
-/* 합사 안내 칸 */
+/* 동거 안내 칸 */
 function pairMergeHTML(){
   const P=(typeof pairEnsure==="function")?pairEnsure():null;
   if(!sbOn() || !P || !P.mine) return "";
   const sh=pairSharedHome();
   if(!sh) return `<div class="card pad" style="margin-bottom:14px">
-    <div class="sect-t">합사</div>
+    <div class="sect-t">동거</div>
     <div class="tiny muted">상대가 한 번 접속하면 두 사람의 집 가운데 좋은 쪽으로 자동으로 합칩니다.</div></div>`;
   const h=homeOf(sh.hall);
   return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
-    <div class="spread"><div class="sect-t" style="margin:0">합사</div>
+    <div class="spread"><div class="sect-t" style="margin:0">동거</div>
       <span class="tag" style="border-color:${h.c};color:${h.c}">${esc(h.n)} ${sh.stage}단계</span></div>
     <div class="tiny muted" style="margin-top:4px;line-height:1.9">
       페어는 따로 살지 않습니다. 두 사람의 집 가운데 <b>좋은 쪽</b>으로 자동으로 함께 듭니다.
@@ -527,7 +527,7 @@ homeAct = function(){
         자동 납부 ${h.auto?"켜짐":"꺼짐"}</button>
     </div>
     <div class="tiny muted" style="margin-top:6px">${paired
-      ? `합사 중입니다. 둘 중 한 명만 내면 두 사람 모두 24시간 적용됩니다. 내 거처 기준 ${rentMoney(rentOf())} 륜/일.`
+      ? `동거 중입니다. 둘 중 한 명만 내면 두 사람 모두 24시간 적용됩니다. 내 거처 기준 ${rentMoney(rentOf())} 륜/일.`
       : "자동 납부를 켜 두면 륜이 있을 때 알아서 빠집니다."}</div>
     ${h.rentPending?'<div class="tiny muted" style="margin-top:6px">일세를 처리 중입니다. 연결이 돌아오면 같은 납부 건으로 다시 확인합니다.</div>':""}
   </div>`;
@@ -590,15 +590,12 @@ buildHome = function(mode){
   syncHall(); renderTop(); renderNav(); renderMain(); save();
   if(typeof syncUp==="function") syncUp(true);
 };
-/* 거처 화면 맨 위에 합사 칸 */
-const _hallv8 = VIEWS.hallv;
-VIEWS.hallv = () => {
-  const merge = (typeof pairMergeHTML==="function") ? pairMergeHTML() : "";
-  const h=_hallv8();
-  if(!merge) return h;
-  const i=h.indexOf('<div class="grid g2"');
-  return i<0 ? merge+h : h.slice(0,i)+merge+h.slice(i);
-};
+/* 거처 현황과 동거 안내를 같은 줄에 표시합니다. */
+function pairHousingHTML(){
+  const home=typeof pairHomeHTML==="function"?pairHomeHTML():"";
+  const living=typeof pairMergeHTML==="function"?pairMergeHTML():"";
+  return home&&living?`<div class="pair-housing-row">${home}${living}</div>`:home||living;
+}
 
 /* ───────────────────────────────────────────────────
    ⑤ 친구와 관계를 따로
@@ -693,12 +690,12 @@ VIEWS.rel=()=>{
       }).join("")||'<div class="tiny muted" style="padding:10px 0">찾는 학생이 없습니다.</div>'}
     </div>`;
 };
-/* 페어 화면 — 거처 따라가기 대신 합사 안내 */
+/* 페어 화면 — 거처 따라가기 대신 동거 안내 */
 VIEWS.pairhub=()=>{
   const p=(typeof pairEnsure==="function")?pairEnsure().mine:null;
   const shared=p&&SOCIAL.pairs.find(r=>String(r.id)===String(p.id));
   return head("둘만의 자리","페어",
-      shared&&shared.pair_name?esc(shared.pair_name):"페어명과 합사한 거처를 함께 관리합니다")
+      shared&&shared.pair_name?esc(shared.pair_name):"페어명과 동거한 거처를 함께 관리합니다")
     + socialStatus()
     + (typeof pairHTML==="function"?pairHTML():"")
     + (p?`<div class="card pad" style="margin-bottom:14px">
@@ -711,8 +708,7 @@ VIEWS.pairhub=()=>{
       :`<div class="card pad" style="margin-bottom:14px">
         <div class="tiny muted" style="margin-bottom:8px">아직 페어가 없습니다. 명부에서 신청해 보세요.</div>
         <button class="btn sm" onclick="go('roster')">학생 명부</button></div>`)
-    + (typeof pairMergeHTML==="function"?pairMergeHTML():"")
-    + (typeof pairHomeHTML==="function"?pairHomeHTML():"")
+    + pairHousingHTML()
     + (typeof pairRunHTML==="function"?pairRunHTML():"");
 };
 

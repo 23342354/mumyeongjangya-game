@@ -968,3 +968,9 @@ body.auth-gate #mobile-chat-toggle{
   .mobile-vital .bar{margin:3px 0 0;height:5px}
   .mobile-vital.critical .mobile-vital-text{color:var(--red)}
 }
+
+/* Pair housing summary and living arrangement share one compact row. */
+.pair-housing-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.pair-housing-row>.card{min-width:0;margin-bottom:0!important;padding:12px}
+.pair-housing-row .sect-t{margin-bottom:6px}
+@media(max-width:600px){.pair-housing-row{grid-template-columns:minmax(0,1fr);gap:8px}}

@@ -2898,7 +2898,7 @@ VIEWS.hallv=()=>{
   const max=id=>hallBenefitsAt(id,HOMESTAGE[homeMax(id)]);
   return head("지금 사는 곳",ic("castle")+" 거처",
     `${me.n} ${me.h} · ${h.stage} / ${homeMax()} 단계`)+`
-  ${typeof pairHomeHTML==="function" ? pairHomeHTML() : ""}
+  ${typeof pairHousingHTML==="function" ? pairHousingHTML() : (typeof pairHomeHTML==="function" ? pairHomeHTML() : "")}
   <div class="grid g2" style="margin-bottom:14px">
     <div>
       <div class="card pad">
