@@ -3,7 +3,7 @@
 'use strict';
 const clone=x=>JSON.parse(JSON.stringify(x));
 window.bagCapacity=function(){return PAIR_PLAY.ready?Number(S.pairBagCap||80):40+(S.res.r11||0)*5;};
-const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false};
+const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false,baseline:null,pending:[],flushTimer:null};
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
 function linked(){return !!(typeof acctIn==='function'&&acctIn()&&S?.pair?.mine?.status==='accepted');}
 function active(){return linked()||!!S?.pairShared;}
@@ -11,12 +11,74 @@ function rpc(action,args={}){return acctFetch('rpc/pair_play',{method:'POST',hea
 function wallet(){return {pass:S.pass,wbTickets:S.wb.tickets,marks:S.fest.marks,rin:S.rin,mana:S.mana,know:S.know,sari:S.sari,lotus:S.lotus,mat:S.mat||{},ing:S.ing||{},bmat:S.bmat||{},ingredients:S.ingredients||{},inv:S.inv||{},potion:S.potion||{},dishes:S.kit.have||{},seeds:S.farm.seeds||{},fertilizers:S.farm.fertilizers||{},fert:S.farm.fert||0,bag:S.bag||[],pendingLoot:S.balance20.pendingLoot||[],gid:S.gid};}
 function progress(){const q={...S.quests};delete q.room;delete q.pick;delete q.durIdx;const d={...S.dex};delete d.title;delete d.wards;return {life:{farm:{skill:S.farm.skill,exp:S.farm.exp},fish:{skill:S.fish.skill,exp:S.fish.exp,catches:S.fish.catches}},pairRoomClaims:S.pairRoomClaims||[],sharedHome:{hall:S.hall,stage:S.home.stage},wbDmg:S.wb.dmg,wbWeek:S.wb.balanceWeek,arena:S.arena,course:S.course,examHist:S.examHist,graduated:!!S.graduated,tower:S.tower,tower2:S.tower2,quests:q,run:S.run||null,storyRead:S.storyRead||[],dex:d,bossClaims:S.balance20.bossClaims||[],rent_due:PJ.snapshot?.progress?.rent_due||0};}
 const personalKeys=['exp','lvl','pts','gear','alloc','sub','res','lesson','study','hp','sn','home','marketRev','lastReal','farm','fish','balance20','buffs','kit','hall','pairBagCap'];
+// Save changes made outside the serialized combat/shop buttons before any server refresh.
+// Each change is a small path-based delta against the last confirmed server snapshot.
+const LOCAL_TRANSIENT=new Set(['sb','pair','pairShared','pairPersonalRev','pairSoloRev','pairBagCap','lastReal','t','passNext','chatFrom']);
+const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function changes(before,after,path=[],out=[]){
+ if(!path.length&&(!before||!after))return out;
+ if(isObject(before)&&isObject(after)){
+  for(const k of new Set([...Object.keys(before),...Object.keys(after)])){
+   if(!path.length&&LOCAL_TRANSIENT.has(k))continue;
+   changes(before[k],after[k],[...path,k],out);
+  }
+ }else if(!same(before,after))out.push({path,had:before!==undefined,from:before===undefined?null:clone(before),has:after!==undefined,to:after===undefined?null:clone(after)});
+ return out;
+}
+function sharedPath(path){
+ const [a,b]=path;
+ if(['rin','mana','know','pass','sari','lotus','mat','ing','bmat','ingredients','inv','potion','bag','gid','quests','dex','course','examHist','graduated','tower','tower2','run','storyRead','arena','pairRoomClaims'].includes(a))return true;
+ if(a==='hall')return true;
+ if(a==='farm')return ['seeds','fertilizers','fert','skill','exp'].includes(b);
+ if(a==='fish')return ['skill','exp','catches'].includes(b);
+ if(a==='fest')return b==='marks';
+ if(a==='kit')return b==='have';
+ if(a==='wb')return ['tickets','dmg','balanceWeek'].includes(b);
+ if(a==='balance20')return ['pendingLoot','bossClaims'].includes(b);
+ if(a==='home')return b==='stage';
+ return false;
+}
+function replayChanges(list){
+ for(const op of list){
+  let parent=S;for(const k of op.path.slice(0,-1)){
+   if(!isObject(parent[k]))parent[k]={};parent=parent[k];
+  }
+  const key=op.path[op.path.length-1],current=parent[key];
+  const shared=sharedPath(op.path);
+  // Numeric shared changes are relative, so a partner's intervening income/spend is preserved.
+  if(shared&&op.had&&op.has&&typeof op.from==='number'&&typeof op.to==='number'){
+   const next=Number(current||0)+(op.to-op.from);
+   if(!Number.isFinite(next)||next<0)throw Error('공동 잔액이 변경되었습니다. 최신 잔액을 확인한 후 다시 시도해 주세요.');
+   parent[key]=next;
+  }else{
+   // Never replace a concurrently edited shared bag, quest list or other nonnumeric value.
+   if(shared&&!same(current,op.from)&&op.had)throw Error('파트너가 공동 기록을 변경했습니다. 미저장 기록을 백업한 뒤 다시 확인해 주세요.');
+   if(op.has)parent[key]=clone(op.to);else delete parent[key];
+  }
+ }
+}
+function markDirty(){
+ if(!PJ.ready||!PJ.baseline||!active())return;
+ PJ.pending=changes(PJ.baseline,S);
+ if(PJ.pending.length){
+  if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,localAt:Date.now()});
+  clearTimeout(PJ.flushTimer);
+  PJ.flushTimer=setTimeout(()=>{if(PJ.pending.length&&PJ.ready&&!PJ.busy)acctPush(true);},1800);
+ }else if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:''});
+}
+function backupOnFailure(reason,snapshot){
+ if(typeof accountSyncBackup==='function')try{accountSyncBackup(clone(snapshot||S),'공동 지갑 미반영 기록',String(reason||''));}catch(_){}
+}
+
 function apply(r){
- if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;}return;}
+ if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.baseline=null;PJ.pending=[];}return;}
  if(!r.ok){PJ.ready=false;PJ.error=r.message||'공동 기록을 준비하고 있습니다.';return;}
  PJ.snapshot=r;PJ.ready=true;PJ.error='';
- const keep={};for(const k of ['sb','pair','name','gender','line','weapon','combatStyle','intro','bio','av','avImg','avSrc','color','title','notes','rel','friends','msgs','chatTab','chatMode','chatFilter','chatFrom'])if(S[k]!==undefined)keep[k]=S[k];
- Object.assign(S,clone(r.self),keep);if(r.pair&&S.pair)S.pair.mine=r.pair;
+ const keep={};for(const k of ['sb','chatTab','chatMode','chatFilter'])if(S[k]!==undefined)keep[k]=S[k];
+ const pairList={inbox:S.pair?.inbox||[],sent:S.pair?.sent||[],partner:S.pair?.partner||null,at:S.pair?.at||0};
+ Object.assign(S,clone(r.self),keep);
+ S.pair={...(S.pair||{}),...pairList,mine:r.pair||null};
 
  const w=r.wallet,p=r.progress;
  for(const k of ['rin','mana','know','sari','lotus','mat','ing','bmat','ingredients','inv','potion','bag','gid'])S[k]=clone(w[k]);
@@ -28,6 +90,7 @@ function apply(r){
  S.pairRoomClaims=clone(p.pairRoomClaims||[]);S.pairShared=r.pairId;S.pairPersonalRev=r.self.pairPersonalRev;
  if(S.pair?.mine&&p.rent_due)S.pair.mine.rent_due=p.rent_due;
  if(typeof RUNTICK!=='undefined'&&RUNTICK){clearInterval(RUNTICK);RUNTICK=null;}
+ PJ.baseline=clone(S);
 }
 function normalizeEffects(){
  S.buffs=(S.buffs||[]).filter(b=>!b.pairExpiresAt||b.pairExpiresAt>Date.now());
@@ -46,26 +109,38 @@ function enqueue(fn){const job=PJ.queue.catch(()=>{}).then(fn);PJ.queue=job.catc
 async function read(){
  const r=await rpc('get');apply(r);if(!r.ok){const e=Error(r.message||'공동 기록 연결을 확인해 주세요.');e.waiting=!!r.waiting;throw e;}return r;
 }
-function showError(e){const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
+function showError(e){if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:String(e?.message||e).slice(0,180)});const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
 
 function rerender(){renderTop();renderNav();renderMain(true);}
 async function init(){
  if(!active()||PJ.busy||Date.now()-PJ.lastPoll<10000)return;
  PJ.lastPoll=Date.now();return enqueue(async()=>{
   PJ.busy=true;try{
-   if(!S.pairShared)await oldPush(true);
-   await read();
+   let preflightFailed=false;
+   if(!S.pairShared){const ok=await oldPush(true);if(ok===false){preflightFailed=true;backupOnFailure('공동 연결 전 계정 원본 저장 실패');}}
+   if(PJ.ready&&PJ.pending.length){
+    const saved=await transact('profile',()=>{},false);
+    if(!saved)throw Error(PJ.error||'미반영 기록을 서버에 보관하지 못했습니다.');
+   }else await read();
    if(PJ.ready&&PJ.offlineNeeded){PJ.offlineNeeded=false;await transact('offline',()=>oldOffline(),false);}
-   cache();rerender();
+   cache();
+   if(preflightFailed){
+    const warning='공동지갑 연결 직전의 개인 저장에 실패했습니다. 원본을 별도 백업했으니 설정에서 확인해 주세요.';
+    if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:warning,errorAt:Date.now()});
+    oldToast(warning,'bad');
+   }
+   rerender();
   }catch(e){showError(e);}finally{PJ.busy=false;}
  });
 }
 function isGroup(tag){return /^(takeExam|examPractice|climbTower|climbGuard|startRun|runQuest|runReturn|runClear|endRun|hitBoss|arenaGo)$/.test(tag);}
 async function transact(tag,fn,queue=true,options={}){
  if(queue)return enqueue(()=>transact(tag,fn,false,options));
- PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null;
+ PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,hadRead=false,sentState=null;
  try{
-  await read();if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
+  const unsaved=PJ.pending.slice();if(unsaved.length)dirtyLocal=clone(S);
+  await read();hadRead=true;if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
+  if(unsaved.length)replayChanges(unsaved);
   before=clone(S);PJ.rollbackGames={fish:typeof FISHGAME!=='undefined'&&FISHGAME?clone(FISHGAME):null,bg:typeof BG!=='undefined'&&BG?clone(BG):null,outing:typeof OUTING!=='undefined'&&OUTING?clone(OUTING):null};PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.modal=null;
   PJ.depth++;const previousCombat=PJ.combat;PJ.combat=isGroup(tag);PJ.groupAward=isGroup(tag);
   let oldClock;
@@ -82,22 +157,28 @@ async function transact(tag,fn,queue=true,options={}){
   }
   const request=(crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random());
   const args={p_revision:PJ.snapshot.revision,p_request:request,p_save:clone(S),p_wallet:wallet(),p_progress:progress(),p_xp:PJ.sharedXp,p_meta:metadata(),p_effects:effects,p_loss:PJ.loss};
+  sentState=clone(S);
   let r;try{r=await rpc('commit',args);}catch(e){
    // Same receipt id: a lost response can never repeat the transaction.
    try{r=await rpc('commit',args);}catch(_){throw e;}
   }
   if(r.conflict){Object.assign(S,before);apply(r);throw Error('파트너가 먼저 공동 기록을 갱신했습니다. 최신 상태를 불러왔으니 다시 눌러 주세요.');}
-  apply(r);cache();for(const m of PJ.messages)oldToast(...m);rerender();
+  if(!r||r.ok!==true)throw Error(r?.message||'공동 기록 저장 결과를 확인하지 못했습니다.');
+  const laterChanges=changes(sentState,S);
+  apply(r);PJ.pending=[];
+  if(laterChanges.length){replayChanges(laterChanges);oldSave();markDirty();}else cache();
+  for(const m of PJ.messages)oldToast(...m);rerender();
   if(S.home?.auto&&S.hall!=='dorm'&&PJ.snapshot.progress.rent_due>0&&nowMin()>=PJ.snapshot.progress.rent_due)payPairRent(true);
   return r;
- }catch(e){if(before&&!String(e.message).includes('파트너가 먼저')){Object.assign(S,before);try{await read();}catch(_){}}
+ }catch(e){backupOnFailure(e?.message,dirtyLocal||sentState||S);if(before&&!String(e.message).includes('파트너가 먼저')){Object.assign(S,before);try{await read();}catch(_){}}
+  if(hadRead&&dirtyLocal&&PJ.pending.length){try{replayChanges(PJ.pending);oldSave();}catch(_){/* unsafe array conflict: protected recovery copy is kept */}}
   if(PJ.rollbackGames){FISHGAME=PJ.rollbackGames.fish;if(FISHGAME)FISHGAME.state='idle';BG=PJ.rollbackGames.bg;OUTING=PJ.rollbackGames.outing;}closeModal();showError(e);rerender();return false;
  }finally{PJ.busy=false;PJ.messages=null;PJ.modal=null;PJ.depth=0;document.body.classList.remove('pair-action-busy');const status=document.querySelector('.pair-team-status');if(status)status.textContent=PJ.error?'연결 상태 확인':PJ.ready?'공동 지갑 연결됨':'파트너 연결 대기';}
 }
 toast=function(...args){if(PJ.depth&&PJ.messages){PJ.messages.push(args);return;}return oldToast(...args);};
 modal=function(...args){if(PJ.depth){PJ.modal=args;return oldModal(...args);}return oldModal(...args);};
-save=function(){if(PJ.depth)return;return oldSave.apply(this,arguments);};
-acctPush=function(force){if(active()){if(PJ.depth||!PJ.ready)return Promise.resolve(true);return transact('profile',()=>{}).then(Boolean);}return oldPush.apply(this,arguments);};
+save=function(){if(PJ.depth)return;const result=oldSave.apply(this,arguments);markDirty();return result;};
+acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);if(!PJ.ready){init();return Promise.resolve(false);}markDirty();if(!PJ.pending.length){if(!force)return Promise.resolve(true);return enqueue(async()=>{try{await read();cache();return true;}catch(e){showError(e);return false;}});}return transact('profile',()=>{}).then(r=>!!(r&&r.ok));}return oldPush.apply(this,arguments);};
 function cache(){oldSave();if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:'',lastSuccess:Date.now()});if(typeof ACCOUNT_SYNC_LAST_SUCCESS!=='undefined')ACCOUNT_SYNC_LAST_SUCCESS=Date.now();}
 const oldSync=syncUp;syncUp=function(force){if(PJ.depth)return Promise.resolve();return oldSync.apply(this,arguments);};
 const xp=gainExp;gainExp=function(n){const result=xp.apply(this,arguments);if(PJ.depth&&!PJ.personal)PJ.sharedXp+=result;return result;};
@@ -119,7 +200,7 @@ step=function(minutes){
  if(!active())return oldStep.apply(this,arguments);
  if(PJ.depth)return tick(minutes);
  PJ.acc+=Math.max(0,Number(minutes)||0);
- if(PJ.ready&&PJ.acc>=.5&&!PJ.busy){const m=PJ.acc;PJ.acc=0;transact('tick',()=>tick(m));}
+ if(PJ.ready&&PJ.acc>=.5&&!PJ.busy){PJ.acc=0;transact('tick',()=>{});}
  if(!PJ.ready)init();
 };
 offline=function(){if(active()){PJ.offlineNeeded=true;return;}return oldOffline.apply(this,arguments);};
@@ -140,7 +221,7 @@ const oldRunTimer=runRealTick;runRealTick=function(){if(active()){if(RUNTICK)cle
 const oldTop=renderTop;renderTop=function(){oldTop.apply(this,arguments);if(PJ.ready)document.querySelector('#topbar .top-actions')?.insertAdjacentHTML('afterbegin','<span class="pair-wallet-badge tag">페어 공동 지갑</span>');};
 const oldRecord=myRecord;myRecord=function(){const r=oldRecord();if(PJ.ready){r.pair_id=PJ.snapshot.pairId;r.pair_name=[S.name,PJ.snapshot.peer.name].sort().join(' · ');}return r;};
 const oldRentTick=pairRentTick;pairRentTick=function(){return active()?true:oldRentTick.apply(this,arguments);};
-const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return oldRent.apply(this,arguments);return enqueue(async()=>{try{await read();const r=await rpc('rent',{p_revision:PJ.snapshot.revision,p_request:crypto.randomUUID()});apply(r);cache();rerender();return true;}catch(e){showError(e);return false;}});};
+const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return oldRent.apply(this,arguments);return enqueue(async()=>{try{if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)return false;}await read();const r=await rpc('rent',{p_revision:PJ.snapshot.revision,p_request:crypto.randomUUID()});if(r.conflict)throw Error('일세 정산 중 파트너의 공동 잔액이 변경되었습니다. 다시 시도해 주세요.');if(!r?.ok)throw Error(r?.message||'일세 저장 확인 실패');apply(r);cache();rerender();return true;}catch(e){showError(e);return false;}});};
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;window[name]=function(...args){
@@ -161,7 +242,7 @@ const oldClaimRoom=claimRoom;claimRoom=function(r){
  if(!PJ.ready)return;
  return transact('legacyRoom',()=>{if((S.pairRoomClaims||[]).includes(String(r.id)))return;const n=S.sb.claimed.length;oldClaimRoom(r);if(S.sb.claimed.length>n){if(!S.pairRoomClaims)S.pairRoomClaims=[];S.pairRoomClaims.push(String(r.id));}});
 };
-const oldMarket=marketRpc;marketRpc=function(action,data){if(!active())return oldMarket.apply(this,arguments);return enqueue(async()=>{const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}if(action!=='snapshot'){if(!pending||pending.signature!==signature)pending={signature,request:crypto.randomUUID()};localStorage.setItem(key,JSON.stringify(pending));data={...data,pp_request:pending.request};}try{const r=await oldMarket(action,data);if(action!=='snapshot')localStorage.removeItem(key);await read();oldSave();return r;}catch(e){showError(e);throw e;}});};
+const oldMarket=marketRpc;marketRpc=function(action,data){if(!active())return oldMarket.apply(this,arguments);return enqueue(async()=>{if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)throw Error('공동 기록을 저장하지 못해 중개소 조회를 중단했습니다.');}const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}if(action!=='snapshot'){if(!pending||pending.signature!==signature)pending={signature,request:crypto.randomUUID()};localStorage.setItem(key,JSON.stringify(pending));data={...data,pp_request:pending.request};}try{const r=await oldMarket(action,data);if(action!=='snapshot')localStorage.removeItem(key);await read();oldSave();return r;}catch(e){showError(e);throw e;}});};
 const oldBossData=balanceBossData;
 balanceBossData=function(){if(!PJ.ready)return oldBossData();const mine=PJ.snapshot.pairId,week=PJ.snapshot.progress.wbWeek,start=Date.parse(week+'T00:00:00+09:00');const map=new Map();
  for(const r of S.sb.roster||[]){if(Date.parse(r.updated_at)<start||!(r.wb_dmg>0)||Number(r.pair_id)===mine)continue;const key=r.pair_id?'p'+r.pair_id:'u'+r.id;const prev=map.get(key);if(!prev||prev.wb_dmg<r.wb_dmg)map.set(key,{...r,name:r.pair_name||r.name});}
@@ -169,9 +250,9 @@ balanceBossData=function(){if(!PJ.ready)return oldBossData();const mine=PJ.snaps
  const players=[...map.values()].sort((a,b)=>b.wb_dmg-a.wb_dmg);return {players,total:players.reduce((n,r)=>n+Number(r.wb_dmg),0),week};};
 function card(){
  const own=power(),p=PJ.ready?peerView():null;
- return `<section class="pair-team-card"><div class="pair-team-top"><b>두 사람의 공동 여정</b><button class="btn sm" title="공동 기록 새로 고침" aria-label="공동 기록 새로 고침" onclick="PAIR_PLAY.lastPoll=0;PAIR_PLAY.refresh()" style="margin-left:auto">↻</button><span class="pair-team-status ${PJ.error?'pair-sync-error':''}">${PJ.ready?(PJ.busy?'공동 기록 반영 중':'공동 지갑 연결됨'):linked()?'연결 준비 중':'파트너를 기다리는 중'}</span></div><div class="pair-team-members"><div class="pair-team-person"><b>${esc(S.name)}</b><span class="pair-team-state">내 전투력 ${nf(own)}</span></div><span class="pair-team-link">∞</span><div class="pair-team-person"><b>${esc(p?.name||pairName()||'나의 파트너')}</b><span class="pair-team-state">${p?'파트너 전투력 '+nf(p.power):'페어를 맺으면 함께 출발합니다'}</span></div></div><div class="pair-team-state" style="margin-top:9px">파장·지식·재화·재료·바랑 공동 사용 · 수업·수행·착용 장비는 각자 · 시험·의뢰·탑은 한 사람이 진행하면 함께 반영</div>${PJ.error?`<div class="pair-team-state pair-sync-error">${esc(PJ.error)}</div>`:''}</section>`;
+ return `<section class="pair-team-card"><div class="pair-team-top"><b>두 사람의 공동 여정</b><button class="btn sm" title="공동 기록 새로 고침" aria-label="공동 기록 새로 고침" onclick="PAIR_PLAY.lastPoll=0;PAIR_PLAY.refresh()" style="margin-left:auto">↻</button><span class="pair-team-status ${PJ.error?'pair-sync-error':''}">${PJ.ready?(PJ.busy?'공동 기록 반영 중':PJ.pending.length?'공동 기록 저장 대기':'공동 지갑 연결됨'):linked()?'연결 준비 중':'파트너를 기다리는 중'}</span></div><div class="pair-team-members"><div class="pair-team-person"><b>${esc(S.name)}</b><span class="pair-team-state">내 전투력 ${nf(own)}</span></div><span class="pair-team-link">∞</span><div class="pair-team-person"><b>${esc(p?.name||pairName()||'나의 파트너')}</b><span class="pair-team-state">${p?'파트너 전투력 '+nf(p.power):'페어를 맺으면 함께 출발합니다'}</span></div></div><div class="pair-team-state" style="margin-top:9px">파장·지식·재화·재료·바랑 공동 사용 · 수업·수행·착용 장비는 각자 · 시험·의뢰·탑은 한 사람이 진행하면 함께 반영</div>${PJ.error?`<div class="pair-team-state pair-sync-error">${esc(PJ.error)}</div>`:''}</section>`;
 }
-PJ.refresh=init;
+PJ.refresh=()=>{PJ.lastPoll=0;return init();};
 for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
 setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth)init();},15000);
 })();

@@ -154,8 +154,13 @@ begin
   elapsed:=least(1440,greatest(0,extract(epoch from(now()-t.mana_at))/60));
   if elapsed>=0.25 then
    select coalesce(sum((value->>'rate')::numeric),0),coalesce(sum((value->>'cap')::numeric),0) into rate,cap from jsonb_each(t.meta);
-   if cap>0 then t.wallet:=jsonb_set(t.wallet,'{mana}',to_jsonb(case when (t.wallet->>'mana')::numeric>=cap then (t.wallet->>'mana')::numeric else least(cap,(t.wallet->>'mana')::numeric+rate*elapsed) end));end if;
-   update public.pair_play_state set wallet=t.wallet,progress=t.progress,mana_at=now(),revision=revision+1 where pair_id=p.id returning * into t;
+   -- Reading at full mana (or without recovery metadata) must not create a fake conflict.
+   if cap>0 and rate>0 and (t.wallet->>'mana')::numeric<cap then
+    t.wallet:=jsonb_set(t.wallet,'{mana}',to_jsonb(least(cap,(t.wallet->>'mana')::numeric+rate*elapsed)));
+    update public.pair_play_state set wallet=t.wallet,progress=t.progress,mana_at=now(),revision=revision+1 where pair_id=p.id returning * into t;
+   else
+    update public.pair_play_state set mana_at=now() where pair_id=p.id;
+   end if;
   end if;
   return public.pp_snapshot(t,p_user);
  end if;

@@ -1361,7 +1361,7 @@ function toast(msg,kind=""){
    운영진이 게임 파일을 새로 올리면, 열어 둔 창은 예전 코드를 그대로 쓰고 있습니다.
    파일의 서버 표식(ETag / 수정 시각)을 5분마다 확인해, 바뀌었으면 띠를 띄웁니다.
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
-const UPDFILES=["part14.js","index.html","part2.js","part3.js","part4.js","part5.js","part6.js","part7.js","part10.js","part11.js","part12.js","part13.js","notification-worker.js","manifest.webmanifest","market.js","config.js"];
+const UPDFILES=["part14.js","index.html","part2.js","part3.js","part4.js","part5.js","part6.js","part7.js","part10.js","part11.js","part12.js","part13.js","pair-play.js","notification-worker.js","manifest.webmanifest","market.js","config.js"];
 let UPDSTAMP=null, UPDSHOWN=false;
 function updStamps(){
   if(location.protocol==="file:") return Promise.resolve(null);   // 로컬 파일은 확인 불가
@@ -3852,6 +3852,6 @@ else setTimeout(()=>init(),0);
 <script src="pixel-scenes.js?v=20261104-shop1"></script>
 <script src="pixel-life.js?v=20261104-simple2"></script>
 <script src="balance20.js?v=20261104-combat-ui3"></script>
-<script src="pair-play.js?v=20261104-combat-ui3"></script>
+<script src="pair-play.js?v=20261104-wallet-save-fix1"></script>
 </body>
 </html>
