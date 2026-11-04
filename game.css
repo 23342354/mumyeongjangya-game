@@ -1159,3 +1159,23 @@ body.auth-gate #mobile-chat-toggle{
 .gear-slot-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-content:start}
 .gear-slot-actions>.btn{min-width:0;min-height:30px;margin:0;padding:5px 4px;font-size:10.5px;line-height:1.3;letter-spacing:-.03em;white-space:nowrap}
 .gear-slot-actions>.btn:only-child{grid-column:1/-1}
+
+/* Give mobile garden plots room to read and make the crop art fill its scene. */
+@media(max-width:780px){
+  #main .life-farm-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;align-items:stretch}
+  #main .life-plot{padding:10px!important;gap:4px;min-height:0}
+  #main .life-phase{flex-wrap:nowrap;justify-content:space-between;gap:4px;min-height:20px;font-size:10px}
+  #main .life-phase b{flex-basis:auto;font-size:10px;line-height:1.4}
+  #main .life-phase>span:first-child{display:none}
+  #main .life-plot-picture{height:104px}
+  #main .life-plot .life-soil{width:138px;height:112px;max-width:100%}
+  #main .life-plot .life-grown{width:96px;height:96px}
+  #main .life-plot .farm-species{font-size:13px;line-height:1.4;min-height:0;word-break:keep-all}
+  #main .life-plot .farm-tier{font-size:10px}
+  #main .life-plot>.tiny{font-size:11px}
+  #main .life-plot>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:auto;padding-top:6px}
+  #main .life-plot .btn{min-width:0;min-height:34px;padding:6px 4px;font-size:11px;white-space:nowrap}
+  #main .life-empty>.btn{align-self:stretch}
+  #main .life-growth-key{font-size:11px;line-height:1.6;margin-bottom:10px}
+}
+@media(max-width:340px){#main .life-farm-grid{gap:7px!important}#main .life-plot{padding:7px!important}#main .life-phase b{font-size:9px}}
