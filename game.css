@@ -851,11 +851,11 @@ textarea.inp{min-height:76px;resize:vertical}
 .pair-team-link{text-align:center;color:var(--gold);font-size:20px}
 .pair-team-state{font-size:11px;line-height:1.7;color:var(--dim)}
 .pair-team-status{padding:3px 8px;border-radius:20px;border:1px solid var(--line);font-size:11px;color:var(--jade)}
-body.pair-action-busy #main button,body.pair-action-busy #navcol button{cursor:progress}
+
 .pair-sync-error{color:var(--red)}
 @media(max-width:1250px){#app{grid-template-columns:180px minmax(0,1fr)}#chatcol{grid-column:1/-1;position:static;height:440px;max-height:440px}}
 @media(max-width:780px){#app{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}#main .pixel-landscape>img{height:210px!important}#main .pixel-landscape figcaption{padding:10px 12px;align-items:flex-start;flex-direction:column;gap:8px}#main .scene:has(.pixel-plaza-art){height:220px!important}#main h1.page{font-size:22px}.pair-team-card{padding:12px}.pair-team-person{padding:8px}.pair-team-members{gap:5px;grid-template-columns:1fr 20px 1fr}body.mobile-game.mobile-chat-open #chatcol{position:fixed;height:min(65dvh,560px);max-height:none}#main .farm-crop-row{grid-template-columns:minmax(0,1fr);gap:8px}}
-body.pair-action-busy #main button,body.pair-action-busy #modalroot button{pointer-events:none;opacity:.7}
+
 #main [onclick^="inviteParty"],#main [onclick^="inviteTeacher"]{display:none}
 #toasts{max-width:min(330px,calc(100vw - 24px));max-height:55vh;overflow:hidden}
 @media(max-width:780px){.pair-wallet-badge{display:none}}
