@@ -1495,7 +1495,7 @@ go = function(v){
   if(v==="pairhub"){ pairHeadFetch(false); }
   if(v==="pairboard"){ pairHeadFetch(false); pairPostFetch(true); }
 };
-setInterval(()=>{ if(VIEW==="pairboard") pairPostFetch(false); }, 12000);
+setInterval(()=>{ if(pollAwake() && VIEW==="pairboard") pairPostFetch(false); }, 12000);
 const _boot8b = boot;
 boot = function(){ _boot8b(); if(sbOn()) setTimeout(()=>pairHeadFetch(true), 2500); };
 
@@ -1596,7 +1596,7 @@ pairPostFetch = function(force){
   return (p&&p.then) ? p.then(v=>{ try{ pairBoardAlertScan(); }catch(e){} return v; }) : p;
 };
 /* 게시판을 보고 있지 않아도 둘의 기록 알림이 오도록 */
-setInterval(()=>{ if(sbOn() && pairEnsure().mine && VIEW!=="pairboard") pairPostFetch(false); }, 45000);
+setInterval(()=>{ if(pollAwake() && sbOn() && pairEnsure().mine && VIEW!=="pairboard") pairPostFetch(false); }, 45000);
 
 /* ───────── ② RP 게시판: 깊은 들여쓰기 대신 하나의 타임라인 ───────── */
 function rpThreadRows(root){
@@ -1833,7 +1833,7 @@ async function rpAlertServerSync(){
   }finally{RP_ALERT_BUSY=false;RP_ALERT_ATTEMPT=Date.now();}
 }
 /* 게시판 fetch와 별도로 서버를 폴링합니다. 조회 실패가 반복되어도 화면은 멈추지 않습니다. */
-setInterval(()=>{if(S?.made&&sbOn()&&ACCT?.id)rpAlertServerSync();},15000);
+setInterval(()=>{if(pollAwake()&&S?.made&&sbOn()&&ACCT?.id)rpAlertServerSync();},15000);
 const _bootRpAlert=boot;
 boot=function(){
   _bootRpAlert();
@@ -2899,7 +2899,7 @@ boot=function(){
  push12HandleQuery();
  push12Probe().catch(()=>{});
 };
-setInterval(()=>{if(S?.made&&PUSH12_ENABLED)push12PullHistory().catch(()=>{});},60000);
+setInterval(()=>{if(pollAwake()&&S?.made&&PUSH12_ENABLED)push12PullHistory().catch(()=>{});},60000);
 
 
 ;
@@ -3122,7 +3122,7 @@ if(typeof ensureV2==='function'){
 }
 buyMarket=function(){toast("임의 NPC 매물은 폐지되었습니다. 러너가 올린 물건을 구매해 주세요.","bad");};
 /* 중개소 바깥에서도 판매 완료와 정산 소식이 알림함에 도착합니다. */
-setInterval(()=>{if(S?.made&&marketConnected()&&!MKT.busy)marketFetch(false);},45000);
+setInterval(()=>{if(pollAwake()&&S?.made&&marketConnected()&&!MKT.busy)marketFetch(false);},45000);
 
 
 ;
@@ -3366,7 +3366,7 @@ function pvpView(){
 }
 VIEWS.duel=pvpView;
 // 기존 실시간 채팅과 분리된, 대련방만의 짧은 폴링. 화면을 떠나면 조회하지 않습니다.
-setInterval(()=>{if(typeof VIEW!=='undefined'&&VIEW==='duel'&&pvpAvailable())pvpSync(false);},3000);
+setInterval(()=>{if(pollAwake()&&typeof VIEW!=='undefined'&&VIEW==='duel'&&pvpAvailable())pvpSync(false);},3000);
 
 
 ;

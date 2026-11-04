@@ -771,7 +771,8 @@ const _auctionGo=go;
 go=function(v){_auctionGo(v);if(v==="merchant")auctionFetch(true);};
 setInterval(()=>{
   if(!S?.made||!auctionConnected())return;
-  if(VIEW==="merchant"){auctionClock();auctionFetch(false);}
-  else if(VIEW==="plaza"&&Date.now()-LIVE_AUCTION.at>30000)auctionFetch(false);
+  // 시계 표시는 그대로 두고, 서버 조회만 숨은 탭에서 멈춥니다.
+  if(VIEW==="merchant"){auctionClock();if(pollAwake())auctionFetch(false);}
+  else if(pollAwake()&&VIEW==="plaza"&&Date.now()-LIVE_AUCTION.at>30000)auctionFetch(false);
 },1000);
 

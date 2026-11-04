@@ -534,6 +534,14 @@ function toast(msg,kind=""){
   setTimeout(()=>{ d.style.transition=".3s"; d.style.opacity=0; d.style.transform="translateX(16px)"; setTimeout(()=>d.remove(),320); },3400);
 }
 
+/* ── 서버 조회 공통 조건 ─────────────
+   다른 탭으로 넘어가거나 화면을 끈 동안에는 서버에 물어볼 이유가 없습니다.
+   각 화면의 반복 조회는 이 함수를 먼저 확인하고, 돌아오면 그때 다시 받아옵니다.
+   창이 숨어 있는 사이 쌓인 변화는 돌아온 직후 한 번에 따라잡습니다. */
+function pollAwake(){
+  return typeof document==="undefined" || document.visibilityState!=="hidden";
+}
+
 /* ── 새 버전 감지 ───────────────────
    운영진이 게임 파일을 새로 올리면, 열어 둔 창은 예전 코드를 그대로 쓰고 있습니다.
    파일의 서버 표식(ETag / 수정 시각)을 5분마다 확인해, 바뀌었으면 띠를 띄웁니다.
