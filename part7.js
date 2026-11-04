@@ -14,12 +14,20 @@
 
 /* ── 한 번만 도는 기록 초기화 ───────────────────────
    날짜를 바꾸면 러너 전원이 다음 접속 때 한 번 더 비워집니다. */
-const WIPEKEY="mmjy_wipe", WIPEV="2026-11-02";
+// 정식 배포 전 초기화 표식. 배포된 모든 테스트 기기의 이전 로그인/세이브를 일회성 폐기합니다.
+// 화면 취향(테마/알림음)은 건드리지 않습니다.
+const WIPEKEY="mmjy_wipe", WIPEV="2026-11-04-release-reset-v2";
 (function(){
   try{
     if(localStorage.getItem(WIPEKEY)!==WIPEV){
-      localStorage.removeItem(SAVEKEY);
-      localStorage.removeItem("mmjy_acct");
+      const oldKeys=[];
+      for(let i=0;i<localStorage.length;i++) oldKeys.push(localStorage.key(i));
+      oldKeys.forEach(key=>{
+        if(key===SAVEKEY || key==="mmjy_acct" ||
+           /^(mmjy_account_sync_v2_|mmjy_account_recovery_v2_|mmjy_pair_market_pending_)/.test(key)){
+          localStorage.removeItem(key);
+        }
+      });
       localStorage.setItem(WIPEKEY, WIPEV);
     }
   }catch(e){}
@@ -272,12 +280,21 @@ function gateIntercept(){
   if(!acctIn()){ gateShow("login"); return true; }
   // 자동 로그인 — 저장해 둔 표식을 서버와 맞춰 봅니다
   acctRpc('login',{p_id:ACCT.id,p_token:ACCT.tok})
-    .then(row=>{acctBoot(row.save||null);})
-    .catch(()=>{
-      // 네트워크 오류가 나면 기존처럼 이 기기의 마지막 로컬 기록으로 입장할 수 있습니다.
-      // 서버 거래는 복구 전까지 비활성화됩니다.
-      initGame();
-      toast('서버 로그인 연결이 끊겨 이 기기 기록으로 시작했습니다. 중개소 이용 전 연결을 확인해 주세요.', 'bad');
+    .then(row=>{
+      if(!row || !row.id) throw new Error('계정 확인에 실패했습니다.');
+      acctBoot(row.save||null);
+    })
+    .catch(e=>{
+      // 예전 구현은 로그인 실패 후 로컬 캐릭터로 입장하여 syncUp()으로
+      // 초기화한 학생 명부를 다시 채웠습니다. 서버 확인 실패 시 게임 진입을 금지합니다.
+      const reason=String(e?.message||e||'');
+      const invalid=/아이디 또는 비밀번호|계정 인증이 필요|로그인이 필요|인증이 필요/.test(reason);
+      if(invalid) acctClear();
+      GATEMODE='login';
+      gateMsg(invalid
+        ? '이전 테스트 계정이 초기화되었거나 로그인 정보가 맞지 않습니다. 새 계정으로 가입해 주세요.'
+        : '서버 연결을 확인할 수 없습니다. 인터넷 연결과 서버 설정을 확인한 뒤 다시 로그인해 주세요.',true);
+      gateShow();
     });
   return true;
 }
