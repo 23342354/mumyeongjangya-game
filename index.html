@@ -655,6 +655,136 @@ textarea.inp{min-height:76px;resize:vertical}
 </style>
 <link rel="stylesheet" href="pixel-scenes.css?v=20261104-1">
 <link rel="stylesheet" href="pixel-life.css?v=20261104-simple2">
+<style id="integrated-game-ui">
+/* Original pixel backgrounds; readable in both existing themes. */
+.pixel-landscape{margin:0 0 14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#101923;position:relative;isolation:isolate}
+.pixel-landscape>img{display:block;width:100%;height:clamp(200px,28vw,330px);object-fit:cover;object-position:50% 55%;image-rendering:pixelated}
+.pixel-landscape figcaption{position:absolute;inset:auto 0 0;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:38px 16px 14px;background:linear-gradient(transparent,rgba(5,12,23,.94));color:#f6e8ce;text-shadow:0 1px 2px #000}
+.pixel-location{display:block;font-size:15px;font-weight:650;letter-spacing:.04em}
+.pixel-description{display:block;font-size:12px;color:#e1daca;margin-top:5px;line-height:1.6}
+.pixel-status{flex-shrink:0;padding:5px 9px;border:1px solid #817257;border-radius:5px;background:#101923e8;color:#f5d6a0;font-size:11px;white-space:nowrap}
+.pixel-plaza-art{position:absolute;inset:0;background:#101923}
+.pixel-plaza-art>img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;object-position:50% 55%;image-rendering:pixelated}
+/* Keep the old drawing available as a fallback if the bitmap cannot load. */
+.pixel-plaza-art>svg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.scene:has(.pixel-plaza-art){height:clamp(236px,30vw,340px)}
+.scene:has(.pixel-plaza-art) .sbadge{background:#101923ec;border-color:#756752;color:#f3e4c9;text-shadow:none}
+@media(max-width:600px){.pixel-landscape>img{height:230px}.pixel-landscape figcaption{padding:35px 12px 12px;align-items:flex-start;flex-direction:column;gap:8px}.pixel-description{font-size:11px}.pixel-location{font-size:14px}.scene:has(.pixel-plaza-art){height:250px}}
+
+/* Sprite atlases use equal cells; all animations are decorative. */
+.life-sprite{display:inline-block;width:38px;height:38px;flex:none;vertical-align:middle;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
+.life-farm-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+.life-plot{position:relative;min-width:0;display:flex!important;flex-direction:column;align-items:stretch!important;justify-content:flex-start!important;padding:10px!important;overflow:hidden;background:linear-gradient(180deg,var(--s1),var(--s2));border-style:solid!important;transition:border-color .2s}
+.life-phase{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:10px;color:var(--dim);min-height:24px}
+.life-phase b{font-size:11px;font-weight:500;color:var(--dim);text-align:center}
+.life-plot-picture{height:130px;position:relative;width:100%;isolation:isolate;flex:none}
+.life-soil{position:absolute;width:170px;height:150px;max-width:100%;left:50%;top:50%;transform:translate(-50%,-50%);z-index:0}
+.life-grown{position:absolute;width:125px;height:125px;max-width:90%;left:50%;top:42%;transform:translate(-50%,-50%);z-index:1;filter:drop-shadow(2px 3px 0 #0005);animation:life-grow-appear .35s ease-out both}
+.life-ready{border-color:var(--gold)!important;background:linear-gradient(180deg,var(--s1),var(--s2))}
+.life-ready .life-phase b{color:var(--gold)}
+.life-ready-glint{position:absolute;right:5%;top:5%;width:45px;height:45px;z-index:2;animation:life-glimmer 2.4s ease-in-out infinite}
+.life-care-flags{position:absolute;inset:auto 0 0;display:flex;justify-content:center;gap:5px;z-index:3}
+.life-care{display:inline-flex;align-items:center;font-size:10px;padding:1px 4px;border-radius:4px;background:var(--s1);border:1px solid var(--line);color:var(--jade)}
+.life-care .life-sprite{width:25px;height:25px}
+.life-empty .life-plot-picture{opacity:.75}
+.life-empty-label{text-align:center;margin:2px 0 10px}
+.life-empty>.btn{align-self:center;margin:auto 0 5px}
+.life-plot .farm-species{font-size:13px;min-height:20px}
+.life-plot>.row{margin-top:auto;padding-top:6px;flex-wrap:wrap}
+.life-plot .bar{margin-top:6px}
+.life-growth-key{margin-bottom:12px;line-height:1.8}
+.life-fishing{height:235px;border:1px solid var(--line);border-radius:10px;position:relative;overflow:hidden;isolation:isolate;background:#112b36 url('assets/pixel-scenes/harbor.png?v=20261104-simple2') 50% 65%/cover;margin:10px 0 14px}
+.life-water-shade{position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#061c3590)}
+.life-float{position:absolute;left:8%;top:52%;width:18px;height:30px;transform:translateX(-50%);filter:drop-shadow(0 0 4px #f9e5b6);opacity:.55}
+.life-float:before{content:'';position:absolute;left:8px;top:-65px;width:1px;height:70px;background:#e7d4b887}
+.life-float i{display:block;position:absolute;left:5px;top:5px;width:8px;height:20px;background:linear-gradient(#f7ecbb 0 40%,#ea6c52 40% 80%,#f7ecbb 80%);border:1px solid #4b2932;box-shadow:2px 2px #0a1d31;animation:life-bob 1.5s ease-in-out infinite}
+.life-float:after{content:'';position:absolute;width:32px;height:8px;border:2px solid #b8e7e67a;border-radius:50%;left:-7px;top:23px}
+.is-running .life-float{opacity:1}
+.life-ripple{position:absolute;width:55px;height:16px;border:2px solid #9fdfd85e;border-radius:50%;left:45%;top:67%;animation:life-ripple 3s ease-out infinite}
+.life-swimmer{position:absolute;top:65%;left:20%;opacity:.32;filter:brightness(.2) sepia(1) hue-rotate(130deg);animation:life-swim 12s ease-in-out infinite alternate}
+.life-swimmer .life-sprite{width:70px;height:70px}
+.life-swimmer-b{left:65%;top:45%;animation-delay:-6s;animation-duration:15s;transform:scale(.7)}
+.life-fishing-caption{position:absolute;inset:auto 0 0;padding:24px 12px 10px;background:linear-gradient(transparent,#061221ef);color:#f4e7cf;text-shadow:0 1px 2px #000;font-size:12px;text-align:center;line-height:1.6;z-index:5}
+.life-catch-display{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.life-caught-fish{width:175px;height:175px;filter:drop-shadow(3px 4px 0 #061221aa);animation:life-catch-pop .45s ease-out both}
+.life-catch-glint{position:absolute;width:90px;height:90px;left:calc(50% + 25px);top:18%;animation:life-glimmer 2s ease-in-out infinite}
+.is-caught .life-float,.is-caught .life-swimmer{visibility:hidden}
+.is-caught .life-fishing-caption{color:#ffe6aa}
+.is-missed .life-ripple{border-color:#c0c9db;animation:life-ripple 1s ease-out 2}
+.life-fishing-gauge{box-shadow:0 0 0 2px #c7ab6420}
+@keyframes life-bob{50%{transform:translateY(3px)}}
+@keyframes life-glimmer{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes life-ripple{0%{transform:scale(.5);opacity:0}20%{opacity:.7}100%{transform:scale(2.2);opacity:0}}
+@keyframes life-swim{0%{translate:-35px 0}50%{translate:10px 7px}100%{translate:65px -4px}}
+@keyframes life-catch-pop{0%{transform:translateY(40px) scale(.5);opacity:0}70%{transform:translateY(-10px) scale(1.1)}100%{transform:none;opacity:1}}
+@keyframes life-grow-appear{from{opacity:0}to{opacity:1}}
+@media(max-width:600px){.life-farm-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}.life-plot{padding:6px!important}.life-plot-picture{height:100px}.life-soil{width:115px;height:115px}.life-grown{width:90px;height:90px}.life-phase{flex-wrap:wrap;justify-content:center;gap:3px;font-size:9px}.life-phase>span:first-child{display:none}.life-phase b{font-size:10px;flex-basis:100%}.life-plot .farm-species{font-size:11px;overflow-wrap:anywhere}.life-plot .tiny{font-size:10px}.life-plot .btn{padding:5px 6px;font-size:10px;min-height:30px}.life-care span:not(.life-sprite){display:none}.life-care{padding:0;border:0;background:transparent}.life-care .life-sprite{width:24px;height:24px}.life-ready-glint{width:32px;height:32px;right:0}.life-plot .farm-tier{font-size:9px}.life-fishing{height:215px}.life-fishing-caption{font-size:11px}.life-empty-label{min-height:30px;line-height:1.5}.life-sprite{width:32px;height:32px}.life-caught-fish{width:160px;height:160px}.life-catch-glint{width:75px;height:75px}}
+@media(prefers-reduced-motion:reduce){.life-grown,.life-ready-glint,.life-float i,.life-ripple,.life-swimmer,.life-caught-fish,.life-catch-glint{animation:none!important}.life-plot{transition:none}}
+/* Festival goldfish and target shooting */
+.life-scoop-pond{height:190px!important;background:radial-gradient(ellipse at 50% 20%,#368887,#144854 65%,#122a42)!important;border:5px solid #816045!important;box-shadow:inset 0 0 0 3px #b48a60,inset 0 -20px 35px #07192b66}
+.life-scoop-pond:before{content:'';position:absolute;inset:12px;background:repeating-linear-gradient(0deg,transparent 0 28px,#9fe7df18 29px 31px,transparent 32px 45px);pointer-events:none}
+.life-scoop-pond .fish .life-sprite{width:48px;height:48px;filter:drop-shadow(2px 4px 1px #07192b88)}
+.life-scoop-net{position:absolute;right:6px;bottom:15px;width:90px;height:90px;rotate:-16deg;filter:drop-shadow(2px 4px 0 #07192b88);z-index:2}
+.life-scoop-caption{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e9f0d5;background:#061e32cc;font-size:11px;padding:5px;z-index:3}
+.life-festival-stars{position:absolute;left:calc(50% - 50px);top:10px;width:100px;height:100px;animation:life-catch-pop .5s ease-out both}
+.life-scoop-splash{animation:life-pond-flash .6s ease-out both}
+.life-target{background:repeating-linear-gradient(90deg,#1e233480 0 27px,#4f415744 28px 30px),radial-gradient(circle,#39455e,#101d32)!important;border:3px solid #94704b!important;box-shadow:inset 0 0 0 2px #c69d5a33}
+.life-target .ring{box-shadow:0 0 0 2px #0004,inset 0 0 0 1px #d6d1a333;pointer-events:none}
+.life-target-lantern{position:absolute;top:4px;width:55px;height:55px;filter:drop-shadow(0 0 8px #f7b44c66);pointer-events:none}
+.life-lantern-left{left:3px}.life-lantern-right{right:3px}
+.life-target .life-pixel-shot{width:9px;height:9px;border-radius:0;background:#ffd585;box-shadow:0 0 0 2px #8f352f,0 0 9px #f0b94b}
+.life-hit-feedback{position:absolute;left:0;right:0;bottom:7px;text-align:center;color:#eddfcc;text-shadow:0 2px #15162c;font-size:12px;pointer-events:none;animation:life-hit-feedback 1.3s ease-out both}
+.life-hit-feedback.is-hit{color:#ffe4a1;font-weight:700}
+.life-festival-win{display:flex;justify-content:center;align-items:center;gap:8px;color:var(--gold);font-size:16px;font-weight:600;padding-top:8px}
+.life-festival-win .life-sprite{width:60px;height:60px}
+@keyframes life-pond-flash{from{box-shadow:inset 0 0 25px #b9f4e0}to{box-shadow:inset 0 0 0 3px #b48a60,inset 0 -20px 35px #07192b66}}
+@keyframes life-hit-feedback{0%{transform:translateY(5px);opacity:0}20%,70%{transform:none;opacity:1}100%{transform:translateY(-5px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.life-scoop-pond,.life-festival-stars,.life-hit-feedback{animation:none!important}.life-scoop-pond .fish{animation:none!important}}
+
+/* Bounded artwork and a quieter workspace. Critical rules are also embedded in index.html. */
+#app{grid-template-columns:200px minmax(0,1fr) 330px;max-width:1720px;gap:18px;padding:18px 22px}
+#main,#navcol,#chatcol{min-width:0;max-width:100%}
+#main{container-type:inline-size}
+#main img{max-width:100%}
+#main .pixel-landscape{width:100%;max-width:100%;display:block;margin:0 0 18px;overflow:hidden;border-radius:12px}
+#main .pixel-landscape>img{width:100%!important;max-width:100%!important;height:clamp(180px,30vh,310px)!important;display:block!important;object-fit:contain!important;object-position:center!important;background:#101a28;image-rendering:pixelated}
+#main .pixel-landscape figcaption{position:static!important;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;background:var(--s1);color:var(--tx);text-shadow:none}
+#main .pixel-location{font-size:14px;color:var(--tx)}
+#main .pixel-description{font-size:12px;color:var(--dim)}
+#main .pixel-status{background:var(--s0);color:var(--gold);border-color:var(--line)}
+#main .scene:has(.pixel-plaza-art){height:clamp(200px,30vh,310px)!important;background:#101a28}
+#main .pixel-plaza-art>img{width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:center!important}
+#main .pixel-plaza-art>svg{display:none}
+#main .page-head{padding:0 0 14px;margin-bottom:16px;min-height:64px}
+#main h1.page{font-size:25px;line-height:1.4}
+#main .page-kicker{color:var(--dim);font-size:11px;letter-spacing:.08em}
+.card{backdrop-filter:blur(8px)}
+:root{--cardA:#171023f2;--cardB:#130c20f5;--subBg:#21172eea;--dim:#c6b5d6;--dim2:#a38bb7;--scrim2:rgba(8,4,18,.84)}
+:root[data-theme="light"]{--cardA:#fffefdf5;--cardB:#faf6fff7;--subBg:#f1eaf8f2;--dim:#59416f;--dim2:#766085;--scrim2:rgba(245,239,252,.88)}
+#navcol .nav-i{padding-top:9px;padding-bottom:9px}
+#navcol>.card:first-child{max-height:calc(100dvh - 150px);overflow:auto;scrollbar-width:thin}
+#chatcol{height:calc(100dvh - 130px);max-height:850px;top:112px;background:var(--s0)}
+#main .farm-crop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:13px;border-bottom:1px solid var(--line)}
+#main .farm-crop-row .life-sprite{width:42px;height:42px}
+#main .farm-crop-row button{max-width:100%}
+.pair-team-card{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}
+.pair-team-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pair-team-members{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;margin-top:12px;align-items:center}
+.pair-team-person{min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--s0)}
+.pair-team-person b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pair-team-link{text-align:center;color:var(--gold);font-size:20px}
+.pair-team-state{font-size:11px;line-height:1.7;color:var(--dim)}
+.pair-team-status{padding:3px 8px;border-radius:20px;border:1px solid var(--line);font-size:11px;color:var(--jade)}
+body.pair-action-busy #main button,body.pair-action-busy #navcol button{cursor:progress}
+.pair-sync-error{color:var(--red)}
+@media(max-width:1250px){#app{grid-template-columns:180px minmax(0,1fr)}#chatcol{grid-column:1/-1;position:static;height:440px;max-height:440px}}
+@media(max-width:780px){#app{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}#main .pixel-landscape>img{height:210px!important}#main .pixel-landscape figcaption{padding:10px 12px;align-items:flex-start;flex-direction:column;gap:8px}#main .scene:has(.pixel-plaza-art){height:220px!important}#main h1.page{font-size:22px}.pair-team-card{padding:12px}.pair-team-person{padding:8px}.pair-team-members{gap:5px;grid-template-columns:1fr 20px 1fr}body.mobile-game.mobile-chat-open #chatcol{position:fixed;height:min(65dvh,560px);max-height:none}#main .farm-crop-row{grid-template-columns:minmax(0,1fr);gap:8px}}
+body.pair-action-busy #main button,body.pair-action-busy #modalroot button{pointer-events:none;opacity:.7}
+#main [onclick^="inviteParty"],#main [onclick^="inviteTeacher"]{display:none}
+#toasts{max-width:min(330px,calc(100vw - 24px));max-height:55vh;overflow:hidden}
+@media(max-width:780px){.pair-wallet-badge{display:none}}
+
+</style>
 </head>
 <body>
 <div id="updbar"></div>
@@ -1203,6 +1333,7 @@ function toast(msg,kind=""){
   if(typeof QUIET!=="undefined" && QUIET) return;   // 밀린 진행을 돌리는 중에는 조용히
   const d=document.createElement("div"); d.className="toast "+kind; d.innerHTML=msg;
   $("#toasts").appendChild(d);
+  while($("#toasts").children.length>3)$("#toasts").firstElementChild.remove();
   setTimeout(()=>{ d.style.transition=".3s"; d.style.opacity=0; d.style.transform="translateX(16px)"; setTimeout(()=>d.remove(),320); },3400);
 }
 
@@ -2240,7 +2371,7 @@ function simBattle(me,allies,foes,maxTurn,opts={}){
       resolveAttack(u, pick(targets), log, opts);
     }
     if(foes.every(f=>f.hp<=0)){ log.push(`<span class="s">■ 적을 모두 제압했습니다.</span>`); return {win:true,turn,log}; }
-    if(me.hp<=0){ log.push(`<span class="h">■ 전투 불능. 현장에서 퇴장합니다.</span>`); return {win:false,turn,log}; }
+    if([me,...allies].every(f=>f.hp<=0)){ log.push(`<span class="h">■ 전투 불능. 현장에서 퇴장합니다.</span>`); return {win:false,turn,log}; }
   }
   log.push(`<span class="turn">제한 턴 종료 · 철수</span>`);
   return {win:false,turn,log,timeout:true};
@@ -2891,7 +3022,7 @@ function festivalExchange(id){
   const costs={ward:30,rare:55,hero:90};
   const c=costs[id];
   if(!c || S.fest.marks<c || festExchanged(id)) { toast("표식이 부족하거나 오늘 이미 교환했습니다.","bad"); return; }
-  if((id==="rare"||id==="hero") && S.bag.length>=40+(S.res.r11||0)*5){
+  if((id==="rare"||id==="hero") && S.bag.length>=bagCapacity()){
     toast("바랑이 가득 찼습니다. 공간을 비운 뒤 교환해 주세요.","bad"); return;
   }
   S.fest.marks-=c;
@@ -3667,11 +3798,11 @@ else setTimeout(()=>init(),0);
 </script>
 <script src="config.js?v=20261104-login-restore1"></script>
 <script src="notifications.js"></script>
-<script src="part2.js?v=20261104-balance20-1"></script>
-<script src="part3.js?v=20261104-balance20-1"></script>
+<script src="part2.js?v=20261104-pair2"></script>
+<script src="part3.js?v=20261104-pair2"></script>
 <script src="part4.js"></script>
 <script src="part5.js"></script>
-<script src="part6.js?v=20261104-balance20-1"></script>
+<script src="part6.js?v=20261104-pair2"></script>
 <script src="part7.js?v=20261104-login-restore1"></script>
 <script src="social.js"></script>
 <script src="part8.js?v=20261103-pairthread-unlimited1"></script>
@@ -3679,12 +3810,13 @@ else setTimeout(()=>init(),0);
 <script src="part10.js?v=20261103-yowa-shop1"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>
 <script src="part12.js?v=20261103-webpush-cors2"></script>
-<script src="market.js?v=20261103-runner-market1"></script>
+<script src="market.js?v=20261104-pair2"></script>
 <script src="pvp.js"></script>
 <script src="part13.js?v=20261103-account-save-safety1"></script>
 <script src="part14.js?v=20261104-novel-layout-fix1"></script>
 <script src="pixel-scenes.js?v=20261104-simple2"></script>
 <script src="pixel-life.js?v=20261104-simple2"></script>
-<script src="balance20.js?v=20261104-1"></script>
+<script src="balance20.js?v=20261104-pair2"></script>
+<script src="pair-play.js?v=20261104-pair2"></script>
 </body>
 </html>

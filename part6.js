@@ -1004,7 +1004,7 @@ function pairCancel(id){
 function pairBreak(){
   const P=pairEnsure(); if(!P.mine) return;
   const o=pairOther(P.mine);
-  if(!confirm(`${o.name} 님과의 페어를 풀까요? 둘만의 자리도 닫힙니다.`)) return;
+  if(!confirm(`${o.name} 님과의 페어를 풀까요? ${window.PAIR_PLAY?.ready?'공동 재화는 절반씩, 바랑 물품은 번갈아 분배됩니다. 진행 기록은 유지됩니다.':'둘만의 자리도 닫힙니다.'}`)) return;
   pairBusyBtn(true);
   sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{status:"broken", updated_at:new Date().toISOString()},"return=minimal")
     .then(()=>{ toast("페어를 풀었습니다."); return pairFetch(true); })
