@@ -955,3 +955,15 @@ body.auth-gate #mobile-chat-toggle{
 .club-stock{display:flex;gap:6px;flex-wrap:wrap;max-height:250px;overflow:auto;margin-top:12px}
 .club-gear-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 @media(max-width:780px){.club-seats{grid-template-columns:repeat(2,minmax(0,1fr))}.club-directory-row{grid-template-columns:24px minmax(0,1fr)}.club-directory-row>.row{grid-column:2}.club-log-row{grid-template-columns:85px minmax(0,1fr);gap:5px}.club-log-row>span{grid-column:1/-1}.club-room{min-height:180px;padding:16px}}
+
+/* Keep character status available when the desktop information panel is hidden. */
+.mobile-vitals{display:none}
+@media(max-width:780px){
+  body.mobile-game .res-wrap{grid-row:2}
+  body.mobile-game .tb2{grid-row:4}
+  body.mobile-game .mobile-vitals{display:grid;grid-column:1/-1;grid-row:3;gap:7px;padding:10px;background:var(--s1);border:1px solid var(--line);border-radius:10px;min-width:0}
+  .mobile-vital-text{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;line-height:1.5}
+  .mobile-vital-text strong{font-variant-numeric:tabular-nums;font-weight:600;text-align:right;overflow-wrap:anywhere}
+  .mobile-vital .bar{margin:3px 0 0;height:5px}
+  .mobile-vital.critical .mobile-vital-text{color:var(--red)}
+}

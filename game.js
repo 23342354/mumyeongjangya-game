@@ -826,6 +826,16 @@ function renderTop(){
       <button class="btn sm ghost" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
     </div>
   </div>
+  <div class="mobile-vitals" aria-label="캐릭터 상태">
+    ${[
+      {key:"hp",label:"체력",value:Math.floor(S.hp),max:100,pct:S.hp},
+      {key:"sn",label:"정신력(이성)",value:Math.floor(S.sn),max:100,pct:S.sn},
+      {key:"xp",label:"경험치",value:Math.floor(S.exp),max:expNeed(),pct:S.exp/expNeed()*100}
+    ].map(v=>`<div class="mobile-vital ${v.key}${v.key!=="xp"&&v.pct<=20?" critical":""}">
+      <div class="mobile-vital-text"><span>${v.label}</span><strong>${v.value.toLocaleString("ko-KR")} / ${v.max.toLocaleString("ko-KR")}${v.key==="xp"?` · ${v.pct.toFixed(1)}%`:""}</strong></div>
+      <div class="bar ${v.key}" role="progressbar" aria-label="${v.label}" aria-valuemin="0" aria-valuemax="${v.max}" aria-valuenow="${v.value}"><i style="width:${Math.max(0,Math.min(100,v.pct))}%"></i></div>
+    </div>`).join("")}
+  </div>
   <div class="tb2">
     <span>${c.date}</span>
     <span class="top-weather">${w.i} ${w.n} <span style="color:var(--s6)">· ${w.d}</span></span>
