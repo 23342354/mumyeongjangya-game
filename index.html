@@ -806,9 +806,27 @@ body.pair-action-busy #main button,body.pair-action-busy #modalroot button{point
 .hex-color-controls input[type=text]{width:125px;font-family:monospace}
 .hex-color-controls input[type=color]{width:36px;height:34px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
 
+
+/* 인증/입학 화면: 내용 없는 게임 채팅 열을 만들지 않습니다. */
+body.auth-gate #app{
+  grid-template-columns:minmax(0,1fr) !important;
+  width:100%;
+}
+body.auth-gate #main{
+  grid-column:1 / -1;
+  width:100%;
+  min-width:0;
+}
+body.auth-gate #navcol,
+body.auth-gate #chatcol,
+body.auth-gate #mobile-subnav,
+body.auth-gate #mobile-nav,
+body.auth-gate #mobile-chat-toggle{
+  display:none !important;
+}
 </style>
 </head>
-<body>
+<body class="auth-gate">
 <div id="updbar"></div>
 <div id="topbar"></div>
 <div id="app">
@@ -3672,6 +3690,7 @@ function finishCreate(){
 
 /* ═══════════════ 초기화 ═══════════════ */
 function boot(){
+  document.body.classList.remove("auth-gate");
   renderTop(); renderNav(); renderMain(); renderChat(); startTick(); save();
 }
 function init(){
@@ -3685,6 +3704,7 @@ function initGame(){
   if(l && l.made){
     S=l; offline(); boot();
   }else{
+    document.body.classList.add("auth-gate");
     S=newState();
     $("#topbar").innerHTML=`<div class="tb1"><div class="logo logo-top" title="無明長夜"></div>
       <div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
@@ -3840,7 +3860,7 @@ else setTimeout(()=>init(),0);
 <script src="part4.js"></script>
 <script src="part5.js"></script>
 <script src="part6.js?v=20261104-pair2"></script>
-<script src="part7.js?v=20261104-login-restore1"></script>
+<script src="part7.js?v=20261104-auth-layout-fix1"></script>
 <script src="social.js?v=20261104-combat-ui3"></script>
 <script src="part8.js?v=20261104-alert-clear-fix1"></script>
 <script src="part9.js"></script>

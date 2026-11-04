@@ -149,6 +149,7 @@ function gateMsg(t, bad){ GATEMSG = t ? `<div class="tiny" style="margin-top:10p
 function gateShow(mode){
   if(mode) { GATEMODE=mode; GATEMSG=""; }
   const up = GATEMODE==="signup";
+  document.body.classList.add("auth-gate");
   $("#topbar").innerHTML=`<div class="tb1"><div class="logo logo-top" title="無明長夜"></div>
     <div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
   $("#navcol").innerHTML=""; $("#chatcol").innerHTML="";
@@ -247,6 +248,7 @@ function acctLogout(){
 /* index.html 의 init() 이 맨 먼저 이 함수를 부릅니다.
    true 를 돌려주면 게임 대신 로그인 화면을 띄웁니다. */
 function gateConfigMissing(){
+  document.body.classList.add("auth-gate");
   /* 운영 서버에서 설정 파일이 사라졌을 때 로그인 없이 다른 기록을 시작하지 않게 차단합니다. */
   document.querySelector("#topbar").innerHTML=`<div class="tb1"><div class="logo logo-top" title="無明長夜"></div><div><div class="me-name">無明長夜</div><div class="me-sub">사신무기전문학교 명계지부</div></div></div>`;
   document.querySelector("#navcol").innerHTML="";
