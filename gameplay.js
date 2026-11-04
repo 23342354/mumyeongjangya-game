@@ -792,20 +792,20 @@ VIEWS.gear=()=>{
     ${SLOTS.map(sl=>{
       const it=S.gear[sl.k]; const b=best(sl.k);
       const up=b&&(!it||gearScore(b)>gearScore(it));
-      if(!it) return `<div class="sub" style="border-style:dashed">
+      if(!it) return `<div class="sub gear-slot-card" style="border-style:dashed">
         <div class="tiny muted">${sl.e} ${sl.n}</div>
-        <div class="tiny muted" style="margin:6px 0">비어 있습니다</div>
-        ${b?`<button class="btn sm pri" onclick="equip(${b.id})">가장 좋은 것 장착</button>`:`<span class="tiny muted">바랑에도 없습니다</span>`}</div>`;
-      return `<div class="sub" style="border-color:${GRADES[it.grade].c}">
+        <div class="tiny muted">비어 있습니다</div><div></div><div></div>
+        <div class="gear-slot-actions">${b?`<button class="btn sm pri" onclick="equip(${b.id})">가장 좋은 것 장착</button>`:`<span class="tiny muted">바랑에도 없습니다</span>`}</div><div></div></div>`;
+      return `<div class="sub gear-slot-card" style="border-color:${GRADES[it.grade].c}">
         <div class="spread"><span class="tiny muted">${sl.e} ${sl.n}</span>${gradeTag(it.grade)}</div>
         <b style="color:${GRADES[it.grade].c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
         <div class="tiny muted">Lv ${it.lv} · 전투력 ${nf(gearScore(it))}</div>
         <div class="tiny" style="color:var(--jade);margin:5px 0 8px">${gearLine(it)}</div>
-        <div class="row">
+        <div class="gear-slot-actions">
           <button class="btn sm pri" onclick="enhance('${sl.k}')">각인 +${it.enh+1}</button>
           <button class="btn sm" ${S.sari<3?"disabled":""} onclick="enhance('${sl.k}',true)" title="사리 3을 더 내면 실패하지 않습니다">보호 각인</button>
           <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
-          ${up?`<button class="btn sm" style="margin-left:auto;color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
+          ${up?`<button class="btn sm" style="color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
         </div>
         <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
       </div>`;
