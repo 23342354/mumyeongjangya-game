@@ -535,12 +535,70 @@ function hookFishingNow(){
  fishingStatus();pumpFishing();
  return {queued:true,id:event.id};
 }
+/* ── 용돈 기입장 · 기록 ─────────────────────────
+   륜이 어디서 들어오고 어디로 나갔는지 한 줄씩 남깁니다.
+   기록은 각자의 저장본(S.ledger)에 들어가며, 페어는 서로의 기록을
+   한 목록에 모아 봅니다. 보여 주는 쪽은 파일 끝에 있습니다. */
+const LEDGER_MAX=40;           // 줄 수 상한 — 저장본과 페어 전송을 가볍게 유지합니다
+const LEDGER_MERGE_MS=600000;  // 같은 항목이 10분 안에 또 들어오면 한 줄로 합칩니다
+const LEDGER={label:'',income:0};
+/* 행동 이름 → 기입장에 적힐 항목 이름 */
+const LEDGER_LABELS={
+ buy:'상점', martBuy:'잡화점', buyMerch:'떠돌이 상인', buyMisc:'기타 구매',
+ enhance:'법구 강화', sellGear:'법구 판매', dismantle:'법구 분해',
+ craftB:'제작', craftBMax:'제작', cook:'조리', brew:'양조',
+ eat:'식사', drink:'음용', drinkPotion:'환약', usePotion:'환약', useItem:'물품 사용',
+ farmSeedBuy11:'씨앗 구입', farmFertiliserBuy11:'비료 구입',
+ farmFertiliserCraft11:'비료 제작', farmFertiliserApply11:'비료 사용',
+ plant:'파종', plantAll:'파종', water:'물주기', waterAll:'물주기',
+ harvest:'수확', harvestAll:'수확', deliverOrder:'납품',
+ joinClub:'동아리 가입', clubAttend:'동아리 출석', clubDonate:'동아리 기부', clubBless:'동아리 축복',
+ aucBid:'경매 입찰', rest:'휴식', saveMe:'구조 요청',
+ buildHome:'거처 공사', setHall:'거처 이전', moveHall:'이사', toggleRentAuto:'월세',
+ exchangeMark:'표 교환', festivalExchange:'축제 교환', openBasket:'꾸러미', booth:'부스',
+ takeTea:'찻집', readBook:'서책', readStory:'이야기',
+ startOuting:'외출', outChoose:'외출', takeSouv:'기념품', takeFestSouv:'기념품', chooseSouv:'기념품',
+ takeExam:'시험', examPractice:'모의 시험',
+ runQuest:'의뢰', startRun:'의뢰 출발', runReturn:'의뢰 귀환', runClear:'의뢰 완수',
+ climbTower:'석탑', climbGuard:'수호탑', hitBoss:'결계 토벌', balanceClaimBoss:'결계 보상',
+ arenaGo:'투기장', balanceCollectLoot:'전리품 수령',
+ startLesson:'수업', quickLesson:'수업', startStudy:'수행'
+};
+const ledgerLabel=name=>LEDGER_LABELS[name]||String(name||'기타');
+/* 한 줄 적기. 같은 항목이 잇따르면 합쳐서 목록이 길어지지 않게 합니다. */
+function ledgerPush(amount,label){
+ amount=Math.round(Number(amount)||0);
+ if(!amount||typeof S==='undefined'||!S)return;
+ if(!Array.isArray(S.ledger))S.ledger=[];
+ const now=Date.now(),top=S.ledger[0];
+ if(top&&top.k===label&&(amount>0)===(Number(top.a)>0)&&now-Number(top.t)<LEDGER_MERGE_MS){
+  top.a=Number(top.a)+amount;top.t=now;return;
+ }
+ S.ledger.unshift({t:now,a:amount,k:String(label).slice(0,24)});
+ if(S.ledger.length>LEDGER_MAX)S.ledger.length=LEDGER_MAX;
+}
+/* 행동 하나가 륜을 얼마나 쓰고 벌었는지 잽니다.
+   수입은 gainRin 쪽에서 이미 한 줄로 적히므로, 그 금액을 빼고 남은
+   실제 지출만 기록합니다. 그래서 사면서 환급받는 행동도 어긋나지 않습니다.
+   시계(tick)는 이 바깥에서 돌기 때문에 의뢰 진행 보상이 섞이지 않습니다. */
+function ledgerMeasure(name,run){
+ if(typeof S==='undefined'||!S)return run();
+ const label=ledgerLabel(name),before=Number(S.rin)||0;
+ const prevLabel=LEDGER.label,prevIncome=LEDGER.income;
+ LEDGER.label=label;LEDGER.income=0;
+ try{ return run(); }
+ finally{
+  const spent=LEDGER.income-((Number(S.rin)||0)-before);
+  if(spent)ledgerPush(-spent,label);
+  LEDGER.label=prevLabel;LEDGER.income=prevIncome;
+ }
+}
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;if(name==='fishHook')fishingHook=f;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
  const group=/^(takeExam|runQuest|startRun|climbTower|climbGuard)$/.test(name);
- if(!active()){if(group){oldToast('먼저 파트너를 맺어 두 사람이 함께 출발해 주세요.','bad');return;}return f.apply(this,args);}
+ if(!active()){if(group){oldToast('먼저 파트너를 맺어 두 사람이 함께 출발해 주세요.','bad');return;}return ledgerMeasure(name,()=>f.apply(this,args));}
  if(name==='fishCast'){
   if(!PJ.ready)init();
   const box=fishingData();if(S.balance20)S.balance20.lastCast=Math.max(Number(S.balance20.lastCast)||0,box.lastCast||0);
@@ -549,10 +607,10 @@ for(const name of actions){const f=window[name];if(typeof f!=='function')continu
   fishingStatus();return result;
  }
  if(name==='fishHook'){if(!PJ.ready)init();return hookFishingNow();}
- if(!PJ.ready){if(['runReturn','runClear'].includes(name)&&S.run){const r=f.apply(this,args);oldSave();oldPush(true);return r;}init();oldToast(PJ.error||'공동 지갑을 연결하고 있습니다. 잠시 후 다시 눌러 주세요.');return;}
+ if(!PJ.ready){if(['runReturn','runClear'].includes(name)&&S.run){const r=ledgerMeasure(name,()=>f.apply(this,args));oldSave();oldPush(true);return r;}init();oldToast(PJ.error||'공동 지갑을 연결하고 있습니다. 잠시 후 다시 눌러 주세요.');return;}
  const key=name+JSON.stringify(args.map(a=>a&&typeof a==='object'?null:a));
  if(PJ.actions.has(key))return PJ.actions.get(key);
- const job=transact(name,()=>f.apply(this,args),true).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
+ const job=transact(name,()=>ledgerMeasure(name,()=>f.apply(this,args)),true).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
 };}
 const drawFishing=drawFish2;drawFish2=function(){const result=drawFishing.apply(this,arguments);fishingStatus();return result;};
 PJ.flushFishing=()=>pumpFishing();
@@ -627,6 +685,29 @@ document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState==='visible'){PJ.lastPoll=0;init();}
  else if(PJ.ready&&PJ.pending.length)acctPush(true);
 });
+
+/* ── 용돈 기입장 · 모으기 ───────────────────────
+   내 기록과 파트너 기록을 시각 순으로 한 목록에 모읍니다.
+   파트너 기록은 서버의 pp_peer가 'ledger'를 내려 줄 때만 들어옵니다. */
+function ledgerRows(){
+ const rows=(Array.isArray(S.ledger)?S.ledger:[])
+   .map(e=>({t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
+             who:S.name||'나',color:S.color||'var(--gold)',me:true}));
+ const peer=PJ.snapshot?.peer;
+ if(Array.isArray(peer?.ledger))for(const e of peer.ledger)
+   rows.push({t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
+              who:peer.name||'파트너',color:peer.color||'var(--violet)',me:false});
+ return rows.sort((a,b)=>b.t-a.t);
+}
+/* 의뢰 진행 보상은 시계가 돌 때 들어오므로 따로 이름을 붙입니다. */
+const ledgerTick=tick;
+tick=function(){
+ const prev=LEDGER.label;LEDGER.label='의뢰 진행';
+ try{ return ledgerTick.apply(this,arguments); }
+ finally{ LEDGER.label=prev; }
+};
+/* 이 모듈은 괄호 안에 갇혀 있으므로, 기입장에 필요한 것만 밖으로 내보냅니다. */
+window.LEDGER_API={push:ledgerPush,rows:ledgerRows,state:LEDGER};
 })();
 
 
@@ -792,3 +873,103 @@ setInterval(()=>{
   else if(pollAwake()&&VIEW==="plaza"&&Date.now()-LIVE_AUCTION.at>30000)auctionFetch(false);
 },1000);
 
+
+/* ═══════════════════════════════════════════════════════
+   용돈 기입장
+   륜이 어디서 들어오고 어디로 나갔는지 한 줄씩 남깁니다.
+   페어는 지갑을 함께 쓰므로 두 사람의 기록을 한 목록에 모읍니다.
+   이름은 각자의 영혼 컬러(테마 색)로 표시합니다.
+
+   기록은 저장본 안에 들어가고(S.ledger), 서버에는 저장과 함께 올라갑니다.
+   파트너의 기록이 내려오려면 운영 서버의 pp_peer 화이트리스트에
+   'ledger'가 들어 있어야 합니다 (supabase/ledger-peer.sql 한 번 실행).
+   ═══════════════════════════════════════════════════════ */
+
+/* 수입은 gainRin 한 곳을 지나갑니다. */
+if(typeof gainRin==='function'){
+ const ledgerGainRin=gainRin;
+ gainRin=function(n){
+  const got=ledgerGainRin.apply(this,arguments);
+  LEDGER_API.state.income+=Number(got)||0;
+  LEDGER_API.push(got,LEDGER_API.state.label||'진행 보상');
+  return got;
+ };
+}
+
+/* 중개소는 서버가 잔액을 통째로 내려 주므로 그 차액을 적습니다. */
+const ledgerMarketApply=typeof marketApplyInventory==='function'?marketApplyInventory:null;
+if(ledgerMarketApply)marketApplyInventory=function(inv){
+ const before=Number(S?.rin)||0;
+ const r=ledgerMarketApply.apply(this,arguments);
+ const diff=(Number(S?.rin)||0)-before;
+ if(diff)LEDGER_API.push(diff,'중개소');
+ return r;
+};
+
+/* ── 보여 주기 ────────────────────────────────── */
+function ledgerSince(rows,from){
+ let inc=0,out=0;
+ for(const r of rows){ if(r.t<from)continue; if(r.a>0)inc+=r.a; else out-=r.a; }
+ return {inc,out};
+}
+function ledgerDayKey(t){const d=new Date(t);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
+function ledgerDayName(t){
+ const d=new Date(t),today=new Date(),y=new Date(today.getTime()-86400000);
+ if(ledgerDayKey(t)===ledgerDayKey(today.getTime()))return '오늘';
+ if(ledgerDayKey(t)===ledgerDayKey(y.getTime()))return '어제';
+ return `${d.getMonth()+1}월 ${d.getDate()}일`;
+}
+function ledgerName(r){
+ return `<b style="color:${esc(r.color)}">${esc(r.who)}</b>`;
+}
+function ledgerAmount(a){
+ if(!a)return `<b class="muted" style="white-space:nowrap">0</b>`;
+ const up=a>0;
+ return `<b style="color:${up?'var(--ok)':'var(--red)'};white-space:nowrap">${up?'+':'−'}${nf(Math.abs(a))}</b>`;
+}
+/* 합계는 '들어온 / 나간'이라는 말이 이미 방향을 알려 주므로 부호를 붙이지 않습니다. */
+function ledgerSum(a,kind){
+ const col=!a?'var(--dim)':kind==='in'?'var(--ok)':'var(--red)';
+ return `<b style="color:${col};white-space:nowrap">${nf(Math.abs(a))}</b>`;
+}
+if(typeof VIEWS!=='undefined')VIEWS.ledger=()=>{
+ const rows=LEDGER_API.rows(),peer=window.PAIR_PLAY&&PAIR_PLAY.snapshot&&PAIR_PLAY.snapshot.peer;
+ const paired=!!peer,peerRows=rows.some(r=>!r.me);
+ const midnight=new Date();midnight.setHours(0,0,0,0);
+ const day=ledgerSince(rows,midnight.getTime());
+ const week=ledgerSince(rows,Date.now()-7*86400000);
+ const wallet=`<div class="card pad"><div class="spread">
+   <div><div class="sect-t" style="margin:0">${paired?'공동 지갑':'지금 가진 륜'}</div>
+     <div class="tiny muted">${paired?'두 사람이 함께 쓰는 잔고입니다':'혼자 쓰는 잔고입니다'}</div></div>
+   <div style="font-size:23px;font-weight:600;color:var(--gold)">${ic("coin",16)} ${nf(Number(S.rin)||0)}</div>
+ </div></div>`;
+ const sums=`<div class="card pad" style="margin-top:14px"><div class="sect-t">드나든 금액</div>
+   <div class="spread" style="padding:6px 0"><span>오늘</span>
+     <span class="tiny muted">들어온 ${ledgerSum(day.inc,'in')} · 나간 ${ledgerSum(day.out,'out')}</span></div>
+   <div class="spread" style="padding:6px 0"><span>최근 7일</span>
+     <span class="tiny muted">들어온 ${ledgerSum(week.inc,'in')} · 나간 ${ledgerSum(week.out,'out')}</span></div></div>`;
+ let list='',lastDay='';
+ for(const r of rows){
+  const d=ledgerDayName(r.t);
+  if(d!==lastDay){lastDay=d;list+=`<div class="sect-t" style="margin:18px 0 6px">${esc(d)}</div>`;}
+  const time=new Date(r.t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  list+=`<div class="card pad" style="margin-bottom:8px"><div class="spread">
+    <div><div>${ledgerName(r)} <span class="muted">·</span> ${esc(r.k)}</div>
+      <div class="tiny muted">${esc(time)}</div></div>
+    ${ledgerAmount(r.a)}</div></div>`;
+ }
+ if(!rows.length)list=`<div class="card pad" style="margin-top:14px">아직 적힌 기록이 없습니다. 무언가 사거나 벌면 여기에 한 줄씩 쌓입니다.</div>`;
+ const note=!paired
+   ? `<div class="card pad tiny muted" style="margin-top:14px">페어를 맺으면 두 사람의 기록이 한 목록에 함께 표시됩니다.</div>`
+   : peerRows ? ''
+   : `<div class="card pad tiny muted" style="margin-top:14px">파트너의 기록이 아직 보이지 않습니다. 운영진이 <b>supabase/ledger-peer.sql</b>을 Supabase SQL Editor에서 한 번 실행하면 함께 표시됩니다.</div>`;
+ return head('륜이 드나든 자리','용돈 기입장',rows.length?`${rows.length}줄`:'')
+   +wallet+sums+list+note;
+};
+
+/* 광장·페어 묶음에 기입장을 넣습니다. */
+(function(){
+ if(typeof NAVDEF==='undefined')return;
+ const g=NAVDEF.find(x=>x.id==='plaza');
+ if(g&&Array.isArray(g.sub)&&!g.sub.some(s=>s.id==='ledger'))g.sub.push({id:'ledger',n:'용돈 기입장'});
+})();
