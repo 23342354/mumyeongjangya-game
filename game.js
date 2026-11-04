@@ -2662,7 +2662,6 @@ VIEWS.rel=()=>{
         <div><b>${esc(r.n)}</b>
           <div class="tiny muted">나는 ${esc(r.nick||r.n)}의 <b style="color:var(--gold)">${r.a}</b> · ${esc(r.n)} 님은 나의 <b style="color:var(--gold)">${r.b}</b></div></div>
         <div class="row">
-          <button class="btn sm ghost" onclick="relPropose('${esc(r.n)}',${i})">수정 제안</button>
           <button class="btn sm red" onclick="relCut(${i})">끊기</button></div></div>`).join("")
         :`<div class="tiny muted" style="padding:10px 0">맺은 관계가 없습니다.</div>`}
     </div>
@@ -2871,7 +2870,7 @@ function drawMe(){
     b=`<div class="tiny muted" style="margin-bottom:10px">맺은 관계 ${S.rel.length} / 50</div>
       ${S.rel.map((r,i)=>`<div class="spread" style="padding:8px 0;border-bottom:1px solid var(--s3)">
         <div><b>${esc(r.n)}</b><div class="tiny muted">나는 ${esc(r.nick||r.n)}의 ${r.a} · ${esc(r.n)} 님은 ${esc(S.name)}의 ${r.b}</div></div>
-        <div class="row"><button class="btn sm" onclick="relPropose('${esc(r.n)}',${i})">수정 제안</button>
+        <div class="row">
           <button class="btn sm red" onclick="relCut(${i});drawMe()">끊기</button></div></div>`).join("")
         ||'<div class="tiny muted">맺은 관계가 없습니다.</div>'}`;
   }

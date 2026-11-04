@@ -79,15 +79,15 @@ function socialRelationEdit(id){
  const r=SOCIAL.links.find(r=>String(r.id)===String(id)&&r.kind==='relation'&&r.status==='accepted');
  if(!r||![String(r.from_id),String(r.to_id)].includes(socialId()))return;
  const from=String(r.from_id)===socialId();
- modal('관계 호칭 수정',`<p>${esc(socialName(socialPeer(r)))}</p><label for="relation-edit-a">나는 상대의</label><input id="relation-edit-a" class="inp" maxlength="20" value="${esc(from?r.role_from:r.role_to)}"><label for="relation-edit-b">상대는 나의</label><input id="relation-edit-b" class="inp" maxlength="20" value="${esc(from?r.role_to:r.role_from)}"><p class="tiny muted">저장하면 두 사람의 호칭이 함께 변경됩니다. 관계는 유지됩니다.</p><button id="relation-edit-save" class="btn pri" onclick="socialRelationEditSave(${r.id})">저장</button>`);
+ modal('관계 호칭 수정',`<p>${esc(socialName(socialPeer(r)))}</p><label for="relation-edit-a">나는 상대의</label><input id="relation-edit-a" class="inp" readonly aria-readonly="true" title="상대가 정한 호칭입니다" value="${esc(from?r.role_from:r.role_to)}"><label for="relation-edit-b">상대는 나의</label><input id="relation-edit-b" class="inp" maxlength="20" value="${esc(from?r.role_to:r.role_from)}"><p class="tiny muted">‘상대는 나의’만 수정할 수 있습니다. ‘나는 상대의’는 상대가 정한 호칭입니다.</p><button id="relation-edit-save" class="btn pri" onclick="socialRelationEditSave(${r.id})">저장</button>`);
 }
 async function socialRelationEditSave(id){
- const a=document.getElementById('relation-edit-a')?.value.trim()||'',b=document.getElementById('relation-edit-b')?.value.trim()||'';
- if(!a||!b||Array.from(a).length>20||Array.from(b).length>20){toast('호칭을 각각 1~20자로 입력해 주세요.','bad');return;}
+ const b=document.getElementById('relation-edit-b')?.value.trim()||'';
+ if(!b||Array.from(b).length>20){toast('호칭을 1~20자로 입력해 주세요.','bad');return;}
  if(!sbOn()||typeof ACCT==='undefined'||!ACCT.id){toast('로그인이 필요합니다.','bad');return;}
  const button=document.getElementById('relation-edit-save');if(!button||button.disabled)return;button.disabled=true;
  try{
-  await sbSend('POST','rpc/social_relation_edit',{p_actor:ACCT.id,p_token:ACCT.tok,p_id:id,p_a:a,p_b:b});
+  await sbSend('POST','rpc/social_relation_edit',{p_actor:ACCT.id,p_token:ACCT.tok,p_id:id,p_a:null,p_b:b});
   closeModal();await socialReload();renderMain();toast('관계 호칭을 수정했습니다.','good');
  }catch(e){toast('호칭을 저장하지 못했습니다. 입력한 내용은 유지됩니다. 잠시 후 다시 시도해 주세요.','bad');}
  finally{if(button.isConnected)button.disabled=false;}
