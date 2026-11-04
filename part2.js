@@ -799,7 +799,7 @@ VIEWS.stats=()=>{
         <button class="btn sm" onclick="autoAlloc('공격')">공격형</button>
         <button class="btn sm" onclick="autoAlloc('생존')">생존형</button>
         <button class="btn sm" onclick="autoAlloc('공명')">공명형</button>
-        <button class="btn sm red" style="margin-left:auto" onclick="resetAlloc()">망각의 차로 초기화 · 륜 ${nf(2000*S.course)}</button>
+        <button class="btn sm red" style="margin-left:auto" onclick="resetAlloc()">망각의 차로 초기화 · 연등 5개</button>
       </div>
       <div class="tiny muted" style="margin-top:6px">수행 단계가 오를 때마다 2포인트를 받습니다. 과목으로 오른 능력치와는 따로 쌓입니다.</div>
       <hr class="hr">
@@ -852,13 +852,11 @@ function autoAlloc(kind){
   toast(`${kind} 프리셋으로 분배했습니다.`,"good"); renderMain(); renderNav(); renderTop(); save();
 }
 function resetAlloc(){
-  const cost=2000*S.course;
-  if(S.rin<cost){ toast("륜이 부족합니다.","bad"); return; }
-  S.rin-=cost;
-  STATS.forEach(s=>{ S.pts+=S.alloc[s.k]; S.alloc[s.k]=0; });
-  toast("망각의 차를 마셨습니다. 분배한 포인트가 돌아왔습니다.","good");
-  renderMain(); renderNav(); renderTop(); save();
+  // 능력치 초기화와 매점의 망각의 차는 완전히 동일한 구매 경로를 사용합니다.
+  // 연등 5개와 하루 구매 한도도 함께 적용됩니다.
+  martBuy("m10");
 }
+
 function setTend(t){ S.tendency=t; renderMain(); renderNav(); renderTop(); save(); }
 
 /* 수행 단계 상승 시 포인트 */

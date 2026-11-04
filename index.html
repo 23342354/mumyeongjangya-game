@@ -824,7 +824,18 @@ body.auth-gate #mobile-nav,
 body.auth-gate #mobile-chat-toggle{
   display:none !important;
 }
+
+/* 광장 진행 상황 / 고정 스크롤 메뉴 */
+#navcol>.card:first-child{overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable}
+.activity-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.activity-row:last-child{border-bottom:0}
+.activity-row>div:first-child{min-width:0}
+.activity-row .tag{margin-right:4px}
+.activity-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+@media(max-width:780px){.activity-row{align-items:flex-start;flex-wrap:wrap}.activity-actions{margin-left:auto}}
+
 </style>
+<link rel="stylesheet" href="auction-live.css?v=20261104-shared-auction1">
 </head>
 <body class="auth-gate">
 <div id="updbar"></div>
@@ -1678,6 +1689,10 @@ const NAVDEF=[
  {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"record",n:"기록·성적"}]},
 ];
 function renderNav(){
+  // 1초 주기 갱신에도 안내도 내부 스크롤 위치를 보존합니다.
+  const navHost=document.getElementById("navcol");
+  const priorMenu=navHost?.querySelector(":scope > .card:first-child");
+  const menuScrollY=priorMenu?.scrollTop||0;
   renderMobileNav();
   const hpP=S.hp, snP=S.sn;
   const navHTML=NAVDEF.map(g=>{
@@ -1722,6 +1737,8 @@ function renderNav(){
     <hr class="hr">
     <div class="tiny muted">${homeOf(S.hall).n} 혜택 · ${typeof hallBenefitText==="function"?hallBenefitText(S.hall):homeOf(S.hall).b}</div>
   </div>`;
+  const refreshedMenu=navHost?.querySelector(":scope > .card:first-child");
+  if(refreshedMenu && menuScrollY>0) refreshedMenu.scrollTop=menuScrollY;
 }
 function navOpen(g){ return NAVOPEN[g.id]!==undefined ? NAVOPEN[g.id] : g.sub.some(s=>s.id===VIEW); }
 const MOBILE_GROUP_NAMES={study:"수업",war:"의뢰",gearn:"법구",craft:"공방",plaza:"광장",soc:"교류",shopn:"상점",rec:"기록"};
@@ -1907,6 +1924,51 @@ function head(kicker,title,right){
   </div>${right?`<div class="rt">${right}</div>`:""}</div>`;
 }
 
+/* 광장 활동 요약. 의뢰는 별도의 실시간 타이머를 사용하므로 현재 잔여치를 읽습니다. */
+function plazaActivityHTML(){
+  if(!S || !S.made) return "";
+  const rows=[];
+  const row=(kind,name,detail,left,view)=>{
+    const time=Number.isFinite(Number(left))?`<b class="activity-countdown" style="color:var(--gold)">${hhmm(Math.max(0,Number(left)))}</b> 남음`:"진행 중";
+    rows.push(`<div class="activity-row">
+      <div><span class="tag j">${kind}</span> <b>${esc(name)}</b><div class="tiny muted">${esc(detail||"")}</div></div>
+      <div class="activity-actions"><span class="tiny">${time}</span><button class="btn sm" onclick="go('${view}')">보기</button></div>
+    </div>`);
+  };
+  if(S.lesson){
+    const sb=SUBJECTS.find(x=>x.id===S.lesson.plan?.[S.lesson.idx]);
+    row("수업",sb?.n||"진행 중인 수업",`${(S.lesson.idx||0)+1} / ${S.lesson.plan?.length||1}교시`,S.lesson.left,"class");
+  }
+  if(S.run&&!S.run.done){
+    const r=S.run;
+    row("의뢰",r.q?.t||r.q?.title||"현장 의뢰",`현재 구간 ${r.stage||r.q?.stage||"?"} · 처치 ${r.kills||0}체`,r.left,"quest");
+  }
+  if(S.study){
+    const r=RESEARCH.find(x=>x.id===S.study.id);
+    row("수행",r?.n||"수행 중", "연구 진행 중",S.study.left,"research");
+  }
+  if(S.book){
+    const b=BOOKS.find(x=>x.id===S.book.id);
+    row("고서",b?.n||"고서 열람","열람 효과 유지 중",S.book.left,"research");
+  }
+  if(coolLeft("rest")>0) row("휴식","보건실 재방문","휴식 재사용 대기시간",coolLeft("rest"),"plaza");
+  if(S.pass<3&&S.passNext>0) row("충전","통행패 발급",`현재 ${S.pass}/3장`,S.passNext,"map");
+  if(typeof LIVE_AUCTION!=="undefined"&&LIVE_AUCTION.data){
+    const auction=LIVE_AUCTION.data;
+    const live=(auction.live||[]).find(l=>Date.parse(l.ends_at)>LIVE_AUCTION.offset+Date.now());
+    const when=live?live.ends_at:auction.next_at;
+    const mins=Math.max(0,(Date.parse(when)-(Date.now()+LIVE_AUCTION.offset))/60000);
+    if(Number.isFinite(mins))row("상인",live?"경매 진행 중":"다음 경매 개장",live?"러너 공동 입찰 진행 중":"매시 정각 개장",mins,"merchant");
+  }
+  if(!rows.length)return `<div class="tiny muted" style="padding:7px 0">현재 진행 중인 수업이나 의뢰가 없습니다. <a style="color:var(--gold);cursor:pointer" onclick="go('quest')">의뢰 보러 가기 →</a></div>`;
+  return rows.join("");
+}
+function plazaActivityRefresh(){
+  if(VIEW!=="plaza"||!S?.made)return;
+  const box=document.getElementById("plaza-active-list");
+  if(box)box.innerHTML=plazaActivityHTML();
+}
+setInterval(plazaActivityRefresh,1000);
 /* ───────────── 사무전 광장 ───────────── */
 VIEWS.plaza=()=>{
   const c=cal(), w=WEATHERS[S.weather];
@@ -1972,6 +2034,14 @@ VIEWS.plaza=()=>{
     <div class="ticker">${S.news.slice(0,3).map(n=>`<div class="ticker-row"><span class="tag">소식</span>
       <span style="flex:1">${esc(n.t)}</span><span class="tiny muted">${n.time}</span></div>`).join("")}</div>
   </div>`:""}
+
+  <div class="card pad" style="margin-bottom:12px" id="plaza-activity-card">
+    <div class="spread" style="margin-bottom:9px;gap:8px">
+      <div class="sect-t" style="margin:0">진행 중인 활동</div>
+      <span class="tiny muted">남은 시간은 실시간으로 갱신됩니다.</span>
+    </div>
+    <div id="plaza-active-list">${plazaActivityHTML()}</div>
+  </div>
 
   <div class="grid g2">
     <div class="card pad">
@@ -3875,5 +3945,6 @@ else setTimeout(()=>init(),0);
 <script src="pixel-life.js?v=20261104-simple2"></script>
 <script src="balance20.js?v=20261104-combat-ui3"></script>
 <script src="pair-play.js?v=20261104-wallet-save-fix1"></script>
+<script src="auction-live.js?v=20261104-shared-auction1"></script>
 </body>
 </html>
