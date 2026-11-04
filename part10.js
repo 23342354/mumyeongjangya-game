@@ -4,13 +4,11 @@
 
 const YOWA_DUMPLINGS=[
  {n:"여와",img:"assets/yowa-dumplings/01.png"},
- {n:"우건하",img:"assets/yowa-dumplings/02.png"},
  {n:"류쉬안",img:"assets/yowa-dumplings/03.png"},
  {n:"킨",img:"assets/yowa-dumplings/04.png"},
  {n:"르셀리아",img:"assets/yowa-dumplings/05.png"},
  {n:"오즈",img:"assets/yowa-dumplings/06.png"},
  {n:"타다시",img:"assets/yowa-dumplings/07.png"},
- {n:"지영원",img:"assets/yowa-dumplings/08.png"},
  {n:"세결",img:"assets/yowa-dumplings/09.png"},
  {n:"삼장",img:"assets/yowa-dumplings/10.png"},
  {n:"카미오카",img:"assets/yowa-dumplings/11.png"},
@@ -26,7 +24,6 @@ const YOWA_DUMPLINGS=[
  {n:"염라",img:"assets/yowa-dumplings/21.png"},
  {n:"양귀비",img:"assets/yowa-dumplings/22.png"},
  {n:"강시",img:"assets/yowa-dumplings/23.png"},
- {n:"렌야",img:"assets/yowa-dumplings/24.png"},
 ];
 const YOWA_DOLLS=[
  {n:"큰요우",img:"assets/yowa-dolls/01.png"},
@@ -38,13 +35,10 @@ const YOWA_DOLLS=[
  {n:"르셀리아",img:"assets/yowa-dolls/07.png"},
  {n:"카논",img:"assets/yowa-dolls/08.png"},
  {n:"란위안",img:"assets/yowa-dolls/09.png"},
- {n:"렌야",img:"assets/yowa-dolls/10.png"},
  {n:"오즈",img:"assets/yowa-dolls/11.png"},
- {n:"건하",img:"assets/yowa-dolls/12.png"},
  {n:"작은요우",img:"assets/yowa-dolls/13.png"},
  {n:"킨",img:"assets/yowa-dolls/14.png"},
  {n:"사쿠",img:"assets/yowa-dolls/15.png"},
- {n:"영원",img:"assets/yowa-dolls/16.png"},
  {n:"레이",img:"assets/yowa-dolls/17.png"},
  {n:"류쉬안",img:"assets/yowa-dolls/18.png"},
 ];
@@ -60,7 +54,7 @@ const YOWA_SPECIALS=[
   img:YOWA_DUMPLINGS[0].img,
   desc:"구매 즉시 압축 파일의 이미지 가운데 하나가 무작위로 등장합니다. 발견한 모습은 말랑이 도감에 등록되며, 도감 수집 보너스가 적용됩니다."},
  {id:"doll",n:"누군가의 영혼을 담은 인형",price:300,kind:"doll",
-  img:YOWA_DOLLS[10].img,
+  img:YOWA_DOLLS.find(x=>x.n==="오즈").img,
   desc:"구매 즉시 영혼 인형 이미지 가운데 하나가 무작위로 등장합니다. 발견한 모습은 영혼 인형 도감에 등록되며, 도감 수집 보너스가 적용됩니다."},
 ];
 
@@ -70,6 +64,17 @@ function ensureV10(){
   if(!Array.isArray(S.dex.plush)) S.dex.plush=[];
   if(!Array.isArray(S.dex.doll)) S.dex.doll=[];
   if(!S.yowa) S.yowa={last:null};
+  // Retain a private migration archive; retired collectibles no longer count or appear.
+  const retired=['지영원','영원','우건하','건하','야나기 렌야','야나기렌야','렌야'];
+  for(const kind of ['plush','doll']){
+    const removed=S.dex[kind].filter(n=>retired.includes(n));
+    if(removed.length){
+      if(!S.yowa.retired)S.yowa.retired={};
+      S.yowa.retired[kind]=[...new Set([...(S.yowa.retired[kind]||[]),...removed])];
+      S.dex[kind]=S.dex[kind].filter(n=>!retired.includes(n));
+    }
+  }
+  if(S.yowa.last&&retired.includes(S.yowa.last.name))S.yowa.last=null;
 }
 function yowaDexTotal(){
   ensureV10();
@@ -108,7 +113,14 @@ dexAdd=function(kind,name){
   }
 };
 
+// 매점 일반 상품 도트.
+const YOWA_PIXEL_ITEMS={aidbox:0,sedative:1,m1:2,m2:3,m3:4,m4:5,m6:6,m7:7,m8:8,m9:9,m10:10,m11:11,m12:12,p1:13,p2:14,p3:15,p4:1,p5:7,p6:7,p7:10,p8:10,p9:13};
+function yowaPixelArt(id,name,size=64){
+ const cell=YOWA_PIXEL_ITEMS[id];if(cell===undefined)return '';
+ return `<span role="img" aria-label="${esc(name)} 도트" style="display:inline-block;flex:none;width:${size}px;height:${size}px;image-rendering:pixelated;background-image:url('assets/pixel-life/shop-items.png?v=20261104-shop1');background-size:400% 400%;background-repeat:no-repeat;background-position:${cell%4*100/3}% ${Math.floor(cell/4)*100/3}%"></span>`;
+}
 function yowaCardArt(item){
+  if(item.id in YOWA_PIXEL_ITEMS)return yowaPixelArt(item.id,item.n,80);
   if(item.img) return `<img src="${item.img}" alt="${esc(item.n)}" style="width:80px;height:80px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 4px 10px #0008)">`;
   return `<div style="font-size:56px;line-height:1">${item.art||'📦'}</div>`;
 }
@@ -187,7 +199,7 @@ VIEWS.shop=()=>{
       const u=used(m.id), out=m.per!=="ever"&&u>=m.lim;
       const costTxt=Object.keys(m.cost).map(k=>`${({rin:"륜",lotus:"연등",sari:"사리"})[k]} ${nf(m.cost[k])}`).join(" · ");
       return `<div class="sub" style="${lock?"opacity:.45":""}">
-        <div class="spread"><b>${m.n}</b>${m.per!=="ever"?`<span class="tiny muted">${u} / ${m.lim}</span>`:""}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">${yowaPixelArt(m.id,m.n)}<b>${esc(m.n)}</b></div><div class="spread">${m.per!=="ever"?`<span class="tiny muted">${u} / ${m.lim}</span>`:""}</div>
         <div class="tiny muted" style="margin:5px 0 8px;min-height:36px">${m.d}</div>
         ${lock?`<div class="tag">${m.req}과정부터</div>`
           :`<button class="btn sm ${out?"":"pri"}" ${out?"disabled":""} onclick="martBuy('${m.id}')">${out?"오늘 끝":`구매 · ${costTxt}`}</button>`}
@@ -197,7 +209,7 @@ VIEWS.shop=()=>{
     <div class="sect-t">소모품 · 탕약</div>
     <div class="grid g4">
       ${SHOP.map(p=>`<div class="sub">
-        <div class="spread"><b>${p.n}</b>${p.tag?`<span class="tag">${p.tag}</span>`:""}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">${yowaPixelArt(p.id,p.n)}<b>${esc(p.n)}</b></div><div class="spread">${p.tag?`<span class="tag">${p.tag}</span>`:""}</div>
         <div class="tiny muted" style="margin:5px 0 8px">${p.d}</div>
         <div class="spread"><span class="tiny" style="color:var(--gold)">륜 ${nf(p.c)}</span>
           <span class="tiny muted">보유 ${S.inv[p.id]||0}</span></div>

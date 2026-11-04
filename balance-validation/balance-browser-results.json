@@ -1,0 +1,289 @@
+{
+  "errors": [],
+  "queue": {
+    "periods": 9,
+    "minutes": 150
+  },
+  "results": [
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "class",
+      "overflow": false,
+      "text": 6721
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "exam",
+      "overflow": false,
+      "text": 1001
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "research",
+      "overflow": false,
+      "text": 2538
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "wboss",
+      "overflow": false,
+      "text": 343
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "hallv",
+      "overflow": false,
+      "text": 2310
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "farm",
+      "overflow": false,
+      "text": 6538
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "fishv",
+      "overflow": false,
+      "text": 1431
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "quest",
+      "overflow": false,
+      "text": 1567
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "market",
+      "overflow": false,
+      "text": 117
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "view": "duel",
+      "overflow": false,
+      "text": 138
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "class",
+      "overflow": false,
+      "text": 6721
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "exam",
+      "overflow": false,
+      "text": 1001
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "research",
+      "overflow": false,
+      "text": 2538
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "wboss",
+      "overflow": false,
+      "text": 343
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "hallv",
+      "overflow": false,
+      "text": 2310
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "farm",
+      "overflow": false,
+      "text": 6538
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "fishv",
+      "overflow": false,
+      "text": 1431
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "quest",
+      "overflow": false,
+      "text": 1567
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "market",
+      "overflow": false,
+      "text": 117
+    },
+    {
+      "width": 1440,
+      "theme": "light",
+      "view": "duel",
+      "overflow": false,
+      "text": 138
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "class",
+      "overflow": false,
+      "text": 6721
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "exam",
+      "overflow": false,
+      "text": 1001
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "research",
+      "overflow": false,
+      "text": 2538
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "wboss",
+      "overflow": false,
+      "text": 343
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "hallv",
+      "overflow": false,
+      "text": 2310
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "farm",
+      "overflow": false,
+      "text": 6538
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "fishv",
+      "overflow": false,
+      "text": 1431
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "quest",
+      "overflow": false,
+      "text": 1567
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "market",
+      "overflow": false,
+      "text": 117
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "view": "duel",
+      "overflow": false,
+      "text": 138
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "class",
+      "overflow": false,
+      "text": 6721
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "exam",
+      "overflow": false,
+      "text": 1001
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "research",
+      "overflow": false,
+      "text": 2538
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "wboss",
+      "overflow": false,
+      "text": 343
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "hallv",
+      "overflow": false,
+      "text": 2310
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "farm",
+      "overflow": false,
+      "text": 6538
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "fishv",
+      "overflow": false,
+      "text": 1431
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "quest",
+      "overflow": false,
+      "text": 1567
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "market",
+      "overflow": false,
+      "text": 117
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "view": "duel",
+      "overflow": false,
+      "text": 138
+    }
+  ]
+}
