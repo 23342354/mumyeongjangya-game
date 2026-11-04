@@ -11,7 +11,12 @@ const PAIR_PASSIVE_TICK_MIN=2;
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
 function linked(){return !!(typeof acctIn==='function'&&acctIn()&&S?.pair?.mine?.status==='accepted');}
 function active(){return linked()||!!S?.pairShared;}
-function rpc(action,args={}){return acctFetch('rpc/pair_play',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_user:ACCT.id,p_token:ACCT.tok,p_action:action,...args})});}
+async function rpc(action,args={}){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{return await acctFetch('rpc/pair_play',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({p_user:ACCT.id,p_token:ACCT.tok,p_action:action,...args})});}
+ catch(e){if(e.name==='AbortError')throw Error('서버 응답이 지연되어 저장 확인을 다시 시도합니다.');throw e;}
+ finally{clearTimeout(timer);}
+}
 function wallet(){return {pass:S.pass,wbTickets:S.wb.tickets,marks:S.fest.marks,rin:S.rin,mana:S.mana,know:S.know,sari:S.sari,lotus:S.lotus,mat:S.mat||{},ing:S.ing||{},bmat:S.bmat||{},ingredients:S.ingredients||{},inv:S.inv||{},potion:S.potion||{},dishes:S.kit.have||{},seeds:S.farm.seeds||{},fertilizers:S.farm.fertilizers||{},fert:S.farm.fert||0,bag:S.bag||[],pendingLoot:S.balance20.pendingLoot||[],gid:S.gid};}
 function progress(){const q={...S.quests};delete q.room;delete q.pick;delete q.durIdx;const d={...S.dex};delete d.title;delete d.wards;return {life:{farm:{skill:S.farm.skill,exp:S.farm.exp},fish:{skill:S.fish.skill,exp:S.fish.exp,catches:S.fish.catches}},pairRoomClaims:S.pairRoomClaims||[],sharedHome:{hall:S.hall,stage:S.home.stage},wbDmg:S.wb.dmg,wbWeek:S.wb.balanceWeek,arena:S.arena,course:S.course,examHist:S.examHist,graduated:!!S.graduated,tower:S.tower,tower2:S.tower2,quests:q,run:S.run||null,storyRead:S.storyRead||[],dex:d,bossClaims:S.balance20.bossClaims||[],rent_due:PJ.snapshot?.progress?.rent_due||0};}
 const personalKeys=['exp','lvl','pts','gear','alloc','sub','res','lesson','study','hp','sn','home','marketRev','lastReal','farm','fish','balance20','buffs','kit','hall','pairBagCap'];
@@ -44,8 +49,9 @@ function sharedPath(path){
  return false;
 }
 function replayChanges(list){
+ const target=clone(S);
  for(const op of list){
-  let parent=S;for(const k of op.path.slice(0,-1)){
+  let parent=target;for(const k of op.path.slice(0,-1)){
    if(!isObject(parent[k]))parent[k]={};parent=parent[k];
   }
   const key=op.path[op.path.length-1],current=parent[key];
@@ -57,18 +63,19 @@ function replayChanges(list){
    parent[key]=next;
   }else{
    // Never replace a concurrently edited shared bag, quest list or other nonnumeric value.
-   if(shared&&!same(current,op.from)&&op.had)throw Error('파트너가 공동 기록을 변경했습니다. 미저장 기록을 백업한 뒤 다시 확인해 주세요.');
+   if(!shared&&!same(current,op.had?op.from:undefined)&&!same(current,op.has?op.to:undefined))throw Error('개인 기록이 다른 기기 또는 파트너 활동으로 변경되었습니다. 미저장 기록은 백업에 보관했습니다.');
+   if(shared&&!same(current,op.had?op.from:undefined))throw Error('파트너가 공동 기록을 변경했습니다. 미저장 기록을 백업한 뒤 다시 확인해 주세요.');
    if(op.has)parent[key]=clone(op.to);else delete parent[key];
   }
  }
+ S=target;
 }
 function markDirty(){
  if(!PJ.ready||!PJ.baseline||!active())return;
  PJ.pending=changes(PJ.baseline,S);
  if(PJ.pending.length){
   if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,localAt:Date.now()});
-  clearTimeout(PJ.flushTimer);
-  PJ.flushTimer=setTimeout(()=>{if(PJ.pending.length&&PJ.ready&&!PJ.busy)acctPush(true);},3500);
+  if(!PJ.flushTimer)PJ.flushTimer=setTimeout(()=>{PJ.flushTimer=null;if(PJ.pending.length&&PJ.ready&&!PJ.busy)acctPush(true);},3500);
  }else if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:''});
 }
 function backupOnFailure(reason,snapshot){
@@ -125,15 +132,63 @@ function sameSnapshot(r){
   &&same(r.self,prev.self)&&same(r.peer,prev.peer)
   &&same(r.pair,prev.pair);
 }
-async function read(quiet=false){
+// A response may arrive after a profile/input save. Capture changes after the await.
+async function read(quiet=false,preserve=true){
  const r=await rpc('get');
+ const local=preserve&&PJ.baseline?changes(PJ.baseline,S):[];
+ const localState=local.length?clone(S):null;
  if(quiet&&sameSnapshot(r)){
   // Do not rebuild the entire UI or overwrite a locally running animation.
   PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;
   PJ.snapshot.passNext=r.passNext;PJ.snapshot.bossNext=r.bossNext;
   S.passNext=r.passNext;S.wb.next=r.bossNext;r.unchanged=true;
  }else apply(r);
+ if(local.length&&r.ok&&!r.solo&&!r.unchanged){
+  try{replayChanges(local);markDirty();}catch(e){backupOnFailure(e.message,localState);throw e;}
+ }
  if(!r.ok){const e=Error(r.message||'공동 기록 연결을 확인해 주세요.');e.waiting=!!r.waiting;throw e;}return r;
+}
+function receiptKey(){return 'mmjy_pair_commit_pending_'+ACCT.id;}
+function rememberCommit(value){
+ PJ.unconfirmed=value;
+ try{if(value)localStorage.setItem(receiptKey(),JSON.stringify(value));else localStorage.removeItem(receiptKey());}catch(_){}
+}
+async function sendCommit(args,base){
+ rememberCommit({args,base});
+ let error;
+ for(let attempt=0;attempt<2;attempt++){
+  try{
+   const r=await rpc('commit',args);
+   if(!r||r.ok!==true)throw Error(r?.message||'공동 기록 저장 결과를 확인하지 못했습니다.');
+   rememberCommit(null);
+   if(Number(r.pairId)!==Number(base.pairShared)){
+    backupOnFailure('저장 중 페어 관계가 변경되었습니다.',args.p_save);
+    throw Error('저장 중 페어 관계가 변경되었습니다. 보관된 기록을 확인해 주세요.');
+   }
+   return r;
+  }catch(e){
+   error=e;
+   // PostgREST validation/auth errors are definitive rejections, not lost ACKs.
+   let code;try{code=JSON.parse(e.message).code;}catch(_){}
+   if(code&&!['40P01','40001','57014','55P03','53300','57P01','PGRST000','PGRST001','PGRST002'].includes(code)){
+    rememberCommit(null);throw e;
+   }
+  }
+ }
+ throw error;
+}
+async function recoverCommit(){
+ let pending=PJ.unconfirmed;
+ if(!pending){try{pending=JSON.parse(localStorage.getItem(receiptKey())||'null');}catch(_){}}
+ if(!pending)return;
+ // Keep edits made after the unconfirmed request, but never replay the paid action.
+ const later=PJ.ready?changes(pending.args.p_save,S):[];
+ const r=await sendCommit(pending.args,pending.base);
+ apply(r);PJ.pending=[];
+ if(r.conflict)replayChanges(changes(pending.base,pending.args.p_save));
+ if(later.length)replayChanges(later);
+ oldSave();markDirty();
+ if(!PJ.pending.length)cache();
 }
 function showError(e){if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:String(e?.message||e).slice(0,180)});const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
 
@@ -142,8 +197,10 @@ async function init(){
  if(!active()||PJ.busy||Date.now()-PJ.lastPoll<PAIR_POLL_MS)return;
  PJ.lastPoll=Date.now();return enqueue(async()=>{
   PJ.busy=true;try{
+   await recoverCommit();
+   markDirty();
    let preflightFailed=false;
-   if(!S.pairShared){const ok=await oldPush(true);if(ok===false){preflightFailed=true;backupOnFailure('공동 연결 전 계정 원본 저장 실패');}}
+   if(!S.pairShared){const ok=await oldPush(true);if(ok===false){preflightFailed=!(typeof ACCOUNT_SYNC_LAST_ERROR!=='undefined'&&ACCOUNT_SYNC_LAST_ERROR.includes('PAIR_STALE_SAVE'));backupOnFailure('공동 연결 전 계정 원본 저장 실패');}}
    let didChange=false;
    if(PJ.ready&&PJ.pending.length){
     const saved=await transact('profile',()=>{},false);
@@ -168,16 +225,18 @@ async function init(){
 function isGroup(tag){return /^(takeExam|examPractice|climbTower|climbGuard|startRun|runQuest|runReturn|runClear|endRun|hitBoss|arenaGo)$/.test(tag);}
 async function transact(tag,fn,queue=true,options={}){
  if(queue)return enqueue(()=>transact(tag,fn,false,options));
- PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,hadRead=false,sentState=null;
+ PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,sentState=null,transactionBase=null;
  try{
+  await recoverCommit();
+  markDirty();
   const unsaved=PJ.pending.slice();if(unsaved.length)dirtyLocal=clone(S);
   // Immediately following an acknowledged server response, we can use that
   // version for a second click without another GET round-trip. If the other
   // player has changed it, the commit CAS rejects the stale revision safely.
   const recent=!!(PJ.ready&&!unsaved.length&&PJ.lastServerReadAt&&Date.now()-PJ.lastServerReadAt<2000);
-  if(!recent)await read();
-  hadRead=true;if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
-  if(unsaved.length)replayChanges(unsaved);
+  if(!recent)await read(false,true);
+  if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
+  transactionBase=clone(PJ.baseline);
   before=clone(S);PJ.rollbackGames={fish:typeof FISHGAME!=='undefined'&&FISHGAME?clone(FISHGAME):null,bg:typeof BG!=='undefined'&&BG?clone(BG):null,outing:typeof OUTING!=='undefined'&&OUTING?clone(OUTING):null};PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.modal=null;
   PJ.depth++;const previousCombat=PJ.combat;PJ.combat=isGroup(tag);PJ.groupAward=isGroup(tag);
   let oldClock;
@@ -196,32 +255,44 @@ async function transact(tag,fn,queue=true,options={}){
   const args={p_revision:PJ.snapshot.revision,p_request:request,p_save:clone(S),p_wallet:wallet(),p_progress:progress(),p_xp:PJ.sharedXp,p_meta:metadata(),p_effects:effects,p_loss:PJ.loss};
   // p_save has already been deep-copied for a stable retry receipt.
   sentState=args.p_save;
-  let r;try{r=await rpc('commit',args);}catch(e){
-   // Same receipt id: a lost response can never repeat the transaction.
-   try{r=await rpc('commit',args);}catch(_){throw e;}
+  let r;
+  for(let attempt=0;attempt<4;attempt++){
+   r=await sendCommit(args,transactionBase);
+   if(!r.conflict)break;
+   // Rebase the computed result; do not rerun combat, rewards or random rolls.
+   const local=clone(S),delta=changes(transactionBase,local);
+   apply(r);PJ.pending=[];
+   try{replayChanges(delta);}catch(e){backupOnFailure(e.message,local);throw e;}
+   transactionBase=clone(PJ.baseline);
+   sentState=clone(S);
+   Object.assign(args,{p_revision:r.revision,p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),p_save:sentState,p_wallet:wallet(),p_progress:progress(),p_meta:metadata()});
+   if(attempt===3){markDirty();throw Error('공동 기록 갱신이 몰리고 있습니다. 변경 기록을 보관했으니 저장을 다시 시도해 주세요.');}
   }
-  if(r.conflict){Object.assign(S,before);apply(r);throw Error('파트너가 먼저 공동 기록을 갱신했습니다. 최신 상태를 불러왔으니 다시 눌러 주세요.');}
-  if(!r||r.ok!==true)throw Error(r?.message||'공동 기록 저장 결과를 확인하지 못했습니다.');
   const laterChanges=changes(sentState,S);
   apply(r);PJ.pending=[];PJ.acc=0;
   if(laterChanges.length){replayChanges(laterChanges);oldSave();markDirty();}else cache();
   for(const m of PJ.messages)oldToast(...m);rerender();
   if(S.home?.auto&&S.hall!=='dorm'&&PJ.snapshot.progress.rent_due>0&&nowMin()>=PJ.snapshot.progress.rent_due)payPairRent(true);
   return r;
- }catch(e){backupOnFailure(e?.message,dirtyLocal||sentState||S);if(before&&!String(e.message).includes('파트너가 먼저')){Object.assign(S,before);try{await read();}catch(_){}}
-  if(hadRead&&dirtyLocal&&PJ.pending.length){try{replayChanges(PJ.pending);oldSave();}catch(_){/* unsafe array conflict: protected recovery copy is kept */}}
+ }catch(e){
+  backupOnFailure(e?.message,sentState||dirtyLocal||S);
+  // Preserve the exact outstanding state on a network failure. A later retry
+  // must settle its receipt before reading or sending any new transaction.
+  if(!sentState&&before)S=before;
+  if(PJ.unconfirmed){oldSave();markDirty();}
+  else if(PJ.baseline){markDirty();oldSave();}
   if(PJ.rollbackGames){FISHGAME=PJ.rollbackGames.fish;if(FISHGAME)FISHGAME.state='idle';BG=PJ.rollbackGames.bg;OUTING=PJ.rollbackGames.outing;}closeModal();showError(e);rerender();return false;
  }finally{PJ.busy=false;PJ.messages=null;PJ.modal=null;PJ.depth=0;document.body.classList.remove('pair-action-busy');const status=document.querySelector('.pair-team-status');if(status)status.textContent=PJ.error?'연결 상태 확인':PJ.ready?'공동 지갑 연결됨':'파트너 연결 대기';}
 }
 toast=function(...args){if(PJ.depth&&PJ.messages){PJ.messages.push(args);return;}return oldToast(...args);};
 modal=function(...args){if(PJ.depth){PJ.modal=args;return oldModal(...args);}return oldModal(...args);};
 save=function(){if(PJ.depth)return;const result=oldSave.apply(this,arguments);markDirty();return result;};
-acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);if(!PJ.ready){init();return Promise.resolve(false);}markDirty();if(!PJ.pending.length){
+acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);if(!PJ.ready){init();return Promise.resolve(false);}markDirty();if(!PJ.pending.length&&!PJ.unconfirmed){
  // No changes to upload: a recently confirmed snapshot is already saved.
  if(!force||Date.now()-PJ.lastServerReadAt<10000)return Promise.resolve(true);
- return enqueue(async()=>{try{const r=await read(true);if(!r.unchanged){cache();rerender();}return true;}catch(e){showError(e);return false;}});
+ return enqueue(async()=>{try{const r=await read(true,true);if(!r.unchanged){cache();rerender();}return true;}catch(e){showError(e);return false;}});
  }return transact('profile',()=>{}).then(r=>!!(r&&r.ok));}return oldPush.apply(this,arguments);};
-function cache(){oldSave();if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:false,error:'',lastSuccess:Date.now()});if(typeof ACCOUNT_SYNC_LAST_SUCCESS!=='undefined')ACCOUNT_SYNC_LAST_SUCCESS=Date.now();}
+function cache(){oldSave();if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:!!PJ.pending.length,error:'',lastSuccess:Date.now()});if(typeof ACCOUNT_SYNC_LAST_SUCCESS!=='undefined')ACCOUNT_SYNC_LAST_SUCCESS=Date.now();}
 const oldSync=syncUp;syncUp=function(force){if(PJ.depth)return Promise.resolve();return oldSync.apply(this,arguments);};
 const xp=gainExp;gainExp=function(n){const result=xp.apply(this,arguments);if(PJ.depth&&!PJ.personal)PJ.sharedXp+=result;return result;};
 for(const name of ['finishPeriod','finishResearch']){const f=window[name];window[name]=function(...args){const old=PJ.personal;PJ.personal=true;try{return f.apply(this,args);}finally{PJ.personal=old;}};}
@@ -276,7 +347,7 @@ const oldRunTimer=runRealTick;runRealTick=function(){if(active()){if(RUNTICK)cle
 const oldTop=renderTop;renderTop=function(){oldTop.apply(this,arguments);if(PJ.ready)document.querySelector('#topbar .top-actions')?.insertAdjacentHTML('afterbegin','<span class="pair-wallet-badge tag">페어 공동 지갑</span>');};
 const oldRecord=myRecord;myRecord=function(){const r=oldRecord();if(PJ.ready){r.pair_id=PJ.snapshot.pairId;r.pair_name=[S.name,PJ.snapshot.peer.name].sort().join(' · ');}return r;};
 const oldRentTick=pairRentTick;pairRentTick=function(){return active()?true:oldRentTick.apply(this,arguments);};
-const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return oldRent.apply(this,arguments);return enqueue(async()=>{try{if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)return false;}await read();const r=await rpc('rent',{p_revision:PJ.snapshot.revision,p_request:crypto.randomUUID()});if(r.conflict)throw Error('일세 정산 중 파트너의 공동 잔액이 변경되었습니다. 다시 시도해 주세요.');if(!r?.ok)throw Error(r?.message||'일세 저장 확인 실패');apply(r);cache();rerender();return true;}catch(e){showError(e);return false;}});};
+const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return oldRent.apply(this,arguments);return enqueue(async()=>{try{await recoverCommit();markDirty();if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)return false;}await read();const r=await rpc('rent',{p_revision:PJ.snapshot.revision,p_request:crypto.randomUUID()});if(r.conflict)throw Error('일세 정산 중 파트너의 공동 잔액이 변경되었습니다. 다시 시도해 주세요.');if(!r?.ok)throw Error(r?.message||'일세 저장 확인 실패');apply(r);cache();rerender();return true;}catch(e){showError(e);return false;}});};
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;window[name]=function(...args){
@@ -297,7 +368,7 @@ const oldClaimRoom=claimRoom;claimRoom=function(r){
  if(!PJ.ready)return;
  return transact('legacyRoom',()=>{if((S.pairRoomClaims||[]).includes(String(r.id)))return;const n=S.sb.claimed.length;oldClaimRoom(r);if(S.sb.claimed.length>n){if(!S.pairRoomClaims)S.pairRoomClaims=[];S.pairRoomClaims.push(String(r.id));}});
 };
-const oldMarket=marketRpc;marketRpc=function(action,data){if(!active())return oldMarket.apply(this,arguments);return enqueue(async()=>{if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)throw Error('공동 기록을 저장하지 못해 중개소 조회를 중단했습니다.');}const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}if(action!=='snapshot'){if(!pending||pending.signature!==signature)pending={signature,request:crypto.randomUUID()};localStorage.setItem(key,JSON.stringify(pending));data={...data,pp_request:pending.request};}try{const r=await oldMarket(action,data);if(action!=='snapshot')localStorage.removeItem(key);await read();oldSave();return r;}catch(e){showError(e);throw e;}});};
+const oldMarket=marketRpc;marketRpc=function(action,data){if(!active())return oldMarket.apply(this,arguments);return enqueue(async()=>{await recoverCommit();markDirty();if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)throw Error('공동 기록을 저장하지 못해 중개소 조회를 중단했습니다.');}const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}if(action!=='snapshot'){if(!pending||pending.signature!==signature)pending={signature,request:crypto.randomUUID()};localStorage.setItem(key,JSON.stringify(pending));data={...data,pp_request:pending.request};}try{const r=await oldMarket(action,data);if(action!=='snapshot')localStorage.removeItem(key);await read();oldSave();return r;}catch(e){showError(e);throw e;}});};
 const oldBossData=balanceBossData;
 balanceBossData=function(){if(!PJ.ready)return oldBossData();const mine=PJ.snapshot.pairId,week=PJ.snapshot.progress.wbWeek,start=Date.parse(week+'T00:00:00+09:00');const map=new Map();
  for(const r of S.sb.roster||[]){if(Date.parse(r.updated_at)<start||!(r.wb_dmg>0)||Number(r.pair_id)===mine)continue;const key=r.pair_id?'p'+r.pair_id:'u'+r.id;const prev=map.get(key);if(!prev||prev.wb_dmg<r.wb_dmg)map.set(key,{...r,name:r.pair_name||r.name});}
