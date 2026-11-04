@@ -75,6 +75,23 @@ function socialRequest(id,kind='friend'){
  modal('쌍방 관계 신청',`<p>${esc(socialName(id))}</p><label>나는 상대의</label><input id="social-a" class="inp" maxlength="20" value="친구"><label>상대는 나의</label><input id="social-b" class="inp" maxlength="20" value="친구"><p class="tiny muted">상대가 수락하면 두 사람의 화면에 역할이 서로 반대로 표시됩니다.</p>${socialButton('신청 보내기',`socialRelationSend(${socialArg(id)})`)}`);
 }
 async function socialRelationSend(id){const a=document.getElementById('social-a').value.trim(),b=document.getElementById('social-b').value.trim();if(!a||!b)return; if(await socialAction('request',{target:id,kind:'relation',a,b}))closeModal();}
+function socialRelationEdit(id){
+ const r=SOCIAL.links.find(r=>String(r.id)===String(id)&&r.kind==='relation'&&r.status==='accepted');
+ if(!r||![String(r.from_id),String(r.to_id)].includes(socialId()))return;
+ const from=String(r.from_id)===socialId();
+ modal('관계 호칭 수정',`<p>${esc(socialName(socialPeer(r)))}</p><label for="relation-edit-a">나는 상대의</label><input id="relation-edit-a" class="inp" maxlength="20" value="${esc(from?r.role_from:r.role_to)}"><label for="relation-edit-b">상대는 나의</label><input id="relation-edit-b" class="inp" maxlength="20" value="${esc(from?r.role_to:r.role_from)}"><p class="tiny muted">저장하면 두 사람의 호칭이 함께 변경됩니다. 관계는 유지됩니다.</p><button id="relation-edit-save" class="btn pri" onclick="socialRelationEditSave(${r.id})">저장</button>`);
+}
+async function socialRelationEditSave(id){
+ const a=document.getElementById('relation-edit-a')?.value.trim()||'',b=document.getElementById('relation-edit-b')?.value.trim()||'';
+ if(!a||!b||Array.from(a).length>20||Array.from(b).length>20){toast('호칭을 각각 1~20자로 입력해 주세요.','bad');return;}
+ if(!sbOn()||typeof ACCT==='undefined'||!ACCT.id){toast('로그인이 필요합니다.','bad');return;}
+ const button=document.getElementById('relation-edit-save');if(!button||button.disabled)return;button.disabled=true;
+ try{
+  await sbSend('POST','rpc/social_relation_edit',{p_actor:ACCT.id,p_token:ACCT.tok,p_id:id,p_a:a,p_b:b});
+  closeModal();await socialReload();renderMain();toast('관계 호칭을 수정했습니다.','good');
+ }catch(e){toast('호칭을 저장하지 못했습니다. 입력한 내용은 유지됩니다. 잠시 후 다시 시도해 주세요.','bad');}
+ finally{if(button.isConnected)button.disabled=false;}
+}
 addFriend=function(name){if(!name){go('rel');return;}const rows=SOCIAL.students.filter(p=>p.name===name);if(rows.length!==1){go('rel');toast('학생 목록에서 계정을 확인하고 신청해 주세요.');return;}socialRequest(rows[0].id);};
 relPropose=function(name){const rows=SOCIAL.students.filter(p=>p.name===name);if(rows.length===1)socialRequest(rows[0].id,'relation');else go('rel');};
 VIEWS.rel=()=>head('사무전 교류','친구 · 관계','상대가 수락하면 양쪽에 함께 표시됩니다')+socialStatus()+`<div class="card pad"><div class="sect-t">받은 신청 · 보낸 신청</div>${SOCIAL.links.filter(r=>r.status==='pending').map(r=>`<div class="spread" style="padding:12px 0"> <div>${socialProfile(socialPeer(r))}<span class="tiny">${r.kind==='friend'?'친구 신청':esc(r.role_from)+' / '+esc(r.role_to)+' 관계 신청'}</span></div><div class="row">${String(r.to_id)===socialId()?socialButton('수락',`socialAction('respond',{id:${r.id},accept:true})`)+socialButton('거절',`socialAction('respond',{id:${r.id},accept:false})`):socialButton('신청 취소',`socialAction('remove',{id:${r.id}})`)}</div></div>`).join('')||'<p class="muted">대기 중인 신청이 없습니다.</p>'}</div><div class="card pad" style="margin-top:14px"><div class="sect-t">친구와 맺은 관계</div>${SOCIAL.links.filter(r=>r.status==='accepted').map(r=>{const from=String(r.from_id)===socialId();return `<div class="spread" style="padding:12px 0"><div>${socialProfile(socialPeer(r))}<div>${r.kind==='friend'?'서로 친구':`나는 상대의 ${esc(from?r.role_from:r.role_to)} · 상대는 나의 ${esc(from?r.role_to:r.role_from)}`}</div></div>${socialButton('해제',`socialRemove(${r.id})`)}</div>`;}).join('')||'<p class="muted">수락한 친구와 관계가 여기에 표시됩니다.</p>'}</div><div class="card pad" style="margin-top:14px"><div class="sect-t">학생 찾기</div>${SOCIAL.students.filter(r=>String(r.id)!==socialId()).map(r=>`<div class="spread" style="padding:10px 0">${socialProfile(r.id)}<div class="row">${['friend','relation'].map(k=>SOCIAL.links.some(l=>l.kind===k&&String(socialPeer(l))===String(r.id)&&['accepted','pending'].includes(l.status))?`<span class="tag">${k==='friend'?'친구':'관계'} · 등록/대기</span>`:socialButton(k==='friend'?'친구 신청':'관계 신청',`socialRequest(${socialArg(r.id)},'${k}')`)).join('')}</div></div>`).join('')}</div>`;

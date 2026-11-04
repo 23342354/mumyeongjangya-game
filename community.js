@@ -607,7 +607,7 @@ function relCard(kind){
   const title = kind==="friend" ? "친구" : "관계";
   const note  = kind==="friend"
     ? "서로 수락하면 양쪽 명부에 친구로 남습니다. 호칭은 붙지 않습니다."
-    : "서로를 어떻게 부를지 정합니다. 수락하면 두 사람 화면에 역할이 서로 반대로 보입니다.";
+    : "서로를 어떻게 부를지 정합니다. 수락하면 두 사람 화면에 역할이 서로 반대로 보입니다. 관계 성립 후에도 호칭을 수정할 수 있습니다.";
   const links = SOCIAL.links.filter(r=>r.kind===kind);
   const pend  = links.filter(r=>r.status==="pending");
   const got   = pend.filter(r=>String(r.to_id)===socialId());
@@ -642,7 +642,7 @@ function relCard(kind){
 
     ${done.length?done.map(r=>`<div class="spread" style="padding:11px 0;border-top:1px solid var(--line)">
       <div>${socialProfile(socialPeer(r))}<div style="margin-top:3px">${line(r)}</div></div>
-      <button class="btn sm ghost" onclick="socialRemove(${r.id})">해제</button></div>`).join("")
+      <div class="row">${kind==="relation"?`<button class="btn sm" onclick="socialRelationEdit(${r.id})">호칭 수정</button>`:""}<button class="btn sm ghost" onclick="socialRemove(${r.id})">해제</button></div></div>`).join("")
      :`<div class="tiny muted" style="padding:8px 0">아직 맺은 ${title}가 없습니다.</div>`}
   </div>`;
 }
