@@ -196,4 +196,52 @@ end $patch$;
 revoke all on function public.pp_snapshot(public.pair_play_state,text) from public,anon,authenticated;
 revoke all on function public.pair_play(text,text,text,bigint,text,jsonb,jsonb,jsonb,bigint,jsonb,jsonb,jsonb) from public;
 grant execute on function public.pair_play(text,text,text,bigint,text,jsonb,jsonb,jsonb,bigint,jsonb,jsonb,jsonb) to anon,authenticated;
+-- Browsing never writes accounts, wallets, listings or transaction receipts.
+create or replace function public.market_read(p_actor text,p_token text)
+returns jsonb language plpgsql stable security definer set search_path=public as $read$
+declare a public.accounts%rowtype;v_list jsonb;v_mine jsonb;v_pending bigint;v_pair boolean;
+begin
+ select * into a from public.accounts where id=p_actor and pw=p_token;
+ if not found then raise exception '계정 인증이 필요합니다.';end if;
+ if to_regclass('public.market_listings') is null or to_regclass('public.market_balances') is null then
+  raise exception '중개소 기본 테이블이 설치되지 않았습니다.';
+ end if;
+ select coalesce(jsonb_agg(to_jsonb(x)),'[]') into v_list from
+  (select id,seller_id,seller_name,kind,item_key,item_name,item_data,quantity,price,status,created_at
+   from public.market_listings where status='active' order by created_at desc,id desc limit 100) x;
+ select coalesce(jsonb_agg(to_jsonb(x)),'[]') into v_mine from
+  (select id,seller_id,seller_name,kind,item_key,item_name,item_data,quantity,price,fee,status,buyer_id,created_at,completed_at
+   from public.market_listings where seller_id=p_actor order by created_at desc,id desc limit 40) x;
+ select pending_rin into v_pending from public.market_balances where account_id=p_actor;
+ select exists(select 1 from public.pairs where status='accepted' and p_actor in(from_id,to_id)) into v_pair;
+ return jsonb_build_object('ok',true,'readOnly',true,'listings',v_list,'mine',v_mine,'pending',coalesce(v_pending,0),'rev',a.market_rev)
+  ||case when v_pair then '{}'::jsonb else jsonb_build_object('inventory',
+    jsonb_build_object('rin',a.save->'rin','bag',a.save->'bag','potion',a.save->'potion','kit',a.save->'kit',
+    'inv',a.save->'inv','mat',a.save->'mat','ing',a.save->'ing','gid',a.save->'gid','marketRev',a.market_rev)) end;
+end $read$;
+revoke all on function public.market_read(text,text) from public;
+grant execute on function public.market_read(text,text) to anon,authenticated;
+-- Keep the legacy endpoint compatible while routing old clients' snapshots to
+-- the same read-only implementation. The original mutation logic is preserved.
+do $market$ begin
+ if to_regprocedure('public.market_trade(text,text,text,jsonb)') is not null then
+  if to_regprocedure('public.market_trade_write_v2(text,text,text,jsonb)') is null then
+   alter function public.market_trade(text,text,text,jsonb) rename to market_trade_write_v2;
+  end if;
+  alter function public.market_trade_write_v2(text,text,text,jsonb) set lock_timeout='750ms';
+  execute $ddl$
+   create or replace function public.market_trade(p_actor text,p_token text,p_action text,p_data jsonb default '{}')
+   returns jsonb language plpgsql security definer set search_path=public as $body$
+   begin
+    if p_action='snapshot' then return public.market_read(p_actor,p_token);end if;
+    return public.market_trade_write_v2(p_actor,p_token,p_action,p_data);
+   end $body$;
+  $ddl$;
+  revoke all on function public.market_trade_write_v2(text,text,text,jsonb) from public,anon,authenticated;
+  revoke all on function public.market_trade(text,text,text,jsonb) from public;
+  grant execute on function public.market_trade(text,text,text,jsonb) to anon,authenticated;
+ end if;
+end $market$;
+
+notify pgrst, 'reload schema';
 commit;

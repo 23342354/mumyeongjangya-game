@@ -549,7 +549,49 @@ const oldClaimRoom=claimRoom;claimRoom=function(r){
  if(!PJ.ready)return;
  return transact('legacyRoom',()=>{if((S.pairRoomClaims||[]).includes(String(r.id)))return;const n=S.sb.claimed.length;oldClaimRoom(r);if(S.sb.claimed.length>n){if(!S.pairRoomClaims)S.pairRoomClaims=[];S.pairRoomClaims.push(String(r.id));}});
 };
-const oldMarket=marketRpc;marketRpc=function(action,data){if(!active())return oldMarket.apply(this,arguments);return enqueue(async()=>{await recoverCommit();markDirty();if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)throw Error('공동 기록을 저장하지 못해 중개소 조회를 중단했습니다.');}const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}if(action!=='snapshot'){if(!pending||pending.signature!==signature)pending={signature,request:crypto.randomUUID()};localStorage.setItem(key,JSON.stringify(pending));data={...data,pp_request:pending.request};}try{const r=await oldMarket(action,data);if(action!=='snapshot')localStorage.removeItem(key);await read();oldSave();return r;}catch(e){showError(e);throw e;}});};
+const oldMarket=marketRpc;
+marketRpc=function(action,data){
+ // Browsing is independent of game-save recovery, the write queue and inventory.
+ if(action==='snapshot'||!active())return oldMarket.apply(this,arguments);
+ return enqueue(async()=>{
+  if(!PJ.ready){init();throw Error('공동 지갑을 연결한 뒤 거래해 주세요. 매물 목록은 계속 조회할 수 있습니다.');}
+  await recoverCommit();markDirty();
+  if(PJ.pending.length){
+   const saved=await transact('profile',()=>{},false);
+   if(!saved)throw Error('미반영 기록을 저장하지 못했습니다. 목록 조회는 가능하며, 거래는 저장 확인 후 다시 시도해 주세요.');
+  }
+  const key='mmjy_pair_market_pending_'+ACCT.id,signature=JSON.stringify([action,data]);
+  let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}
+  if(pending&&pending.signature!==signature){
+   const [previousAction,previousData]=JSON.parse(pending.signature);
+   const recovered=await oldMarket(previousAction,{...previousData,pp_request:pending.request});
+   if(!recovered?.ok)throw Error('이전 거래 결과를 확인하지 못했습니다. 새 거래는 아직 실행하지 않았습니다.');
+   try{localStorage.removeItem(key);}catch(_){}pending=null;PJ.lastAuthoritativeReadAt=0;
+   try{await read(true,true);cache();}
+   catch(e){showError(e);throw Error('이전 거래 완료를 확인했습니다. 잔액 갱신 후 새 거래를 다시 진행해 주세요.');}
+  }
+  const fresh=!pending;
+  if(!pending)pending={signature,request:crypto.randomUUID()};
+  localStorage.setItem(key,JSON.stringify(pending));
+  let result;
+  try{
+   result=await oldMarket(action,{...data,pp_request:pending.request});
+   if(!result||result.ok!==true)throw Error(result?.message||'거래 결과를 확인하지 못했습니다.');
+  }catch(e){
+   const code=errorCode(e)||String(e.message).match(/"code"\s*:\s*"([^"]+)"/)?.[1];
+   // A fresh request rejected by PostgreSQL is rolled back. Keep receipts only
+   // when an earlier response may have been lost or completion is unknown.
+   if(fresh&&code&&code!=='40003')try{localStorage.removeItem(key);}catch(_){}
+   showError(e);throw e;
+  }
+  result={...result,save:undefined};
+  // An acknowledged trade succeeded even if the subsequent wallet refresh fails.
+  try{localStorage.removeItem(key);}catch(_){}PJ.lastAuthoritativeReadAt=0;
+  try{await read(true,true);cache();}
+  catch(e){result={...result,refreshPending:true};PJ.lastPoll=0;showError(e);}
+  return result;
+ });
+};
 const oldBossData=balanceBossData;
 balanceBossData=function(){if(!PJ.ready)return oldBossData();const mine=PJ.snapshot.pairId,week=PJ.snapshot.progress.wbWeek,start=Date.parse(week+'T00:00:00+09:00');const map=new Map();
  for(const r of S.sb.roster||[]){if(Date.parse(r.updated_at)<start||!(r.wb_dmg>0)||Number(r.pair_id)===mine)continue;const key=r.pair_id?'p'+r.pair_id:'u'+r.id;const prev=map.get(key);if(!prev||prev.wb_dmg<r.wb_dmg)map.set(key,{...r,name:r.pair_name||r.name});}
