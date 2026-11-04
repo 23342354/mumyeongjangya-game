@@ -157,17 +157,84 @@ const CLUBS=[
  {id:"cl2", n:"야행 순찰대", e:ic("candle"), d:"야간 순찰에 자원하는 학생들의 모임.",          b:"의뢰 륜 +8%"},
  {id:"cl3", n:"필사회",     e:ic("scroll"), d:"서고의 낡은 기록을 베껴 쓰는 모임.",           b:"수업 효율 +6%"},
 ];
-/* ─── 연무제 대진 ─── */
-/* 연무장에 올라오는 상대 — 모브 학생이 아니라 업귀와 교관입니다. */
-const ARENAFOES=[
- "잿빛 손","쇠사슬 늑대","불 붙은 인형","업귀 잔해","개조 의체 괴한","영혼 밀매상","마녀의 사역물",
- "목소리 없는 군중","종을 삼킨 것","찢긴 장의 주인","삼장 보건 교사","강시 경비","여와","양귀비 교사","항아 교관"];
-const ARENALINE=[
- "\"가볍게 가자. 다치면 삼장 선생님한테 혼나.\"","\"지난번은 운이 좋았을 뿐이야.\"","\"네 파장, 소문대로네.\"",
- "\"……시작하지.\"","\"손속에 정은 없다.\"","\"재밌겠다!\"","\"교본대로 하지 않으면 진다.\"","\"눈을 감지 마.\"",
- "\"이번엔 안 봐줘.\"","\"끝까지 서 있는 쪽이 이기는 거야.\"","\"이그나 교수님이 너를 잘 봐 두라고 하셨어.\"",
- "\"늦게 들어오면 문 잠근다. 그 전에 끝내자.\"","\"아, 저 싸우는 건 잘 못하는데…… 어라?\"",
- "\"거짓말은 금세 티가 난단다.\"","\"허접~♡ 자, 한 바퀴 돌자.\""];
+/* ─── 연무제 대진: 교직원 말투는 NPC 설정을 따릅니다. ─── */
+const ARENA_ROSTERS=[
+ [
+  {n:'잿빛 손',role:'업귀 대응 훈련',line:'(잿빛 손들이 연무장 바닥을 짚으며 기어 나온다.)'},
+  {n:'쇠사슬 늑대',role:'업귀 대응 훈련',line:'(팽팽해진 사슬 끝에서 낮은 으르렁거림이 울린다.)'},
+  {n:'불 붙은 인형',role:'업귀 대응 훈련',line:'(인형의 이음매 사이로 불길이 새어 나온다.)'},
+  {n:'업귀 잔해',role:'업귀 대응 훈련',line:'(흩어진 잔해가 다시 하나의 형상을 이룬다.)'},
+  {n:'개조 의체 괴한',role:'실전 대응 훈련',line:'“그 자세로 내 공격을 받아낼 수 있겠어?”'},
+  {n:'영혼 밀매상',role:'실전 대응 훈련',line:'“이런, 거래할 생각은 없나 보군.”'},
+  {n:'마녀의 사역물',role:'사역물 대응 훈련',line:'(기이하게 뒤틀린 형체가 당신의 빈틈을 살핀다.)'},
+  {n:'목소리 없는 군중',role:'집단 파장 대응 훈련',line:'(아무 말도 하지 않는 군중이 일제히 고개를 돌린다.)'},
+  {n:'종을 삼킨 것',role:'업귀 대응 훈련',line:'(몸속 깊은 곳에서 돌아오지 못한 종소리가 울린다.)'},
+  {n:'찢긴 장의 주인',role:'금서고 대응 훈련',line:'(찢어진 책장들이 당신의 앞을 가로막는다.)'},
+  {n:'삼장 보건 교사',role:'보건 교사 · 석장 대련',speaker:'삼장',
+   line:'“서두르지 마십시오. 힘을 쓰는 일에도 순서가 있습니다. 우선 호흡부터 고르시지요.”',
+   win:'“잘하셨습니다. 다만, 이겼다고 해서 몸을 돌보는 일까지 잊으시면 곤란합니다. 잠시 이리 와 보십시오.”',
+   lose:'“괜찮습니다. 다친 곳부터 살피겠습니다. 다음에는 무엇을 고쳐야 할지, 함께 짚어 보시지요.”'},
+  {n:'강시 경비',role:'경비 · 교내 안전 평가',speaker:'강시',
+   line:'“훈련장 확인 끝. 준비됐어? 무기 잘 챙기고. 그럼 시작한다.”',
+   win:'“통과. 다친 데는 없어? 있으면 바로 보건실 가.”',lose:'“거기까지. 발밑 확인 안 했지? 다시 준비해 와.”'},
+  {n:'여와의 시험 장치',role:'매점 관리인 제작 · 장치 대응 실습',speaker:'여와',
+   line:'“저, 저는 직접 싸우는 건 못 해서요⋯⋯. 이 시험 장치를 써도 괜찮을까요? 출력은 분명히 확인했는데⋯⋯.”',
+   win:'“와, 정말 멈췄네요⋯⋯! 아, 다치신 데는 없으세요? 그, 작동 기록을 조금만 확인해도 될까요?”',
+   lose:'“아앗, 잠시만요! 멈춤 장치가⋯⋯ 여기 있었네요. 죄송해요, 출력부터 다시 확인할게요⋯⋯.”'},
+  {n:'양귀비 교사',role:'담임 교사 · 파장 감지 평가',speaker:'양귀비',
+   line:'“서두를 것 없단다. 네 파장이 어디서 흔들리는지, 천천히 살펴보렴.”',
+   win:'“그래, 이번에는 흐름이 끊기지 않았구나. 그 감각을 기억해 두렴.”',
+   lose:'“잠깐 쉬자꾸나. 억지로 밀어붙이면 네가 먼저 지친단다. 숨부터 고르렴.”'},
+  {n:'항아 교관',role:'전투 교관 · 근접전 교련',speaker:'항아',
+   line:'“허접~♡ 준비 운동은 했지? 좋아, 그럼 어디까지 버티나 보자!”',
+   win:'“오, 제법인데? 방금 그 움직임, 실전에서도 잊지 마. 아직 끝난 줄 알고 긴장 풀지는 말고!”',
+   lose:'“거기서 눈을 떼면 어떡해? 자, 숨 돌리고. 다음엔 내 발부터 봐.”'}
+ ],
+ [
+  {n:'개조 의체 괴한 · 강화형',role:'심화 실전 대응 훈련',line:'“지난번과 같은 속도라고 생각했다면 늦었어.”'},
+  {n:'영혼 밀매상 · 조직 간부',role:'심화 실전 대응 훈련',line:'“소문은 들었지. 값어치를 직접 확인해 볼까.”'},
+  {n:'마녀의 사역물 · 상위 개체',role:'상위 사역물 대응 훈련',line:'(다른 방향에서 겹쳐 오는 기척이 퇴로를 좁힌다.)'},
+  {n:'목소리 없는 군중 · 집단 파장',role:'집단 파장 대응 훈련',line:'(서로 다른 발걸음이 하나의 박자로 맞물린다.)'},
+  {n:'종을 삼킨 것 · 잔향',role:'강화 업귀 대응 훈련',line:'(종소리가 그친 자리에서 또 하나의 울림이 밀려온다.)'},
+  {n:'찢긴 장의 주인 · 금서 개방',role:'금서고 심화 대응 훈련',line:'(닫혀 있던 책장이 펼쳐지며 연무장의 공기가 무거워진다.)'},
+  {n:'일륜의 그늘',role:'상위 업귀 대응 훈련',line:'(가짜 낮의 그림자가 발치에서부터 길게 번진다.)'},
+  {n:'강시 · 정문 수비',role:'경비 · 방어선 돌파 평가',speaker:'강시',
+   line:'“여기부터는 못 지나가. 지나가려면, 내가 지키는 선부터 넘어 봐.”',
+   win:'“확인. 방어선 돌파. ⋯⋯잘했어. 밖에서도 그만큼 주변을 살펴.”',lose:'“또 정면만 봤네. 출입구는 하나가 아니야. 기억해 둬.”'},
+  {n:'삼장 · 석장 대련',role:'보건 교사 · 심화 대련',speaker:'삼장',
+   line:'“배운 것을 익히셨다면, 이번에는 흔들리는 순간에도 지켜 보십시오. 무리하실 필요는 없습니다.”',
+   win:'“예, 끝까지 자세를 잃지 않으셨군요. 그만큼 쉬는 법도 잘 익혀 두셨기를 바랍니다.”',
+   lose:'“아직 끝까지 힘을 주고 계시는군요. 내려놓아야 할 때를 아는 것도 수행입니다.”'},
+  {n:'여와의 시험 장치 · 고출력',role:'매점 관리인 제작 · 고출력 장치 실습',speaker:'여와',
+   line:'“지난번 기록으로 제어 장치를 보완했어요. 이번에는 출력도 조금⋯⋯ 아, 안전장치는 세 번 확인했어요!”',
+   win:'“이 출력에서도 대응하셨네요⋯⋯! 정말 대단하세요. 혹시 불편했던 동작이 있었는지도 알려 주실래요?”',
+   lose:'“일단 정지할게요! 장치의 반응 속도를 낮추고⋯⋯ 먼저 괜찮으신지 확인해야겠네요. 죄송해요⋯⋯.”'},
+  {n:'양귀비 · 공명 교정',role:'담임 교사 · 심화 공명 평가',speaker:'양귀비',
+   line:'“힘이 많이 늘었구나. 이제는 네 힘만 보지 말고, 곁의 파장에도 자리를 내어 주렴.”',
+   win:'“그래, 서로에게 맞춰 가는 법을 찾았구나. 지금의 호흡을 잘 기억해 두렴.”',
+   lose:'“네가 먼저 전부 감당하려고 하는구나. 잠깐 기다려 주는 것도 나쁘지 않단다.”'},
+  {n:'항아 · 가속 교련',role:'전투 교관 · 고속 근접전',speaker:'항아',
+   line:'“이번엔 보이는 것만 따라가면 늦어. 멈출 자리까지 생각하고 움직여!”',
+   win:'“좋아! 방금은 눈으로 쫓은 게 아니었지? 그 판단, 잊지 마.”',
+   lose:'“급하게 꺾으면 네 몸부터 상해. 속도보다 판단이 먼저라고 했지? 다시!”'},
+  {n:'강시·양귀비 · 합동 평가',role:'경비·담임 교사 · 협동 대응 평가',speaker:'강시 · 양귀비',
+   line:'강시: “나는 앞을 막는다.” 양귀비: “그러니 한 사람만 보고 있으면 곤란하겠지?”',
+   win:'강시: “양쪽 확인. 통과.” 양귀비: “눈앞의 움직임만 좇지 않았구나. 잘했단다.”',
+   lose:'강시: “뒤쪽, 놓쳤어.” 양귀비: “괜찮단다. 이번에는 주변의 흐름도 함께 살펴보렴.”'},
+  {n:'항아·삼장 · 장인·무기 공명',role:'전투 교관·석장 · 페어 합동 교련',speaker:'항아 · 삼장',
+   line:'항아: “이번엔 우리 둘이야. 따라올 수 있겠어?” 삼장: “항아 선생님, 학생의 준비부터 확인하시지요.”',
+   win:'항아: “이야, 여기까지 뚫네!” 삼장: “두 분의 호흡이 잘 맞았습니다. 이제는 잠시 쉬시지요.”',
+   lose:'항아: “내가 움직일 때만 보면 늦지!” 삼장: “서로의 빈틈을 메우는 것이 공명입니다. 다시 살펴보십시오.”'},
+  {n:'염라 · 최종 평가',role:'이사장 · 최종 평가',speaker:'염라',
+   line:'“홍홍홍 ♬ 여기까지 잘 왔구나. 이번에는 네가 지키려는 것을 보여 다오.”',
+   win:'“잘 보았다. 네 곁에 선 이와 함께 고른 길이니, 앞으로도 서로를 놓치지 말거라. 홍홍홍 ♬”',
+   lose:'“지금의 결과만으로 너를 정할 생각은 없다. 무엇을 지키려 했는지, 차분히 돌아보거라.”'}
+ ]
+];
+const ARENAFOES=ARENA_ROSTERS[0].map(f=>f.n);
+const ARENALINE=ARENA_ROSTERS[0].map(f=>f.line);
+function arenaRoster(season=S.arena.season||1){return ARENA_ROSTERS[Number(season)>=2?1:0];}
+function arenaEntry(round=S.arena.round,season=S.arena.season||1){const roster=arenaRoster(season);return roster[Math.max(0,Math.min(roster.length-1,Number(round)-1))];}
 /* ─── 업귀 토벌(월드 보스) ─── */
 const WBOSS=[
  {n:"찢긴 장의 주인", e:ic("bookClosed"), d:"금서고의 모든 금서가 한 권으로 엮였다. 읽는 자의 이름을 지운다."},
@@ -1101,11 +1168,16 @@ function hitBoss(){
 
 function arenaFoe(r,sn){
  const scale=window.PAIR_PLAY?.ready?1.7:1;
- return {hp:Math.round(25000*Math.pow(1.30,r)*Math.pow(2,sn-1)*scale),dps:Math.round(450*Math.pow(1.25,r)*Math.pow(1.8,sn-1)*scale)};
+ if(sn<=1)return {hp:Math.round(25000*Math.pow(1.30,r)*scale),dps:Math.round(450*Math.pow(1.25,r)*scale)};
+ // The next event starts above the first event's champion, rather than resetting
+ // to a weak opening opponent. Subsequent rounds and events keep increasing.
+ const step=(sn-2)*15+Math.max(0,r-1);
+ return {hp:Math.round(25000*Math.pow(1.30,15)*1.15*Math.pow(1.11,step)*scale),
+   dps:Math.round(450*Math.pow(1.25,15)*1.12*Math.pow(1.09,step)*scale)};
 }
 VIEWS.arena=()=>{
   const r=S.arena.round, sn=S.arena.season||1;
-  const foe=ARENAFOES[Math.min(r,15)-1]||"???";
+  const entry=arenaEntry(r,sn),roster=arenaRoster(sn),foe=entry.n;
   const c=C();
   const opponent=arenaFoe(r,sn),fhp=opponent.hp,fdps=opponent.dps;
   const sec=fhp/Math.max(1,c.dps);
@@ -1113,34 +1185,35 @@ VIEWS.arena=()=>{
   const sust=c.hp*c.heal/Math.max(1,fdps*mit*1.5);
   const killSust=c.hp*c.heal/Math.max(1,fdps*mit);
   const killOK=sec<=45&&killSust>=sec, holdOK=sust>=Math.min(45,sec);
-  return head("라이벌과 차례로 겨루는",ic("arena")+" 연무제", `제 ${sn}회 · 최고 기록 ${S.arena.best} / 15`)+`
+  return head("사무전 연무장에서 펼치는 단계별 교련",ic("arena")+" 연무제", `제 ${sn}회 · 이번 대회 ${Math.min(15,Math.max(0,r-1))} / 15 · 최고 회전 ${S.arena.best}`)+`
   ${buffStrip()}
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="tiny" style="color:var(--gold)">${r>15?"완주":r+"회전"}</div>
       ${r>15?`<h3 style="margin:4px 0">모든 상대를 꺾었습니다</h3>
         <div class="tiny muted">다음 연무제가 열리기를 기다립니다.</div>
-        <button class="btn" style="margin-top:10px" onclick="S.arena.season=(S.arena.season||1)+1;S.arena.round=1;renderMain()">다음 연무제 참가</button>`
+        <button class="btn" style="margin-top:10px" onclick="arenaGo('kill')">다음 연무제 참가</button>`
       :`<h3 style="margin:4px 0 2px;font-size:19px">${foe}</h3>
-      <div class="tiny muted">${r<=11?"졸업생 · 조교":"사무전 교직원"} · ${Math.round(r*6.5*sn)}단계 수준${sn>1?` · <span style="color:var(--gold)">제 ${sn}회</span>`:""}</div>
-      <div class="quote" style="margin:8px 0">${ARENALINE[Math.min(r,15)-1]}</div>
-      <div class="tiny"><b>처치</b> <span style="color:${killOK?"var(--jade)":"var(--red)"}">${killOK?`승산 높음 — 약 ${sec.toFixed(1)}초`:sec<=45?`생존력 부족 — 약 ${killSust.toFixed(1)}초`:`승산 낮음 — 45초 안에 체력의 약 ${Math.min(100,Math.round(c.dps*45/fhp*100))}%`}</span></div>
+      <div class="tiny muted">${esc(entry.role)}${sn>1?` · <span style="color:var(--gold)">제 ${sn}회</span>`:""}</div>
+      <div class="quote" style="margin:8px 0">${esc(entry.line)}</div>
+      <div class="tiny"><b>제압</b> <span style="color:${killOK?"var(--jade)":"var(--red)"}">${killOK?`승산 높음 — 약 ${sec.toFixed(1)}초`:sec<=45?`생존력 부족 — 약 ${killSust.toFixed(1)}초`:`승산 낮음 — 45초 안에 체력의 약 ${Math.min(100,Math.round(c.dps*45/fhp*100))}%`}</span></div>
       <div class="tiny"><b>버티기</b> <span style="color:${holdOK?"var(--jade)":"var(--red)"}">${holdOK?"45초를 버틸 수 있습니다":`약 ${sust.toFixed(1)}초`}</span>
         <span class="muted">모든 성향 도전 가능 · 상대 공격 ×1.5 · 45초를 버티거나 그 전에 쓰러뜨리면 승리</span></div>
       <div class="tiny muted" style="margin-top:4px">보상 · 순위 · 대기시간은 두 방식이 같습니다</div>
       <div class="row" style="margin-top:10px">
-        <button class="btn pri" onclick="arenaGo('kill')">처치로 도전</button>
+        <button class="btn pri" onclick="arenaGo('kill')">제압으로 도전</button>
         <button class="btn" onclick="arenaGo('hold')">버티기로 도전</button></div>`}
     </div>
     <div class="card pad">
       <div class="sect-t">대진표</div>
       <table class="t">
-        ${ARENAFOES.map((n,i)=>{
+        ${roster.map((opponent,i)=>{
+          const n=esc(opponent.n);
           const idx=i+1;
           return `<tr><td style="width:28px">${idx}</td>
             <td>${idx<r?n:idx===r?`<b>${n}</b>`:"???"}</td>
             <td style="text-align:right">${idx<r?'<span class="tag j">승리</span>'
-              :idx===r?'<span class="tag g">다음 상대</span>':`<span class="tiny muted">${Math.round(idx*6.5)}단계</span>`}</td></tr>`}).join("")}
+              :idx===r?'<span class="tag g">다음 상대</span>':`<span class="tiny muted">${sn>=2?"심화 교련":"다음 교련"}</span>`}</td></tr>`}).join("")}
       </table>
     </div>
   </div>
@@ -1156,6 +1229,9 @@ VIEWS.arena=()=>{
 };
 function arenaGo(mode){
   const r=S.arena.round;
+  if(r>15){S.arena.season=(S.arena.season||1)+1;S.arena.round=1;renderMain();save();return {advanced:true};}
+  if(!['kill','hold'].includes(mode))return;
+  const entry=arenaEntry(r,S.arena.season||1);
   const c=C();
   const sn=S.arena.season||1;
   const opponent=arenaFoe(r,sn),fhp=opponent.hp,fdps=opponent.dps;
@@ -1175,21 +1251,23 @@ function arenaGo(mode){
       S.arena.season=sn+1; S.arena.round=1;
       S.lotus+=30; S.sari+=10;
       const prize=mkGear(Math.round(S.lvl+sn*24), 4); balanceStoreLoot(prize,true);
-      rew+=`<br><b style="color:var(--gold)">${sn}회 연무제 완주 · 연등 +30 · 사리 +10 · 전설 법구 「${prize.name}」</b><br>${sn+1}회 연무제가 열립니다. 상대가 한층 강해집니다.`;
+      rew+=`<br><b style="color:var(--gold)">${sn}회 연무제 완주 · 연등 +30 · 사리 +10 · 전설 법구 「${prize.name}」</b><br>${sn+1}회 연무제가 열립니다. 첫 상대는 「${esc(arenaEntry(1,sn+1).n)}」입니다. 상대가 한층 강해집니다.`;
     }
   }
-  modal(`연무제 ${r}회전 · ${ARENAFOES[r-1]}`,`
+  modal(`제${sn}회 연무제 ${r}회전 · ${entry.n}`,`
     <div class="log">
-      <span class="turn">${mode==="kill"?"처치 과제 · 45초 제한":"버티기 과제 · 45초"}</span><br>
+      <span class="turn">${mode==="kill"?"제압 과제 · 45초 제한":"버티기 과제 · 45초"}</span><br>
       내 초당 피해 <b>${nf(c.dps)}</b> · 상대 체력 ${nf(fhp)} → 제압까지 ${sec<=45?sec.toFixed(1)+"초":"45초 안에 불가"}<br>
       내 생명력 <b>${nf(c.hp)}</b> · 상대 초당 피해 ${nf(fdps)} → 버틴 시간 ${Math.min(99,sust).toFixed(1)}초<br>
       <span class="${win?"s":"h"}">■ ${win?"승리":"패배"}</span>
     </div>
     ${win?`<div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">${rew}</div></div>`
-      :`<div class="tiny" style="margin-top:10px;color:var(--red)">${ARENAFOES[r-1]}에게 막혔습니다. 법구를 각인하거나 성향을 바꿔 다시 도전할 수 있습니다.</div>`}
+      :`<div class="tiny" style="margin-top:10px;color:var(--red)">${esc(entry.n)}에게 막혔습니다. 법구를 각인하거나 성향을 바꿔 다시 도전할 수 있습니다.</div>`}
+    ${(win?entry.win:entry.lose)?`<div class="quote" style="margin-top:12px">${esc(win?entry.win:entry.lose)}</div>`:""}
     <div class="row" style="margin-top:12px"><button class="btn pri" onclick="closeModal();renderMain()">확인</button>
       ${win&&S.arena.round<=15?`<button class="btn" onclick="closeModal();arenaGo('${mode}')">다음 상대</button>`:""}</div>`,"wide");
   renderTop(); renderNav(); save();
+  return {win,season:sn,round:r,completed:win&&r===15};
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2378,8 +2456,8 @@ const _hitBoss=hitBoss;
 hitBoss=function(){ _hitBoss(); ct("wb"); S.war.mine=(S.war.mine||0)+30;
   dexAdd("mon",WBOSS[S.wb.boss%WBOSS.length].n); achCheck(); };
 const _arenaGo=arenaGo;
-arenaGo=function(m){ const b=S.arena.round; _arenaGo(m);
-  if(S.arena.round>b){ S.war.mine=(S.war.mine||0)+25; achCheck(); } };
+arenaGo=function(m){ const result=_arenaGo(m);
+  if(result?.win){ S.war.mine=(S.war.mine||0)+25; achCheck(); }return result; };
 const _takeExam=takeExam;
 takeExam=function(){ const before=S.course; _takeExam();
   const rec=S.examHist[before];

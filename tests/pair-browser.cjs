@@ -144,6 +144,15 @@ const root=path.resolve(__dirname,'..');
  await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle');
  assert.equal(await page.evaluate(()=>S.balance20.fish),60);assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),0);
  assert.equal(commitCalls,atLimit,'daily-cap practice needs no reward save');
+ // The first arena final must open the new second-event roster for both players.
+ await page.evaluate(async()=>{S.arena={...S.arena,season:1,round:15,best:14};save();await acctPush(true);const original=C;C=()=>({...original(),dps:1e12,hp:1e12,heal:1e4,def:1e7});try{await arenaGo('kill');}finally{C=original;}});
+ assert.equal(await page.evaluate(()=>S.arena.season),2);assert.equal(await page.evaluate(()=>S.arena.round),1);
+ const arenaPeer=(await db.query("select save->'arena' as arena from accounts where id='bob'")).rows[0].arena;
+ assert.equal(arenaPeer.season,2);assert.equal(arenaPeer.round,1,'event transition is saved for the partner');
+ assert.match(await page.locator('#modalroot').innerText(),/항아 교관/);assert.match(await page.locator('#modalroot').innerText(),/2회 연무제가 열립니다/);
+ await page.evaluate(()=>{closeModal();VIEW='arena';renderMain();});
+ assert.match(await page.locator('#main').innerText(),/제 2회/);assert.match(await page.locator('#main').innerText(),/개조 의체 괴한 · 강화형/);
+ assert.equal(await page.evaluate(()=>arenaFoe(1,2).hp>arenaFoe(15,1).hp&&arenaFoe(1,2).dps>arenaFoe(15,1).dps),true);
  // Distinct dumplings share both existing meal slots, including two desserts.
  // Restore the real wall clock after the fishing cooldown time-travel fixture.
  await page.evaluate(()=>{if(window.realFishingNow)Date.now=window.realFishingNow;});
