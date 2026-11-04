@@ -456,6 +456,7 @@ function newState(){
     course:1, exp:0, lvl:1,
     hp:100, sn:100,
     mana:1200, know:240, rin:1800, sari:3, lotus:0,
+    ledger:[],        // 용돈 기입장 — 륜이 드나든 기록 {t:시각, a:금액, k:항목}
     t:0,              // 명계 분
     lastReal:Date.now(),
     speed:1,
