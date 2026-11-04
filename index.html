@@ -1622,6 +1622,7 @@ function renderTop(){
     <span>${c.date}</span>
     <span class="top-weather">${w.i} ${w.n} <span style="color:var(--s6)">· ${w.d}</span></span>
     ${onlineChip()}
+    <button class="btn sm top-rest" onclick="rest()" ${coolLeft('rest')>0?'disabled':''} title="체력·이성 45 회복 · 재사용 대기시간 3시간">${coolLeft('rest')>0?'보건실 · '+hhmm(coolLeft('rest')):'보건실에서 쉬기 (3시간)'}</button>
     ${bookChip}${buffs}
     <span style="margin-left:auto;color:var(--s6)">${c.str}</span>
   </div>`;
@@ -2701,16 +2702,6 @@ VIEWS.exam=()=>{
   const est=sc.theory+ (ready?31.9:0);
   const grade=est>=100?"S":est>=90?"A":est>=80?"B":est>=64?"C":"-";
   return head("과정 평가",ic("memo")+" 시험장", `합격선 <b>${c.line}점</b>`)+`
-  <div class="card pad" style="margin-bottom:14px">
-    <div class="sect-t">대련 준비</div>
-    <div class="row" style="margin-bottom:8px">
-      ${S.buffs.length?S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip">${esc(b.n)} ${hhmm(b.left)}</span>`).join(""):'<span class="tiny muted">적용 중인 물약·식사가 없습니다. 매점에서 준비할 수 있습니다.</span>'}
-    </div>
-    <div class="row"><span class="tiny muted">체력 ${Math.floor(S.hp)} · 이성 ${Math.floor(S.sn)}</span>
-      <button class="btn sm" onclick="go('shop')">매점으로</button>
-      <button class="btn sm" onclick="rest()">보건실에서 쉬기 (3시간)</button></div>
-  </div>
-
   <div class="grid g2">
     <div class="card pad">
       <div class="page-kicker">${S.course}과정</div>
@@ -3807,7 +3798,7 @@ else setTimeout(()=>init(),0);
 <script src="social.js"></script>
 <script src="part8.js?v=20261103-pairthread-unlimited1"></script>
 <script src="part9.js"></script>
-<script src="part10.js?v=20261104-shop1"></script>
+<script src="part10.js?v=20261104-products2"></script>
 <script src="part11.js?v=20261103-farm-refactor1"></script>
 <script src="part12.js?v=20261103-webpush-cors2"></script>
 <script src="market.js?v=20261104-pair2"></script>

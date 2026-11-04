@@ -51,11 +51,11 @@ const YOWA_SPECIALS=[
   art:'🧪',
   desc:"우유처럼 하얀 액체가 든 병입니다. 사용 즉시 이성을 10 회복합니다."},
  {id:"plush",n:"누군가를 닮은 만두 말랑이",price:30,kind:"plush",
-  img:YOWA_DUMPLINGS[0].img,
-  desc:"구매 즉시 압축 파일의 이미지 가운데 하나가 무작위로 등장합니다. 발견한 모습은 말랑이 도감에 등록되며, 도감 수집 보너스가 적용됩니다."},
- {id:"doll",n:"누군가의 영혼을 담은 인형",price:300,kind:"doll",
-  img:YOWA_DOLLS.find(x=>x.n==="오즈").img,
-  desc:"구매 즉시 영혼 인형 이미지 가운데 하나가 무작위로 등장합니다. 발견한 모습은 영혼 인형 도감에 등록되며, 도감 수집 보너스가 적용됩니다."},
+  img:"assets/pixel-life/mystery-dumpling.png",pixel:true,
+  desc:"랜덤 말랑이. 만지면 부드럽고 기분이 좋다. 대나무 찜기의 뚜껑을 열기 전까지 무엇이 들어있을지 모르는 기대감도 충족 시켜준다."},
+ {id:"doll",n:"누군가를 닮은 영혼 인형",price:300,kind:"doll",
+  img:"assets/pixel-life/wrapped-soul-doll.png",pixel:true,
+  desc:"사무전의 재학생을 닮은 것 같다. 재봉선이 투박하며 애정이 느껴진다."},
 ];
 
 function ensureV10(){
@@ -121,7 +121,7 @@ function yowaPixelArt(id,name,size=64){
 }
 function yowaCardArt(item){
   if(item.id in YOWA_PIXEL_ITEMS)return yowaPixelArt(item.id,item.n,80);
-  if(item.img) return `<img src="${item.img}" alt="${esc(item.n)}" style="width:80px;height:80px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 4px 10px #0008)">`;
+  if(item.img) return `<img src="${item.img}" alt="${esc(item.n)}" style="width:${item.pixel?104:80}px;height:${item.pixel?104:80}px;object-fit:contain;image-rendering:${item.pixel?'pixelated':'auto'};filter:drop-shadow(0 4px 10px #0008)">`;
   return `<div style="font-size:56px;line-height:1">${item.art||'📦'}</div>`;
 }
 function yowaSpecialCard(item){
@@ -161,7 +161,7 @@ function yowaBuySpecial(id){
     const isNew=!(S.dex.doll||[]).includes(got.n);
     S.yowa.last={kind:"doll",name:got.n,img:got.img,time:Date.now()};
     dexAdd("doll",got.n);
-    yowaRevealModal("누군가의 영혼을 담은 인형",got,isNew,"영혼 인형 도감",`영혼 인형 도감 ${(S.dex.doll||[]).length} / ${YOWA_DOLLS.length}`);
+    yowaRevealModal("누군가를 닮은 영혼 인형",got,isNew,"영혼 인형 도감",`영혼 인형 도감 ${(S.dex.doll||[]).length} / ${YOWA_DOLLS.length}`);
   }
   renderTop(); renderNav(); renderMain(); save();
 }
