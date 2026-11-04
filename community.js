@@ -2911,10 +2911,19 @@ setInterval(()=>{if(S?.made&&PUSH12_ENABLED)push12PullHistory().catch(()=>{});},
 const MARKET_TYPES={gear:"법구",potion:"물약",dish:"만두",consumable:"소모품",material:"재료",ingredient:"조제 재료"};
 const MKT={listings:[],mine:[],pending:0,loaded:false,loading:false,busy:false,at:0,filter:"전체",tab:"buy",error:""};
 function marketConnected(){return typeof acctIn==="function"&&acctIn()&&typeof acctOn==="function"&&acctOn()&&typeof sbOn==="function"&&sbOn();}
-function marketRpc(action,data){
-  if(!marketConnected())return Promise.reject(new Error("중개소는 로그인과 Supabase 연결이 필요합니다."));
-  return acctFetch("rpc/market_trade",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({p_actor:ACCT.id,p_token:ACCT.tok,p_action:action,p_data:data||{}})});
+function marketPaired(){return !!(S?.pairShared||S?.pair?.mine?.status==='accepted');}
+async function marketRpc(action,data){
+ if(!marketConnected())throw new Error('중개소는 로그인과 Supabase 연결이 필요합니다.');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+ try{
+  const read=action==='snapshot';
+  return await acctFetch(read?'rpc/market_read':'rpc/market_trade',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
+   body:JSON.stringify(read?{p_actor:ACCT.id,p_token:ACCT.tok}:{p_actor:ACCT.id,p_token:ACCT.tok,p_action:action,p_data:data||{}})});
+ }catch(e){
+  if(action==='snapshot'&&String(e.message).includes('PGRST202'))throw new Error('중개소 읽기 전용 서버 패치를 적용해 주세요. supabase/pair-sync-performance.sql을 다시 실행하면 됩니다.');
+  if(e.name==='AbortError')throw new Error('중개소 서버 응답이 지연되고 있습니다. 잠시 후 다시 확인해 주세요.');
+  throw e;
+ }finally{clearTimeout(timer);}
 }
 function marketApplyInventory(inv){
   if(!inv||!S)return;
@@ -2971,8 +2980,10 @@ async function marketFetch(force=false){
     MKT.mine=Array.isArray(result.mine)?result.mine:[];
     MKT.pending=Number(result.pending||0);
     // 서버에서 거래된 뒤 다른 기기/이전 저장본이 보이면 거래 관련 잔액과 물품만 동기화합니다.
-    if(Number(result.rev||0)>Number(S.marketRev||0))marketApplyInventory(result.inventory);
-    else if(!S.marketInitialized){S.marketRev=Number(result.rev||0);S.marketInitialized=true;save();}
+    if(!marketPaired()){
+      if(Number(result.rev||0)>Number(S.marketRev||0))marketApplyInventory(result.inventory);
+      else if(!S.marketInitialized){S.marketRev=Number(result.rev||0);S.marketInitialized=true;save();}
+    }
     const key="mmjy_market_seen_"+ACCT.id;
     let seen=[];try{seen=JSON.parse(localStorage.getItem(key)||"[]");}catch(e){}
     const seenSet=new Set(seen.map(String));
@@ -2984,7 +2995,7 @@ async function marketFetch(force=false){
     }
     try{localStorage.setItem(key,JSON.stringify([...seenSet].slice(-250)));}catch(e){}
     MKT.loaded=true;MKT.error="";MKT.at=Date.now();
-    save();
+    if(!marketPaired())save();
     if(VIEW==="market")renderMain(true);
     renderTop();
   }catch(e){MKT.error=String(e?.message||e).slice(0,220);MKT.at=Date.now();if(VIEW==="market")renderMain(true);}
@@ -3010,14 +3021,14 @@ async function marketCommit(action,data,success){
   MKT.busy=true;
   try{
     // 다른 기능의 로컬 저장 기록을 서버에 먼저 전송한 뒤 트랜잭션을 수행합니다.
-    if(typeof acctPush==="function"){
+    if(!marketPaired()&&typeof acctPush==="function"){
       const ok=await acctPush(true);
       if(ok===false)throw new Error("서버에 내 최신 저장 기록을 올리지 못했습니다. 중개소에서 새로 고침한 뒤 다시 시도해 주세요.");
     }
     const r=await marketRpc(action,data);
-    marketApplyInventory(r.save);
+    if(!marketPaired())marketApplyInventory(r.save);
     if(action==="list")closeModal();
-    toast(success||"거래가 완료되었습니다.","good");
+    toast((success||"거래가 완료되었습니다.")+(r.refreshPending?" · 잔액·물품 갱신 대기":""),"good");
     MKT.at=0;
     await marketFetch(true);
     renderTop();renderNav();renderMain();
@@ -3095,7 +3106,7 @@ VIEWS.market=()=>{
       <span class="seg"><button class="${MKT.tab==="buy"?"on":""}" onclick="marketTab('buy')">전체 매물</button><button class="${MKT.tab==="mine"?"on":""}" onclick="marketTab('mine')">내 판매 기록</button></span>
       <span class="tiny muted">${list.length}건</span></div>
       <div class="market-filters">${["전체",...Object.values(MARKET_TYPES)].map(t=>`<button class="btn sm ${MKT.filter===t?"pri":""}" onclick="marketFilter('${t}')">${t}</button>`).join("")}</div>
-      ${MKT.error?`<div class="sub tiny" style="color:var(--red)">연결/SQL 확인: ${esc(MKT.error)}</div>`:""}
+      ${MKT.error?`<div class="sub tiny" style="color:var(--red)">목록 조회 오류: ${esc(MKT.error)}</div>`:""}
       ${MKT.loading&&!MKT.loaded?'<p class="tiny muted">거래 기록 불러오는 중…</p>':""}
       <div class="market-offers">${list.length?list.map(m=>marketViewItem(m,true)).join(""):'<div class="tiny muted market-empty">아직 등록된 매물이 없습니다. 첫 번째 매물을 내놓아 보세요.</div>'}</div>
     </section>`;
@@ -3111,7 +3122,7 @@ if(typeof ensureV2==='function'){
 }
 buyMarket=function(){toast("임의 NPC 매물은 폐지되었습니다. 러너가 올린 물건을 구매해 주세요.","bad");};
 /* 중개소 바깥에서도 판매 완료와 정산 소식이 알림함에 도착합니다. */
-setInterval(()=>{if(S?.made&&marketConnected()&&!MKT.busy&&!MKT.error)marketFetch(false);},45000);
+setInterval(()=>{if(S?.made&&marketConnected()&&!MKT.busy)marketFetch(false);},45000);
 
 
 ;
