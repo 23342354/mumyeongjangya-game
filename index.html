@@ -244,9 +244,10 @@ h1.page{font-size:25px;margin:2px 0 3px;font-weight:600;letter-spacing:-.01em}
   height:236px;background:linear-gradient(180deg,var(--s1) 0%,var(--s2) 45%,var(--s2) 100%)}
 .scene>svg:not(.ic){position:absolute;inset:0;width:100%;height:100%}
 .scene .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:10px 12px;font-size:11.5px}
+  padding:10px 12px;font-size:11.5px;z-index:3}
 .sbadge{background:var(--glass1);border:1px solid var(--s4);border-radius:6px;padding:3px 9px;
   display:inline-flex;gap:8px;align-items:center;color:var(--violetL)}
+.scene-link-btn{appearance:none;-webkit-appearance:none;border:1px solid var(--s4);background:var(--glass1);color:var(--violetL);font:inherit;line-height:inherit;cursor:pointer}
 .story-card{background:linear-gradient(135deg,var(--s3),var(--s2));border:1px solid var(--s5);border-radius:10px;padding:14px 16px}
 .pips{display:flex;gap:4px}
 .pips i{width:7px;height:7px;border-radius:50%;background:var(--s5);display:block}
@@ -747,14 +748,15 @@ textarea.inp{min-height:76px;resize:vertical}
 #main{container-type:inline-size}
 #main img{max-width:100%}
 #main .pixel-landscape{width:100%;max-width:100%;display:block;margin:0 0 18px;overflow:hidden;border-radius:12px}
-#main .pixel-landscape>img{width:100%!important;max-width:100%!important;height:clamp(180px,30vh,310px)!important;display:block!important;object-fit:contain!important;object-position:center!important;background:#101a28;image-rendering:pixelated}
+#main .pixel-landscape>img{width:100%!important;max-width:100%!important;height:clamp(180px,30vh,310px)!important;display:block!important;object-fit:cover!important;object-position:center center!important;background:#101a28;image-rendering:pixelated}
 #main .pixel-landscape figcaption{position:static!important;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;background:var(--s1);color:var(--tx);text-shadow:none}
 #main .pixel-location{font-size:14px;color:var(--tx)}
 #main .pixel-description{font-size:12px;color:var(--dim)}
 #main .pixel-status{background:var(--s0);color:var(--gold);border-color:var(--line)}
 #main .scene:has(.pixel-plaza-art){height:clamp(200px,30vh,310px)!important;background:#101a28}
-#main .pixel-plaza-art>img{width:100%!important;height:100%!important;max-width:100%!important;object-fit:contain!important;object-position:center!important}
+#main .pixel-plaza-art>img{width:100%!important;height:100%!important;max-width:100%!important;object-fit:cover!important;object-position:center center!important}
 #main .pixel-plaza-art>svg{display:none}
+#main .pixel-plaza-art,#main .pixel-plaza-art *{pointer-events:none}
 #main .page-head{padding:0 0 14px;margin-bottom:16px;min-height:64px}
 #main h1.page{font-size:25px;line-height:1.4}
 #main .page-kicker{color:var(--dim);font-size:11px;letter-spacing:.08em}
@@ -1935,7 +1937,7 @@ VIEWS.plaza=()=>{
       </div>
       <div class="spread">
         <span class="sbadge">통행패 ${S.pass}/3 <span style="color:var(--s7)">· 다음 ${hhmm(S.passNext)}</span></span>
-        <span class="sbadge" style="cursor:pointer" onclick="go('map')">지도 열기 ›</span>
+        <button type="button" class="sbadge scene-link-btn" onclick="go('map')" aria-label="지도 열기">지도 열기 ›</button>
       </div>
     </div>
   </div>
