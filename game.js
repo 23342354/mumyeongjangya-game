@@ -801,7 +801,9 @@ function offline(){
    ═══════════════════════════════════════════════════ */
 function renderTop(){
   const c=cal(), w=WEATHERS[S.weather];
-  const buffs=S.buffs.filter(b=>!b.hide).map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"var(--violet)"}"></span>${esc(b.n)} <span style="color:var(--s7)">${hhmm(b.left)}</span></span>`).join("");
+  const chipRow=S.buffs.filter(b=>!b.hide)
+    .concat(typeof mealChips==="function"?mealChips():[]);
+  const buffs=chipRow.map(b=>`<span class="buffchip"${b.d?` title="${esc(b.slot?b.slot+" · "+b.d:b.d)}"`:""}><span class="dot" style="background:${b.c||"var(--violet)"}"></span>${esc(b.n)} <span style="color:var(--s7)">${hhmm(b.left)}</span></span>`).join("");
   const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:var(--s7)">${pairLiveTimer('book',S.book.left)}</span></span>`:"";
   $("#topbar").innerHTML=`
   <div class="tb1">
@@ -1495,7 +1497,9 @@ function editPlan(i){
 }
 function buffStrip(){
   const items=[];
-  S.buffs.filter(b=>!b.hide).forEach(b=>items.push(`<span class="buffchip">${b.e||"◉"} ${esc(b.n)} <span class="muted">${hhmm(b.left)}</span></span>`));
+  S.buffs.filter(b=>!b.hide)
+    .concat(typeof mealChips==="function"?mealChips():[])
+    .forEach(b=>items.push(`<span class="buffchip"${b.d?` title="${esc(b.slot?b.slot+" · "+b.d:b.d)}"`:""}>${b.e||"◉"} ${esc(b.n)} <span class="muted">${hhmm(b.left)}</span></span>`));
   if(S.book) items.push(`<span class="buffchip">${ic("scroll",13)} ${BOOKS.find(b=>b.id===S.book.id).n} <span class="muted">${pairLiveTimer('book',S.book.left)}</span></span>`);
   if(!items.length) return "";
   return `<div class="card pad" style="margin-bottom:12px;padding:9px 14px"><div class="row">${items.join("")}</div></div>`;

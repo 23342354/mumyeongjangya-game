@@ -263,6 +263,20 @@ function mealOpt(key){
     const d=DISHES.find(x=>x.id===m.id); if(d) d.buf.forEach(([k,val])=>{ if(k===key) v+=val; }); });
   return v;
 }
+/* 식사와 디저트는 버프 목록이 아니라 각자의 칸에 들어갑니다. 그래서 효과는
+   적용되는데 상단 띠에는 보이지 않아, 뒤에 마신 탕약만 뜨는 것처럼 보였습니다.
+   칸에 든 것도 같은 띠에 올려 둡니다. 효과가 겹치는지 눈으로 확인할 수 있습니다. */
+function mealChips(){
+  const out=[];
+  for(const s of ["eat","dess"]){
+    const m=S.kit&&S.kit[s]; if(!m||!(m.left>0)) continue;
+    const d=DISHES.find(x=>x.id===m.id); if(!d) continue;
+    out.push({n:d.n, left:m.left, e:d.e||ic("bento"), c:"var(--gold)",
+      slot:s==="eat"?"식사":"디저트",
+      d:(d.buf||[]).map(([k,v])=>OPTNAME(k)+" +"+Math.round(v*100)+"%").join(" · ")});
+  }
+  return out;
+}
 /* effStat 재정의 */
 effStat=function(k){
   let v=stat(k)+hallBonus(k)+extraStat(k);
