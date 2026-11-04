@@ -633,6 +633,7 @@ function ledgerMeasure(name,run){
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto','yowaBuySpecial'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;if(name==='fishHook')fishingHook=f;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
+ if(!active()&&window.CLUB_INVENTORY_TASK)return window.CLUB_INVENTORY_TASK.then(()=>f.apply(this,args));
  const group=/^(takeExam|runQuest|startRun|climbTower|climbGuard)$/.test(name);
  if(!active()){if(group){oldToast('먼저 파트너를 맺어 두 사람이 함께 출발해 주세요.','bad');return;}return ledgerMeasure(name,()=>f.apply(this,args));}
  if(name==='fishCast'){
@@ -709,6 +710,47 @@ marketRpc=function(action,data){
   try{await read(true,true);cache();}
   catch(e){result={...result,refreshPending:true};PJ.lastPoll=0;showError(e);}
   return result;
+ });
+};
+// Club transfers share the existing persistence queue and authoritative pair refresh.
+const rawClubInventory=clubInventoryRpc;
+let soloClubHold=false;
+const clubPush=acctPush;
+acctPush=function(){if(soloClubHold&&!active())return Promise.resolve(false);return clubPush.apply(this,arguments);};
+function clubInventorySnapshot(){const s={};for(const k of ['rin','mat','ing','bmat','ingredients','potion','bag','gid'])s[k]=clone(S[k]??(k==='bag'?[]:k==='rin'?0:k==='gid'?1:{}));s.kit={have:clone(S.kit.have)};s.farm={seeds:clone(S.farm.seeds)};return s;}
+function soloClubMerge(inv,base,request){
+ if((S.clubInventoryApplied||[]).includes(request))return;
+ const current=clubInventorySnapshot(),maps=['mat','ing','bmat','ingredients','potion'];
+ const scalar=(server,old,live)=>{const n=Number(server||0)+Number(live||0)-Number(old||0);if(n<0||!Number.isFinite(n))throw Error('출납 중 소지품이 변경되었습니다. 백업 기록을 확인해 주세요.');return n;};
+ const merged=clone(inv);merged.rin=scalar(inv.rin,base.rin,current.rin);
+ for(const k of maps){merged[k]={...(inv[k]||{})};for(const key of new Set([...Object.keys(base[k]||{}),...Object.keys(current[k]||{})]))merged[k][key]=scalar(inv[k]?.[key],base[k]?.[key],current[k]?.[key]);}
+ for(const [a,b] of [['kit','have'],['farm','seeds']]){merged[a]={[b]:{...(inv[a]?.[b]||{})}};for(const key of new Set([...Object.keys(base[a]?.[b]||{}),...Object.keys(current[a]?.[b]||{})]))merged[a][b][key]=scalar(inv[a]?.[b]?.[key],base[a]?.[b]?.[key],current[a]?.[b]?.[key]);}
+ const oldIds=new Set((base.bag||[]).map(i=>String(i.id))),liveIds=new Set((current.bag||[]).map(i=>String(i.id)));
+ merged.bag=(inv.bag||[]).filter(i=>!oldIds.has(String(i.id))||liveIds.has(String(i.id)));
+ let gid=Math.max(Number(inv.gid)||1,Number(current.gid)||1);
+ for(const i of current.bag||[])if(!oldIds.has(String(i.id))){const copy=clone(i);if(merged.bag.some(x=>String(x.id)===String(copy.id)))copy.id=gid++;merged.bag.push(copy);}
+ merged.gid=gid;clubApplyInventory(merged);S.clubInventoryApplied=[...(S.clubInventoryApplied||[]),request].slice(-30);oldSave();
+}
+clubInventoryRpc=function(action,data){
+ if(!active()){
+  const task=(async()=>{
+   const key='mmjy-club-transfer-'+ACCT.id;let journal;try{journal=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}
+   let base=journal?.request===data.request?journal.base:null;
+   if(!base){if(await clubPush(true)===false)throw Error('최신 기록을 저장한 뒤 출납해 주세요.');base=clubInventorySnapshot();if(journal){journal.base=base;localStorage.setItem(key,JSON.stringify(journal));}}
+   soloClubHold=true;
+   try{const r=await rawClubInventory(action,data);if(r?.ok&&r.inventory)soloClubMerge(r.inventory,base,data.request);return {...r,inventory:null};}
+   catch(e){backupOnFailure(e.message);throw e;}
+   finally{soloClubHold=false;window.CLUB_INVENTORY_TASK=null;}
+  })();window.CLUB_INVENTORY_TASK=task;return task;
+ }
+ return enqueue(async()=>{
+  if(!PJ.ready){init();throw Error('공동 지갑 연결을 확인한 뒤 출납해 주세요.');}
+  await recoverCommit();markDirty();
+  if(PJ.pending.length&&!await transact('profile',()=>{},false))throw Error('미반영 기록을 저장하지 못했습니다. 잠시 후 다시 출납해 주세요.');
+  const r=await rawClubInventory(action,data);if(!r?.ok)throw Error(r?.message||'출납 결과를 확인하지 못했습니다.');
+  PJ.lastAuthoritativeReadAt=0;
+  try{await read(true,true);cache();}catch(e){PJ.lastPoll=0;showError(e);return {...r,inventory:null,refreshPending:true};}
+  return {...r,inventory:null};
  });
 };
 const oldBossData=balanceBossData;

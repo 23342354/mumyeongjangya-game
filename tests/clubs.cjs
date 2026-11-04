@@ -1,5 +1,5 @@
 const {PGlite}=require('@electric-sql/pglite'),fs=require('node:fs'),assert=require('node:assert/strict');
-(async()=>{const db=new PGlite();await db.exec(`create role anon;create role authenticated;create table accounts(id text primary key,pw text,name text,save jsonb);insert into accounts values('alice','secret','Alice','{}'),('bob','secret','Bob','{}'),('eve','secret','Eve','{}');`);
+(async()=>{const db=new PGlite();await require('./club-fixture.cjs')(db);
 const sql=fs.readFileSync(require('node:path').join(__dirname,'../supabase/clubs.sql'),'utf8');await db.exec(sql);await db.exec(sql);
 const rpc=async(user,action,data={})=>(await db.query("select runner_club($1,'secret',$2,$3) as r",[user,action,{directory:true,...data}])).rows[0].r;
 await assert.rejects(db.query("select runner_club('alice','wrong')"),/CLUB_AUTH/);
@@ -22,7 +22,7 @@ await db.exec('set role anon');await assert.rejects(db.query('select * from runn
 await rpc('alice','leave');r=await rpc('bob','snapshot');assert.equal(r.mine.owner_id,'bob','leader is transferred');
 assert.equal((await rpc('alice','snapshot')).messages.length,0,'former member loses access');
 await rpc('bob','leave');assert.equal((await rpc('eve','snapshot')).clubs.length,0,'last member cleans up club');
-await db.exec(`insert into accounts select 'u'||i,'secret','user'||i,'{}' from generate_series(1,4) i`);
+await db.exec(`insert into accounts(id,pw,name,save) select 'u'||i,'secret','user'||i,'{}' from generate_series(1,4) i`);
 r=await rpc('alice','create',{name:'정원 테스트'});for(let i=1;i<4;i++)await rpc('u'+i,'join',{id:r.mine.id});
 await assert.rejects(rpc('u4','join',{id:r.mine.id}),/정원/);
 await db.close();console.log('PASS: repeatable migration, auth, create/join idempotency, duplicate names, daily attendance, shared levels, private chat, message replay, membership revocation, leader transfer and 4-member cap');

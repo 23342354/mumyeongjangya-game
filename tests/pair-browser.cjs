@@ -9,14 +9,16 @@ const root=path.resolve(__dirname,'..');
  await db.exec(cp.execFileSync('git',['show','b77fa80:중개소-러너간거래-설치.sql'],{cwd:root,encoding:'utf8'}));
  await db.exec(cp.execFileSync('git',['show','b77fa80:페어-공동플레이-설치.sql'],{cwd:root,encoding:'utf8'}));
  await db.exec(fs.readFileSync(path.join(root,'supabase/pair-sync-performance.sql'),'utf8'));
+ await db.exec(fs.readFileSync(path.join(root,'supabase/clubs.sql'),'utf8'));
  const server=http.createServer((req,res)=>{const rel=decodeURIComponent(req.url.split('?')[0]).slice(1)||'index.html';if(rel.includes('..')){res.writeHead(404);res.end();return;}try{const f=path.join(root,rel);res.setHeader('Content-Type',f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':f.endsWith('.html')?'text/html':'application/octet-stream');res.end(fs.readFileSync(f));}catch{res.writeHead(404);res.end();}});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,headless:true,args:['--no-sandbox','--disable-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
  const context=await browser.newContext();await context.addInitScript(()=>{window.setInterval=()=>1;});
- let hold=null,notify=null,timeout=false,commitCalls=0,dropReplies=0,marketReads=0,blockPairReads=false,dropMarketReplies=0;
+ let hold=null,notify=null,timeout=false,commitCalls=0,dropReplies=0,marketReads=0,blockPairReads=false,dropMarketReplies=0,dropClubReply=false;
  await context.route('**/*',async route=>{
   const request=route.request(),url=request.url();
+  if(url.includes('/rpc/runner_club')){const a=request.postDataJSON();try{const out=await db.query('select runner_club($1,$2,$3,$4) as r',[a.p_user,a.p_token,a.p_action,a.p_data||{}]);if(dropClubReply&&a.p_action==='deposit'){dropClubReply=false;return route.abort('failed');}return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(out.rows[0].r)});}catch(e){return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({code:e.code,message:e.message})});}}
   if(url.includes('/rpc/market_trade')){
    const a=request.postDataJSON();try{const out=await db.query('select market_trade($1,$2,$3,$4) as r',[a.p_actor,a.p_token,a.p_action,a.p_data||{}]);if(dropMarketReplies>0){dropMarketReplies--;return route.abort('failed');}return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(out.rows[0].r)});}catch(e){return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:e.code,message:e.message})});}
   }
@@ -142,6 +144,19 @@ const root=path.resolve(__dirname,'..');
  await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle');
  assert.equal(await page.evaluate(()=>S.balance20.fish),60);assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),0);
  assert.equal(commitCalls,atLimit,'daily-cap practice needs no reward save');
+ await page.evaluate(async()=>{if(CLUBNET.busy)await new Promise(r=>setTimeout(r,100));await clubAction('create',{name:'페어 창고 검증'});});
+ assert.equal(await page.evaluate(()=>!!clubCurrent()),true);
+ await page.evaluate(async()=>{await clubTransfer('deposit',{kind:'rin',qty:10});});
+ let vault=(await db.query('select vault from runner_clubs')).rows[0].vault;assert.equal(Number(vault.rin),10,'pair gateway deposits real shared currency');
+ dropClubReply=true;await page.evaluate(async()=>{await clubTransfer('deposit',{kind:'rin',qty:5});});
+ assert.ok(await page.evaluate(()=>!!localStorage.getItem('mmjy-club-transfer-alice')));
+ await page.evaluate(async()=>{await clubTransfer('deposit',{kind:'rin',qty:5});});
+ vault=(await db.query('select vault from runner_clubs')).rows[0].vault;assert.equal(Number(vault.rin),15,'lost pair transfer reply is replayed once');
+ blockPairReads=true;await page.evaluate(async()=>{await clubTransfer('deposit',{kind:'rin',qty:7});});
+ assert.equal(await page.evaluate(()=>localStorage.getItem('mmjy-club-transfer-alice')),null,'acknowledged transfer is not retried when wallet refresh fails');
+ blockPairReads=false;await page.evaluate(async()=>{PAIR_PLAY.retryAt=0;await PAIR_PLAY.refresh();});
+ assert.equal(Number((await db.query('select vault from runner_clubs')).rows[0].vault.rin),22);
+ assert.equal(await page.evaluate(()=>S.rin),Number((await db.query('select wallet from pair_play_state where pair_id=1')).rows[0].wallet.rin),'later refresh applies authoritative shared wallet');
  assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown recovery, five-minute combat checkpoints, immediate hooks, durable fishing outbox, save-independent marketplace reads, trade acknowledgement/recovery and reload deduplication');
  }finally{await browser.close();server.close();await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
