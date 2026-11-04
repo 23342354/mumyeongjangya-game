@@ -125,3 +125,83 @@ VIEWS.rpboard=()=>{
  const row=p=>`<div class="spread"><b>${esc(socialName(p.author_id))}</b><span class="tiny muted">${esc(new Date(p.created_at).toLocaleString('ko-KR'))}</span></div><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0">${fmtChat(p.body)}</div>${String(p.author_id)===socialId()?socialButton('삭제',`rpDelete(${p.id})`):''}`;
  return head('짧게 남기고 이어 쓰는 역극','RP 게시판','메모 500자 · 댓글로 이어 쓰기 · 대사와 *행동* 또는 (행동)')+socialStatus()+`<div class="card pad"><textarea id="rp-compose" class="inp" rows="4" maxlength="500" style="width:100%" placeholder="다른 학생이 댓글로 이어 씁니다. 대사와 *행동* 또는 (행동)을 남겨 주세요."></textarea><div class="row" style="margin-top:10px">${socialButton('남기기','rpPost()')}</div></div><div class="card pad" style="margin:14px 0"><div class="row">${[['all','전체'],['bookmark','북마크'],['mine','내 메모'],['replies','내 댓글']].map(([k,n])=>`<button class="btn sm ${RP_FILTER===k?'pri':''}" onclick="rpFilter('${k}')">${n}</button>`).join('')}</div><div class="row" style="margin-top:10px"><input class="inp" id="rp-search" value="${esc(RP_QUERY)}" placeholder="내용 · 작성자 검색">${socialButton('검색','rpSearch()')}</div></div><div class="spread" style="margin-bottom:12px">${socialButton('이전',"RP_PAGE=Math.max(0,RP_PAGE-1);renderMain()")}${RP_PAGE+1} / ${pages} · ${roots.length}개 ${socialButton('다음',`RP_PAGE=Math.min(${pages-1},RP_PAGE+1);renderMain()`)}</div>${roots.slice(RP_PAGE*10,RP_PAGE*10+10).map(p=>`<article class="card pad" style="margin-bottom:14px">${row(p)}<div class="row">${socialButton(marks.includes(p.id)?'★ 북마크 해제':'☆ 북마크',`rpBookmark(${p.id})`)}${socialButton('이어 쓰기',`rpReply(${p.id})`)}</div><details style="margin-top:12px"><summary>댓글 ${SOCIAL.posts.filter(c=>c.parent_id===p.id).length}개</summary>${SOCIAL.posts.filter(c=>c.parent_id===p.id).reverse().map(c=>`<div class="card pad" style="margin-top:8px">${row(c)}${socialButton('답글',`rpReply(${p.id})`)}</div>`).join('')}</details></article>`).join('')||'<div class="card pad">아직 남겨진 메모가 없습니다.</div>'}`;
 };
+
+/* 사용자 모임: 회원/경험치/비공개 채팅은 별도 인증 RPC가 관리합니다. */
+const CLUBNET={owner:'',mine:null,clubs:[],members:[],ready:false,busy:false,error:'',at:0,cursor:0,scope:'',sending:false,directoryAt:0,epoch:0};
+const CLUB_PERKS=[{lv:1,key:'know',v:.02,n:'지식 +2%'},{lv:3,key:'loot',v:.03,n:'전리품 +3%'},{lv:5,key:'gold',v:.03,n:'륜 획득 +3%'},{lv:7,key:'study',v:.05,n:'수업 보상 +5%'},{lv:10,key:'know',v:.03,n:'지식 추가 +3%'},{lv:10,key:'loot',v:.02,n:'전리품 추가 +2%'}];
+function clubCurrent(){return CLUBNET.owner===String(ACCT?.id||'')&&CLUBNET.ready?CLUBNET.mine:null;}
+const clubLegacyOpt=clubOpt;
+clubOpt=function(key){if(!CLUBNET.ready||CLUBNET.owner!==String(ACCT?.id||''))return clubLegacyOpt(key);const mine=clubCurrent();return mine?CLUB_PERKS.filter(p=>p.lv<=mine.lv&&p.key===key).reduce((n,p)=>n+p.v,0):0;};
+function clubRender(){
+ if(VIEW!=='club')return;
+ const draft=['club-name','club-intro'].map(id=>({id,el:document.getElementById(id)})).filter(x=>x.el).map(({id,el})=>({id,value:el.value,focused:document.activeElement===el,start:el.selectionStart,end:el.selectionEnd}));
+ renderMain(true);
+ for(const d of draft){const el=document.getElementById(d.id);if(el){el.value=d.value;if(d.focused){el.focus();el.setSelectionRange(d.start,d.end);}}}
+}
+async function clubRpc(action,data={}){
+ if(!acctIn())throw Error('로그인한 뒤 이용해 주세요.');
+ return acctFetch('rpc/runner_club',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_user:ACCT.id,p_token:ACCT.tok,p_action:action,p_data:{directory:VIEW==='club',...data}})});
+}
+function clubApply(r,owner){
+ if(String(ACCT.id)!==owner)return;
+ const scope=r.mine?'club:'+r.mine.id:'';
+ if(CLUBNET.scope!==scope){CLUBNET.cursor=0;S.msgs=S.msgs.filter(m=>m.tab!=='모임');}
+ Object.assign(CLUBNET,{owner,mine:r.mine,clubs:Array.isArray(r.clubs)?r.clubs:CLUBNET.clubs,members:r.members||[],ready:true,error:'',scope});
+ if(Array.isArray(r.clubs))CLUBNET.directoryAt=Date.now();
+ const rows=(r.messages||[]).map(m=>({...m,id:'club:'+m.id,tab:'모임',scope,body:fmtChat(m.body),_clubVerified:true}));
+ if(rows.length){CLUBNET.cursor=Math.max(CLUBNET.cursor,...r.messages.map(m=>Number(m.id)));chatRows(rows,true,false);}
+ renderTop();clubRender();if(S.chatTab==='모임')renderChat();
+}
+async function clubRefresh(force=false){
+ if(!S?.made||!acctIn()||CLUBNET.busy||document.hidden)return;
+ const owner=String(ACCT.id);
+ if(CLUBNET.owner!==owner)Object.assign(CLUBNET,{owner,mine:null,clubs:[],members:[],ready:false,error:'',at:0,cursor:0,scope:'',directoryAt:0});
+ const interval=S.chatTab==='모임'?5000:VIEW==='club'?15000:60000;
+ if(!force&&Date.now()-CLUBNET.at<interval)return;
+ CLUBNET.busy=true;CLUBNET.at=Date.now();
+ try{const r=await clubRpc('snapshot',{after:CLUBNET.cursor,club:String(clubCurrent()?.id||'')});if(!r?.ok)throw Error('모임 정보를 불러오지 못했습니다.');clubApply(r,owner);}
+ catch(e){if(String(ACCT.id)===owner){CLUBNET.error=/runner_club|PGRST202|404/.test(String(e.message))?'모임 서버 설치가 필요합니다. 운영자가 모임 업데이트를 적용한 뒤 다시 시도해 주세요.':'모임 연결을 확인해 주세요. 잠시 후 다시 시도할 수 있습니다.';clubRender();}}
+ finally{CLUBNET.busy=false;clubRender();}
+}
+async function clubAction(action,data={}){
+ if(CLUBNET.busy){toast('모임 정보를 반영 중입니다. 잠시 후 다시 눌러 주세요.');return false;}
+ const owner=String(ACCT.id);CLUBNET.busy=true;CLUBNET.epoch++;
+ try{const r=await clubRpc(action,data);if(!r?.ok)throw Error(r?.message||'모임 작업에 실패했습니다.');clubApply(r,owner);toast({create:'모임을 만들었습니다.',join:'모임에 가입했습니다.',leave:'모임을 탈퇴했습니다.',attend:'출석했습니다. 모임 경험치 +10'}[action]||'반영했습니다.','good');return true;}
+ catch(e){toast(String(e.message).includes('23505')?'이미 사용 중인 모임 이름입니다.':String(e.message).slice(0,150),'bad');return false;}
+ finally{CLUBNET.busy=false;clubRender();}
+}
+function clubCreate(){const name=document.getElementById('club-name')?.value.trim(),intro=document.getElementById('club-intro')?.value.trim();if(!name||name.length<2||name.length>20){toast('모임 이름은 2~20자로 입력해 주세요.','bad');return;}clubAction('create',{name,intro});}
+function clubLeave(){const mine=clubCurrent();if(mine&&confirm(mine.owner_id===ACCT.id?'탈퇴하면 가장 먼저 가입한 부원에게 모임장이 넘어갑니다. 마지막 부원이면 모임과 모임 채팅이 삭제됩니다. 탈퇴할까요?':'모임을 탈퇴할까요?'))clubAction('leave');}
+VIEWS.club=function(){
+ if(!CLUBNET.error&&(!CLUBNET.ready||Date.now()-CLUBNET.directoryAt>15000))setTimeout(()=>clubRefresh(!CLUBNET.directoryAt),0);
+ const mine=clubCurrent(),disabled=CLUBNET.busy?'disabled':'';
+ const perks=`<div class="card pad" style="margin-top:14px"><div class="sect-t">레벨별 모임 혜택</div><div class="tiny muted">가입한 부원에게 자동 적용 · 하루 한 번 출석으로 모임 경험치 +10 · 경험치 100마다 레벨 상승 · 최대 Lv 10</div><div class="club-perks">${CLUB_PERKS.map(p=>`<div class="sub ${mine&&mine.lv>=p.lv?'club-perk-active':''}"><b>Lv ${p.lv}</b> · ${p.n}<span class="tiny muted">${mine?(mine.lv>=p.lv?' 적용 중':' 잠김'):''}</span></div>`).join('')}</div></div>`;
+ const status=CLUBNET.error?`<div class="card pad" role="status">${esc(CLUBNET.error)} <button class="btn sm" onclick="clubRefresh(true)">다시 연결</button></div>`:!CLUBNET.ready?'<div class="card pad" role="status">모임을 불러오는 중입니다…</div>':'';
+ const member=mine?`<div class="card pad"><div class="spread"><h3>${esc(mine.name)} <span class="tag g">Lv ${mine.lv}</span></h3><span class="tiny muted">${CLUBNET.members.length} / 4명</span></div><p class="club-intro">${esc(mine.intro||'자유롭게 모여 함께 성장하는 모임입니다.')}</p><div class="tiny muted">누적 모임 경험치 ${nf(mine.xp)}${mine.lv<10?' · 다음 레벨까지 '+(mine.lv*100-mine.xp):' · 최고 레벨'} · 내 기여도 ${nf(mine.contribution)}</div><div class="bar jd" style="margin-top:8px"><i style="width:${mine.lv>=10?100:mine.xp%100}%"></i></div><div class="row" style="margin-top:12px"><button class="btn pri" ${disabled} ${mine.attended?'disabled':''} onclick="clubAction('attend')">${mine.attended?'오늘 출석 완료':'출석 · 경험치 +10'}</button><button class="btn" onclick="setChatTab('모임');if(document.body.classList.contains('mobile-game')&&!document.body.classList.contains('mobile-chat-open'))toggleMobileChat()">모임 채팅</button><button class="btn sm red" onclick="clubLeave()" ${disabled}>탈퇴</button></div><div class="tiny muted" style="margin-top:8px">출석은 한국 시간 자정에 초기화됩니다. 모임장은 탈퇴 시 가장 오래된 부원에게 자동 승계됩니다.</div></div><div class="card pad" style="margin-top:14px"><div class="sect-t">함께하는 부원</div>${CLUBNET.members.map(m=>`<div class="spread club-member"><b>${esc(m.name)} ${m.user_id===mine.owner_id?'<span class="tag g">모임장</span>':''}</b><span class="tiny muted">기여도 ${nf(m.contribution)}</span></div>`).join('')}</div>`:CLUBNET.ready?`<div class="card pad"><div class="sect-t">새 모임 만들기 · 무료</div><label for="club-name">모임 이름</label><input class="inp" id="club-name" minlength="2" maxlength="20" placeholder="2~20자"><label for="club-intro">소개</label><textarea class="inp" id="club-intro" maxlength="200" rows="3" placeholder="어떤 모임인지 소개해 주세요 · 200자까지"></textarea><button class="btn pri" onclick="clubCreate()" ${disabled}>모임 만들기</button><div class="tiny muted">한 사람당 한 모임 · 누구나 가입 가능 · 최대 4명</div></div>`:'';
+ const list=CLUBNET.ready?`<div class="card pad" style="margin-top:14px"><div class="spread"><div class="sect-t">모임 둘러보기</div><button class="btn sm" onclick="clubRefresh(true)" ${disabled}>새로고침</button></div><div class="grid g2">${CLUBNET.clubs.map(c=>`<div class="sub"><h4>${esc(c.name)} · Lv ${c.lv}</h4><p class="tiny muted club-intro">${esc(c.intro||'함께할 부원을 기다립니다.')}</p><div class="spread"><span class="tiny muted">${c.members} / 4명</span>${mine?`<span class="tag">${mine.id===c.id?'내 모임':'가입하려면 현재 모임을 탈퇴해 주세요'}</span>`:`<button class="btn pri sm" ${disabled} ${c.members>=4?'disabled':''} onclick="clubAction('join',{id:${Number(c.id)}})">${c.members>=4?'정원 마감':'가입하기'}</button>`}</div></div>`).join('')||'<div class="tiny muted">아직 모임이 없습니다. 첫 모임을 만들어 보세요.</div>'}</div></div>`:'';
+ return head('학생들이 직접 꾸리는 모임',ic('lantern')+' 모임',mine?mine.name+' · Lv '+mine.lv:'만들고, 모이고, 함께 성장하세요')+status+member+perks+list;
+};
+if(!CHATTABS.includes('모임'))CHATTABS.push('모임');
+const clubOldScope=chatScope;chatScope=function(tab){return tab==='모임'?(clubCurrent()?'club:'+clubCurrent().id:''):clubOldScope(tab);};
+const clubOldVisible=chatVisible;chatVisible=function(m){if(S.chatTab==='모임')return !!clubCurrent()&&m.tab==='모임'&&m.scope===chatScope('모임');return clubOldVisible(m);};
+// Never accept a public messages-table row as a private club message.
+const clubOldRows=chatRows;chatRows=function(rows,...args){return clubOldRows((rows||[]).filter(r=>r.tab!=='모임'||r._clubVerified===true),...args);};
+const clubOldContext=chatContextHTML;chatContextHTML=function(){if(S.chatTab==='모임')return clubCurrent()?'모임 부원만 볼 수 있는 대화입니다.':CLUBNET.error||'모임에 가입하면 전용 채팅이 열립니다.';return clubOldContext();};
+const clubOldRenderChat=renderChat;renderChat=function(){const result=clubOldRenderChat.apply(this,arguments);if(S.chatTab==='모임'){const label=document.getElementById('chatscope');if(label)label.textContent=clubCurrent()?.name||'가입한 모임 없음';}if(S?.made&&acctIn())setTimeout(()=>clubRefresh(),0);return result;};
+const clubOldSend=sendChat;sendChat=function(){
+ if(S.chatTab!=='모임')return clubOldSend.apply(this,arguments);
+ const input=document.getElementById('chatinput'),raw=input?.value.trim(),mine=clubCurrent();
+ if(!mine){toast('모임에 먼저 가입해 주세요.','bad');return;}
+ if(!raw||CLUBNET.sending)return;
+ if(raw.length>1000){toast('모임 메시지는 1000자까지 입력할 수 있습니다.','bad');return;}
+ const owner=String(ACCT.id),epoch=CLUBNET.epoch,scope=String(mine.id),key='mmjy-club-message-'+owner;
+ let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}
+ if(!pending||pending.body!==raw||pending.club!==scope)pending={body:raw,club:scope,mode:chatModeOf(S.chatMode),request:crypto.randomUUID()};
+ try{localStorage.setItem(key,JSON.stringify(pending));}catch(_){}
+ CLUBNET.sending=true;
+ return clubRpc('message',pending).then(r=>{if(String(ACCT.id)!==owner||CLUBNET.epoch!==epoch)return;if(!r?.ok)throw Error('메시지를 저장하지 못했습니다.');try{localStorage.removeItem(key);}catch(_){}if(input.value.trim()===raw)input.value='';clubApply(r,owner);if(S.chatTab==='모임')renderChat(true);}).catch(()=>toast('모임 메시지가 전송되지 않았습니다. 입력 내용은 남아 있습니다. 다시 보내 주세요.','bad')).finally(()=>{CLUBNET.sending=false;});
+};
+let CLUBTIMER=null;
+function clubPolling(){if(CLUBTIMER)clearInterval(CLUBTIMER);CLUBTIMER=null;if(!document.hidden)CLUBTIMER=setInterval(()=>clubRefresh(),5000);}
+clubPolling();
+document.addEventListener('visibilitychange',()=>{clubPolling();if(!document.hidden)clubRefresh();});

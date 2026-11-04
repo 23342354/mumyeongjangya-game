@@ -58,7 +58,8 @@ function load(server){
     sbSend:(m,p)=>{server.calls.push('WRITE '+p);return Promise.resolve([]);},
     ic:()=>'',esc:s=>String(s),head:()=>'',homeOf:()=>({n:''}),fmtChat:s=>String(s),
     faceHTML:()=>'',modal(){},closeModal(){},toast(){},moveHall(){},save(){},
-    renderMain(){},renderChat(){},alertBadge(){},
+    renderMain(){},renderChat(){},renderTop(){},alertBadge(){},
+    chatScope:()=>'',chatVisible:()=>true,chatRows:()=>0,chatContextHTML:()=>'',sendChat(){},clubOpt:()=>0,acctIn:()=>false,
     pairBtn:()=>'',pairSend:()=>{},pairHTML:()=>'',pairHomeHTML:()=>'',
     pairEnsure:()=>({mine:null,partner:null}),pairFetch:()=>Promise.resolve(true),
     go(){},boot(){},
@@ -74,7 +75,7 @@ function load(server){
     fetch:(...a)=>ctx.socialFetch(...a),
     reload:()=>ctx.socialReload(),
     tick:()=>ctx.socialTick(),
-    live:()=>timers.filter(t=>!t.dead),
+    live:()=>timers.filter(t=>!t.dead&&t===peek('SOCIALTICK')),
     hide:v=>{doc.visibilityState=v?'hidden':'visible';doc.hidden=!!v;listeners.forEach(f=>f());}};
 }
 

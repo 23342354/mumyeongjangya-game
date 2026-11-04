@@ -919,3 +919,10 @@ body.auth-gate #mobile-chat-toggle{
 .auction-history>span{min-width:0}
 #main .grid.g3:has(.auction-lot){grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr))}
 
+
+/* 사용자 모임 */
+.club-perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:12px}
+.club-perk-active{border-color:var(--jade)!important}
+.club-intro{white-space:pre-wrap;overflow-wrap:anywhere}
+.club-member{padding:9px 0;border-bottom:1px solid var(--line)}
+#club-name,#club-intro{display:block;width:100%;margin:6px 0 12px}
