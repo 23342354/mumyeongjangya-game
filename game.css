@@ -844,18 +844,24 @@ textarea.inp{min-height:76px;resize:vertical}
 #main .farm-crop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:13px;border-bottom:1px solid var(--line)}
 #main .farm-crop-row .life-sprite{width:42px;height:42px}
 #main .farm-crop-row button{max-width:100%}
-.pair-team-card{margin:0 0 12px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}
-.pair-team-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.pair-team-members{display:grid;grid-template-columns:1fr 24px 1fr;gap:7px;margin-top:8px;align-items:center;max-width:640px}
-.pair-team-person{min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--s0)}
-.pair-team-person b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pair-team-link{text-align:center;color:var(--gold);font-size:20px}
+/* 두 사람의 현황은 한 줄짜리 띠입니다. 예전에는 짧은 이름 두 개를
+   큰 상자에 담아 카드 높이를 다섯 줄 가까이 썼습니다. */
+.pair-team-card{margin:0 0 11px;padding:9px 13px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}
+.pair-team-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pair-team-duo{display:flex;align-items:baseline;gap:7px;min-width:0;flex-wrap:wrap}
+.pair-team-name{font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pair-team-pow{font-size:11px;color:var(--dim)}
+.pair-team-sep{color:var(--dim2)}
+.pair-team-wait{font-size:12px;color:var(--dim)}
+.pair-team-link{color:var(--gold);font-size:15px;line-height:1}
+.pair-team-ctl{margin-left:auto;display:flex;align-items:center;gap:8px}
+.pair-team-note{font-size:11px;line-height:1.7;color:var(--dim);margin-top:5px}
 .pair-team-state{font-size:11px;line-height:1.7;color:var(--dim)}
 .pair-team-status{padding:3px 8px;border-radius:20px;border:1px solid var(--line);font-size:11px;color:var(--jade)}
 
 .pair-sync-error{color:var(--red)}
 @media(max-width:1250px){#app{grid-template-columns:180px minmax(0,1fr)}#chatcol{grid-column:1/-1;position:static;height:440px;max-height:440px}}
-@media(max-width:780px){#app{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}#main .pixel-landscape>img{height:210px!important}#main .pixel-landscape figcaption{padding:10px 12px;align-items:flex-start;flex-direction:column;gap:8px}#main .scene:has(.pixel-plaza-art){height:220px!important}#main h1.page{font-size:22px}.pair-team-card{padding:12px}.pair-team-person{padding:8px}.pair-team-members{gap:5px;grid-template-columns:1fr 20px 1fr}body.mobile-game.mobile-chat-open #chatcol{position:fixed;height:min(65dvh,560px);max-height:none}#main .farm-crop-row{grid-template-columns:minmax(0,1fr);gap:8px}}
+@media(max-width:780px){#app{grid-template-columns:minmax(0,1fr);padding:12px;gap:12px}#main .pixel-landscape>img{height:210px!important}#main .pixel-landscape figcaption{padding:10px 12px;align-items:flex-start;flex-direction:column;gap:8px}#main .scene:has(.pixel-plaza-art){height:220px!important}#main h1.page{font-size:22px}.pair-team-card{padding:9px 11px}.pair-team-name{max-width:40vw}body.mobile-game.mobile-chat-open #chatcol{position:fixed;height:min(65dvh,560px);max-height:none}#main .farm-crop-row{grid-template-columns:minmax(0,1fr);gap:8px}}
 
 #main [onclick^="inviteParty"],#main [onclick^="inviteTeacher"]{display:none}
 #toasts{max-width:min(330px,calc(100vw - 24px));max-height:55vh;overflow:hidden}
