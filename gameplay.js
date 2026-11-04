@@ -2300,7 +2300,7 @@ const WORLD_DISTRICT_NOTES={
     "places": [
       [
         "마장관",
-        "포커와 마작을 즐기며 판돈을 거는 장소. 오즈도 이곳을 드나들며 어른들과 판을 벌인다. 의뢰와 무기 거래 외에 사람들이 시간을 보내고 돈을 잃거나 따는 생활의 한 면이다."
+        "포커와 마작을 즐기며 판돈을 거는 장소. 의뢰와 무기 거래 외에 사람들이 시간을 보내고 돈을 잃거나 따는 생활의 한 면이다."
       ],
       [
         "현상금 게시판과 용병 술집",
@@ -2314,14 +2314,6 @@ const WORLD_DISTRICT_NOTES={
       [
         "딤섬 가게 유운루 留雲樓",
         "하이윤 海云이 운영하는 동네 가게. 찜기를 번쩍 옮길 만큼 정정한 주인은 행패 부리는 손님도 직접 내보낸다. 오즈가 아르바이트를 했고 란위안이 만두를 먹으러 드나들던 곳으로, 외상과 일당, 이웃의 인연이 쌓인다."
-      ],
-      [
-        "하이윤의 가르침",
-        "하이윤은 란위안에게 선무일치 禪武一致를 가르치는 무술의 스승이기도 하다. 사무전의 정규 수업 밖에서도 동네 가게와 주민 사이에서 기술과 가르침이 이어진다."
-      ],
-      [
-        "주거 골목의 노란 벽돌집",
-        "오즈와 란위안의 생활 기록에 남은 집. 비좁은 살림과 집세, 식탁과 돌아갈 자리가 함께 등장한다. 제6구역을 위험 지역이라는 말 하나로만 설명할 수 없게 하는 생활의 흔적이다."
       ]
     ]
   },
@@ -2345,7 +2337,7 @@ const WORLD_DISTRICT_NOTES={
 };
 function worldDistrictNotes(id){
   const note=WORLD_DISTRICT_NOTES["w"+id];if(!note)return "";
-  return `<details class="world-district-notes" style="margin-top:10px"><summary style="cursor:pointer;color:var(--violetL);font-size:12px">거리와 생활 · 주요 장소 ${note.places.length}곳</summary><p class="tiny muted" style="line-height:1.9;margin:8px 0">${esc(note.life)}</p>${note.places.map(([name,text])=>`<div class="sub" style="margin-top:7px"><b class="tiny">${esc(name)}</b><div class="tiny muted" style="line-height:1.9;margin-top:4px">${esc(text)}</div></div>`).join("")}</details>`;
+  return `<details class="world-district-notes" data-disclosure-key="world-district-${id}" style="margin-top:10px"><summary style="cursor:pointer;color:var(--violetL);font-size:12px">거리와 생활 · 주요 장소 ${note.places.length}곳</summary><p class="tiny muted" style="line-height:1.9;margin:8px 0">${esc(note.life)}</p>${note.places.map(([name,text])=>`<div class="sub" style="margin-top:7px"><b class="tiny">${esc(name)}</b><div class="tiny muted" style="line-height:1.9;margin-top:4px">${esc(text)}</div></div>`).join("")}</details>`;
 }
 
 VIEWS.world=()=>{

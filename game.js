@@ -1132,14 +1132,20 @@ function npcChat(){
    메인 화면 디스패치
    ═══════════════════════════════════════════════════ */
 const VIEWS={};
+const MAIN_DISCLOSURES=new Map();
 function renderMain(soft){
   const ae=document.activeElement;
   if(soft && ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
   const sc=window.scrollY;
   // '고르기', 시간 변경 등의 수동 갱신 때도 열린 의뢰 목록 유지.
   const questListOpen=VIEW==="quest" && !!document.getElementById("quest-stage-picker")?.open;
+  // Keep explicitly keyed disclosures at the state the reader last chose.
+  document.querySelectorAll('#main details[data-disclosure-key]').forEach(el=>MAIN_DISCLOSURES.set(el.dataset.disclosureKey,el.open));
   const f=VIEWS[VIEW]||VIEWS.plaza;
   $("#main").innerHTML=f();
+  document.querySelectorAll('#main details[data-disclosure-key]').forEach(el=>{
+    if(MAIN_DISCLOSURES.has(el.dataset.disclosureKey))el.open=MAIN_DISCLOSURES.get(el.dataset.disclosureKey);
+  });
   if(questListOpen){ const picker=document.getElementById("quest-stage-picker"); if(picker) picker.open=true; }
   if(soft) window.scrollTo(0,sc);
 }
