@@ -1214,3 +1214,16 @@ body.auth-gate #mobile-chat-toggle{
   body.mobile-game.mobile-chat-open #chatcol{left:0;right:0;width:100%;max-width:none;margin:0;border-radius:0}
   body.mobile-game.mobile-chat-open #chatcol .chat-panel{width:100%;margin:0;border-radius:0;border-left:0;border-right:0;background:var(--s0)}
 }
+
+/* Keep scrolling available while showing scrollbars only inside chat. */
+*{scrollbar-width:none!important}
+*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+#navcol>.card:first-child{scrollbar-gutter:auto}
+#chatcol,#chatcol *{scrollbar-width:thin!important}
+#chatcol::-webkit-scrollbar,#chatcol *::-webkit-scrollbar{display:block!important;width:8px!important;height:8px!important}
+
+/* The desktop chat is anchored to the viewport, independent of page length/scroll. */
+@media(min-width:1181px){
+  #chatcol{position:fixed;top:var(--chat-top,112px);right:max(30px,calc((100vw - 1640px)/2 + 30px));width:300px;max-width:300px;height:calc(100dvh - var(--chat-top,112px) - 16px);min-height:0;max-height:none;z-index:50}
+  body.chat-off #chatcol{width:34px;max-width:34px}
+}

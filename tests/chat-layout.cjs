@@ -22,10 +22,24 @@ try{
  await page.evaluate(()=>{document.querySelector('#chatlog').scrollTop=120;});await settle();
  await page.evaluate(()=>{document.querySelector('#topbar .tb2').innerHTML='<span class="buffchip">추가 효과</span>'.repeat(35);});await check();
  assert.equal(await page.locator('#chatlog').evaluate(el=>el.scrollTop),120,'reading position is preserved');
+ // The chat stays anchored while a long page scrolls and while a short page ends.
+ for(const width of [1181,1250,1721,1920]){
+  await page.setViewportSize({width,height:800});
+  await page.evaluate(()=>{window.scrollTo(0,0);document.querySelector('#main').style.minHeight='2400px';});await settle();
+  const anchored=await page.locator('#chatcol').boundingBox();
+  assert.equal(await page.locator('#chatcol').evaluate(el=>getComputedStyle(el).position),'fixed');
+  for(const y of [250,1200]){await page.evaluate(y=>window.scrollTo(0,y),y);await settle();const b=await page.locator('#chatcol').boundingBox();assert.ok(Math.abs(b.y-anchored.y)<1&&Math.abs(b.x-anchored.x)<1&&Math.abs(b.height-anchored.height)<1,'chat position does not follow body scroll');}
+  assert.ok(await page.locator('#main').evaluate(el=>el.getBoundingClientRect().right<=document.querySelector('#chatcol').getBoundingClientRect().left-20),'fixed chat reserves its grid column');
+ }
+ await page.evaluate(()=>{document.querySelector('#main').style.minHeight='40px';document.querySelector('#main').innerHTML='<p>짧은 본문</p>';window.scrollTo(0,0);});await settle();
+ const short=await page.locator('#chatcol').boundingBox();await page.evaluate(()=>window.scrollTo(0,500));await settle();assert.equal(Math.round((await page.locator('#chatcol').boundingBox()).y),Math.round(short.y));
+ assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
+ assert.equal(await page.locator('#chatlog').evaluate(el=>getComputedStyle(el).scrollbarWidth),'thin');
+ await page.evaluate(()=>toggleChat());await settle();assert.equal(Math.round((await page.locator('#chatcol').boundingBox()).width),34);await page.evaluate(()=>toggleChat());
  await page.setViewportSize({width:1100,height:800});await settle();assert.equal(await page.locator('#chatcol').evaluate(el=>Math.round(el.getBoundingClientRect().height)),440,'tablet flow retains its own height');
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.body.classList.add('mobile-game','mobile-chat-open'));await settle();
  assert.equal(await page.locator('#chatcol').evaluate(el=>getComputedStyle(el).position),'fixed');
  assert.ok(await page.locator('#chatinput').evaluate(el=>el.getBoundingClientRect().bottom<innerHeight),'mobile input remains visible');
- assert.deepEqual(errors,[]);console.log('PASS: wrapped buffs at desktop heights 950/700, visible compose input, latest-message follow, preserved reading position/draft, tablet and mobile layouts');
+ assert.deepEqual(errors,[]);console.log('PASS: header resize, scroll-stable desktop chat at 1181/1250/1721/1920px, short pages, reserved column, chat-only scrollbars, fold, draft/reading position, tablet and mobile layouts');
 }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());
