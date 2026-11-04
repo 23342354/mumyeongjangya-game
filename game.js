@@ -1703,6 +1703,25 @@ function questCheck(stage){
     : `의뢰는 1~${QUEST_MAX_STAGE}단계에서 선택해 주세요.`,"bad");
   return false;
 }
+/* 관문을 넘은 뒤 다음에 고를 단계를 미리 집어 둡니다.
+   예전에는 고른 단계가 통과한 관문에 그대로 머물러, 열렸는데도
+   넘어가지 않은 것처럼 보였습니다.
+   어림 처치 수가 넉넉한 단계만 '무난하다'고 보고, 다음 관문이 무난하면
+   관문 쪽을 먼저 집습니다. 아니면 안정적으로 갈 수 있는 가장 높은 단계를 집습니다. */
+const QUEST_SAFE_KILLS=2;
+function questSafeAt(stage){
+  const mins=Math.max(qDur().m,qGateMin(stage));
+  return questEstimate(stage,mins).kills>=QUEST_SAFE_KILLS;
+}
+function questAutoPick(){
+  const limit=questOpenLimit();
+  /* 이미 넘긴 단계보다 아래로는 내려가지 않습니다. 어림 계산이 보수적이라
+     그냥 두면 10단계를 깬 사람에게 3단계를 골라 주는 일이 생깁니다. */
+  const floor=Math.min(limit,Math.max(1,(Number(S.quests.cleared)||0)+1));
+  if(limit%10===0&&questSafeAt(limit)) return limit;
+  for(let s=limit-1;s>=floor;s--) if(questSafeAt(s)) return s;
+  return floor;
+}
 function questRecordClear(stage){
   if(!questCanEnter(stage)) return false;
   if(typeof notifySound==="function") notifySound("activity");
@@ -1710,8 +1729,12 @@ function questRecordClear(stage){
   S.quests.cleared=Math.max(Number(S.quests.cleared)||0,stage);
   if(stage===gate+10){
     S.quests.gate=stage;
-    toast(stage===QUEST_MAX_STAGE?"마지막 200단계 관문을 통과했습니다!"
-      : `${stage}단계 관문 통과 · ${stage+1}~${stage+9}단계와 ${stage+10}단계 관문이 열렸습니다.`,"good");
+    if(stage===QUEST_MAX_STAGE) toast("마지막 200단계 관문을 통과했습니다!","good");
+    else{
+      const next=questAutoPick();
+      S.quests.pick=next;
+      toast(`${stage}단계 관문 통과 · ${stage+1}~${stage+9}단계와 ${stage+10}단계 관문이 열렸습니다. ${next}단계를 골라 두었습니다.`,"good");
+    }
   }
   return true;
 }
@@ -2156,7 +2179,7 @@ function drawOuting(){
     modal(`${w.n} 나들이 · 돌아가는 길`,`
       <div class="tiny muted" style="margin-bottom:10px">여섯 걸음을 걸었고 세 가지 이야기를 겪었습니다. 통행패를 반납하고 사무전으로 돌아갑니다.</div>
       <div class="card pad">
-        <div class="tiny" style="color:var(--jade)">륜 +${nf(got.rin)} · 지식 +${nf(got.know)} · 경험치 +${nf(got.exp)}${got.lotus?` · 연등 +${got.lotus}`:""}</div>
+        <div class="tiny" style="color:var(--jade)">걸으면서 받은 몫 · 륜 +${nf(got.rin)} · 지식 +${nf(got.know)} · 경험치 +${nf(got.exp)}${got.lotus?` · 연등 +${got.lotus}`:""}</div>
       </div>
       ${canSouv?`<div style="margin-top:12px"><div class="sect-t">작은 기념품을 하나 고르세요</div>
         <div class="row">${souvenirsFor(w).map((s,i)=>`<button class="btn" onclick="takeSouv(${w.id},${i})">${s.e} ${s.n}</button>`).join("")}</div></div>`:""}
@@ -2181,9 +2204,13 @@ function outChoose(i){
   if(c.st){ const roll=d5(effStat(c.st)); ok=roll>=c.dc;
     txt=`<div class="tiny muted">${STATS.find(s=>s.k===c.st).n} 판정 · ${effStat(c.st)}D5 = <b>${roll}</b> / 목표 ${c.dc}</div>
          <div style="margin-top:8px;font-size:15px">${ok?c.g:c.b}</div>`;
-    if(ok){ O.got.rin+=rnd(60,180); O.got.know+=rnd(10,40); O.got.exp+=rnd(40,110); if(Math.random()<.3)O.got.lotus++; }
-    else { damageHP(rnd(2,9)); damageSN(rnd(1,7)); O.got.exp+=rnd(10,30); }
-  }else{ txt=`<div style="font-size:15px">${c.g}</div>`; O.got.exp+=rnd(15,35); }
+    /* 걸음마다 바로 지급합니다. 예전에는 O.got에 쌓아 마지막에 보여 주기만 하고
+       실제로 더하지 않아, 통행패만 쓰고 아무것도 받지 못했습니다.
+       걸음마다 지급하면 도중에 창이 닫혀도 그때까지 번 몫은 남습니다. */
+    if(ok){ O.got.rin+=gainRin(rnd(60,180)); O.got.know+=gainKnow(rnd(10,40)); O.got.exp+=gainExp(rnd(40,110));
+            if(Math.random()<.3){ S.lotus++; O.got.lotus++; } }
+    else { damageHP(rnd(2,9)); damageSN(rnd(1,7)); O.got.exp+=gainExp(rnd(10,30)); }
+  }else{ txt=`<div style="font-size:15px">${c.g}</div>`; O.got.exp+=gainExp(rnd(15,35)); }
   addMark(4);
   O.step++;
   modal("결과", txt+`<div class="row" style="margin-top:14px"><button class="btn pri" onclick="drawOuting()">계속 걷는다</button></div>`);

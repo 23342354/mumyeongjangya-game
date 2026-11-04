@@ -6,7 +6,8 @@
     "test:browser": "node tests/browser-smoke.cjs",
     "test:combat": "python3 tests/combat-model.py",
     "test:sql": "node tests/pair-sql.cjs",
-    "test:pair-browser": "node tests/pair-browser.cjs"
+    "test:pair-browser": "node tests/pair-browser.cjs",
+    "test:behavior": "node tests/quest-outing.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1",

@@ -49,6 +49,13 @@ async function socialFetch(force=false){
  // Derived compatibility cache uses actual profile fields, never random values.
  if(!S.socialLegacy)S.socialLegacy={friends:JSON.parse(JSON.stringify(S.friends||[])),relations:JSON.parse(JSON.stringify(S.rel||[]))};
  S.friends=SOCIAL.links.filter(r=>r.kind==='friend'&&r.status==='accepted').map(r=>{const id=socialPeer(r),p=socialStudent(id);return {id,n:p?.name||id,c:p?.course,lv:p?.lvl,line:p?.line,last:p?.updated_at||'',linkId:r.id};});
+ /* 내 정보 화면이 읽는 옛 관계 배열도 교류 기록에서 채웁니다.
+    둘이 따로 놀아서, 교류에서는 보이는 관계가 내 정보에서는
+    '맺은 관계가 없습니다'로 뜨던 문제를 막습니다. */
+ S.rel=SOCIAL.links.filter(r=>r.kind==='relation'&&r.status==='accepted').map(r=>{
+  const from=String(r.from_id)===socialId(),id=socialPeer(r),p=socialStudent(id);
+  return {n:p?.name||id,a:from?r.role_from:r.role_to,b:from?r.role_to:r.role_from,nick:'',linkId:r.id};
+ });
  if(['rel','pairhub','rpboard','roster'].includes(VIEW)){const editor=VIEW==='rpboard'&&['rp-compose','rp-search'].includes(document.activeElement?.id);if(!editor)renderMain(true);}
  }catch(e){SOCIAL.error='교류 정보를 불러오지 못했습니다. 운영 서버의 교류 테이블과 연결을 확인해 주세요.';if(['rel','pairhub','rpboard'].includes(VIEW))renderMain(true);}
  finally{SOCIAL.busy=false;}
@@ -71,6 +78,9 @@ async function socialRelationSend(id){const a=document.getElementById('social-a'
 addFriend=function(name){if(!name){go('rel');return;}const rows=SOCIAL.students.filter(p=>p.name===name);if(rows.length!==1){go('rel');toast('학생 목록에서 계정을 확인하고 신청해 주세요.');return;}socialRequest(rows[0].id);};
 relPropose=function(name){const rows=SOCIAL.students.filter(p=>p.name===name);if(rows.length===1)socialRequest(rows[0].id,'relation');else go('rel');};
 VIEWS.rel=()=>head('사무전 교류','친구 · 관계','상대가 수락하면 양쪽에 함께 표시됩니다')+socialStatus()+`<div class="card pad"><div class="sect-t">받은 신청 · 보낸 신청</div>${SOCIAL.links.filter(r=>r.status==='pending').map(r=>`<div class="spread" style="padding:12px 0"> <div>${socialProfile(socialPeer(r))}<span class="tiny">${r.kind==='friend'?'친구 신청':esc(r.role_from)+' / '+esc(r.role_to)+' 관계 신청'}</span></div><div class="row">${String(r.to_id)===socialId()?socialButton('수락',`socialAction('respond',{id:${r.id},accept:true})`)+socialButton('거절',`socialAction('respond',{id:${r.id},accept:false})`):socialButton('신청 취소',`socialAction('remove',{id:${r.id}})`)}</div></div>`).join('')||'<p class="muted">대기 중인 신청이 없습니다.</p>'}</div><div class="card pad" style="margin-top:14px"><div class="sect-t">친구와 맺은 관계</div>${SOCIAL.links.filter(r=>r.status==='accepted').map(r=>{const from=String(r.from_id)===socialId();return `<div class="spread" style="padding:12px 0"><div>${socialProfile(socialPeer(r))}<div>${r.kind==='friend'?'서로 친구':`나는 상대의 ${esc(from?r.role_from:r.role_to)} · 상대는 나의 ${esc(from?r.role_to:r.role_from)}`}</div></div>${socialButton('해제',`socialRemove(${r.id})`)}</div>`;}).join('')||'<p class="muted">수락한 친구와 관계가 여기에 표시됩니다.</p>'}</div><div class="card pad" style="margin-top:14px"><div class="sect-t">학생 찾기</div>${SOCIAL.students.filter(r=>String(r.id)!==socialId()).map(r=>`<div class="spread" style="padding:10px 0">${socialProfile(r.id)}<div class="row">${['friend','relation'].map(k=>SOCIAL.links.some(l=>l.kind===k&&String(socialPeer(l))===String(r.id)&&['accepted','pending'].includes(l.status))?`<span class="tag">${k==='friend'?'친구':'관계'} · 등록/대기</span>`:socialButton(k==='friend'?'친구 신청':'관계 신청',`socialRequest(${socialArg(r.id)},'${k}')`)).join('')}</div></div>`).join('')}</div>`;
+/* 내 정보의 '끊기'도 교류 기록을 지우도록 돌립니다. 그대로 두면 화면에서만
+   사라지고 다음 조회 때 되살아납니다. */
+relCut=function(i){const r=(S.rel||[])[i];if(r&&r.linkId)socialRemove(r.linkId);};
 function socialRemove(id){if(confirm('양쪽 화면에서 이 친구 또는 관계를 해제할까요?'))socialAction('remove',{id});}
 // Remove the DM surface, retain stored messages without deleting history.
 CHATTABS.splice(CHATTABS.indexOf('1:1'),1);
