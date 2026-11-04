@@ -1208,3 +1208,9 @@ body.auth-gate #mobile-chat-toggle{
   body.mobile-game:not(.top-open) #mobile-subnav{top:calc(var(--mobile-top-height,57px) - 1px)}
   body.mobile-game #mobile-subnav button{padding:6px 10px;min-height:28px;font-size:12px;line-height:1.3}
 }
+
+/* The mobile chat drawer spans the screen without side gutters or corner gaps. */
+@media(max-width:780px){
+  body.mobile-game.mobile-chat-open #chatcol{left:0;right:0;width:100%;max-width:none;margin:0;border-radius:0}
+  body.mobile-game.mobile-chat-open #chatcol .chat-panel{width:100%;margin:0;border-radius:0;border-left:0;border-right:0;background:var(--s0)}
+}
