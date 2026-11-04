@@ -257,6 +257,11 @@ h1.page{font-size:22px;margin:1px 0 2px;font-weight:600;letter-spacing:-.01em}
 
 /* 과목/연구 카드 */
 .sub{background:var(--subBg);border:1px solid var(--lineSoft);border-radius:var(--r-m);padding:11px 12px;position:relative}
+.sub-act{margin-top:8px}
+/* 과목 카드 — 설명 길이가 제각각이라 단추 줄이 카드마다 다른 높이에 놓였습니다.
+   카드를 세로 상자로 만들고 단추 줄을 바닥에 붙여 한 행이 가지런히 맞습니다. */
+.sub-grid .sub{display:flex;flex-direction:column}
+.sub-grid .sub>.sub-act{margin-top:auto;padding-top:9px}
 .sub:hover{border-color:var(--line2)}
 .sub.active{border-color:var(--gold2);box-shadow:var(--glow)}
 .sub h4{margin:0 0 2px;font-size:14px;font-weight:600}
@@ -1117,3 +1122,10 @@ body.auth-gate #mobile-chat-toggle{
       color-mix(in srgb, var(--s0) 74%, transparent) 240px,
       var(--s0) 540px, var(--s0) 100%)}
 }
+
+/* 과목 격자 — 본문 칸 너비를 따릅니다(#main 은 container). 대화 칸을 접으면
+   본문이 넓어지므로, 화면 너비가 아니라 실제 칸 너비로 열 수를 정해야 맞습니다. */
+.sub-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@container (max-width:830px){.sub-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@container (max-width:760px){.sub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container (max-width:470px){.sub-grid{grid-template-columns:minmax(0,1fr)}}
