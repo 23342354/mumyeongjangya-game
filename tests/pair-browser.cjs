@@ -41,12 +41,26 @@ const root=path.resolve(__dirname,'..');
  release();await page.evaluate(async()=>{await Promise.all([window.delayed,window.lessonJob,window.studyJob,window.farmJob]);});
  const activities=await page.evaluate(()=>({run:!!S.run&&!S.run.done,lesson:!!S.lesson,study:!!S.study,msg:S.msgs.some(m=>m.sid===777),fish:FISHGAME?.state,farm:!!S.farm.plots[0]}));
  assert.deepEqual(activities,{run:true,lesson:true,study:true,msg:true,fish:'run',farm:true});
+ // Check the real combat implementation, not just the scheduler fixture.
+ const checkpoint=async mins=>{
+  const current=(await db.query('select progress from pair_play_state where pair_id=1')).rows[0].progress;
+  current.run.lastTick=Date.now()-mins*60000;
+  await db.query('update pair_play_state set progress=$1,revision=revision+1 where pair_id=1',[current]);
+  await page.evaluate(async()=>{await PAIR_PLAY.refresh();});
+ };
+ await checkpoint(4);const countAtFour=commitCalls;
+ await page.evaluate(async()=>{step(1/60);await PAIR_PLAY.queue;});
+ assert.equal(commitCalls,countAtFour,'no quest tick within four minutes');
+ await checkpoint(5);
+ await page.evaluate(async()=>{step(1/60);await PAIR_PLAY.queue;});
+ assert.equal(commitCalls,countAtFour+1,'one combat checkpoint at five minutes');
+ assert.equal(await page.evaluate(()=>S.run.logs.some(l=>l.t.includes('의뢰 진행'))),true,'real attack logs summarized');
  // A background statement timeout must leave the modal and received chat intact.
  timeout=true;const before=commitCalls;await page.evaluate(async()=>{S.bio='timeout state';save();await acctPush(true);});assert.equal(commitCalls,before+1);
  assert.equal(await page.evaluate(()=>!!document.querySelector('#fbar')&&FISHGAME.state==='run'),true);
  assert.equal(await page.evaluate(()=>S.msgs.some(m=>m.sid===777)),true);
  timeout=false;await page.evaluate(async()=>{PAIR_PLAY.retryAt=0;await acctPush(true);});
  assert.equal(await page.evaluate(()=>S.msgs.some(m=>m.sid===777)),true);
- assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown and recovery');
+ assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown recovery and five-minute combat checkpoints');
  }finally{await browser.close();server.close();await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
