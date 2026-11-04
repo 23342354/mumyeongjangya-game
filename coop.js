@@ -7,18 +7,32 @@
 'use strict';
 const clone=x=>JSON.parse(JSON.stringify(x));
 window.bagCapacity=function(){return PAIR_PLAY.ready?Number(S.pairBagCap||80):40+(S.res.r11||0)*5;};
-const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,lastServerReadAt:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false,baseline:null,pending:[],flushTimer:null,peerCache:null};
+const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:false,queue:Promise.resolve(),snapshot:null,error:'',lastPoll:0,lastServerReadAt:0,acc:0,sharedXp:0,loss:{hp:0,sn:0},offlineNeeded:false,baseline:null,pending:[],flushTimer:null,peerCache:null,retryAt:0,failures:0,initQueued:false,tickQueued:false,actions:new Map()};
 // Passive requests are intentionally slower than real game actions. The RPC still
 // uses server-side revision checks and request receipts for every paid action.
 const PAIR_POLL_MS=30000;
 const PAIR_PASSIVE_TICK_MIN=2;
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
+const CLIENT_KEYS=['msgs','chatReset','chatFrom','chatTab','chatMode','chatFilter','dmWith'];
+function replaceLocalState(target){
+ const keep={};for(const k of CLIENT_KEYS)if(S[k]!==undefined)keep[k]=S[k];
+ for(const k of Object.keys(S))if(!(k in target)&&!CLIENT_KEYS.includes(k))delete S[k];
+ Object.assign(S,target,keep);
+}
+function compactSave(state=S){
+ const blob=clone(state);delete blob.msgs;
+ if(blob.sb)blob.sb={id:blob.sb.id,claimed:blob.sb.claimed||[]};
+ if(blob.pair)blob.pair={mine:blob.pair.mine||null};
+ return blob;
+}
+function errorCode(e){if(e?.code)return e.code;try{return JSON.parse(e.message).code;}catch(_){return '';}}
+function cooling(){return Date.now()<PJ.retryAt;}
 function linked(){return !!(typeof acctIn==='function'&&acctIn()&&S?.pair?.mine?.status==='accepted');}
 function active(){return linked()||!!S?.pairShared;}
 async function rpc(action,args={}){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
  try{return await acctFetch('rpc/pair_play',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({p_user:ACCT.id,p_token:ACCT.tok,p_action:action,...args})});}
- catch(e){if(e.name==='AbortError')throw Error('서버 응답이 지연되어 저장 확인을 다시 시도합니다.');throw e;}
+ catch(e){if(e.name==='AbortError'||e.name==='TypeError'){const err=Error('서버 응답이 지연되어 저장 확인을 다시 시도합니다.');err.code='PAIR_NETWORK_TIMEOUT';throw err;}throw e;}
  finally{clearTimeout(timer);}
 }
 function wallet(){return {pass:S.pass,wbTickets:S.wb.tickets,marks:S.fest.marks,rin:S.rin,mana:S.mana,know:S.know,sari:S.sari,lotus:S.lotus,mat:S.mat||{},ing:S.ing||{},bmat:S.bmat||{},ingredients:S.ingredients||{},inv:S.inv||{},potion:S.potion||{},dishes:S.kit.have||{},seeds:S.farm.seeds||{},fertilizers:S.farm.fertilizers||{},fert:S.farm.fert||0,bag:S.bag||[],pendingLoot:S.balance20.pendingLoot||[],gid:S.gid};}
@@ -26,12 +40,12 @@ function progress(){const q={...S.quests};delete q.room;delete q.pick;delete q.d
 const personalKeys=['exp','lvl','pts','gear','alloc','sub','res','lesson','study','hp','sn','home','marketRev','lastReal','farm','fish','balance20','buffs','kit','hall','pairBagCap'];
 // Save changes made outside the serialized combat/shop buttons before any server refresh.
 // Each change is a small path-based delta against the last confirmed server snapshot.
-const LOCAL_TRANSIENT=new Set(['sb','pair','pairShared','pairPersonalRev','pairSoloRev','pairBagCap','lastReal','t','passNext','chatFrom']);
+const LOCAL_TRANSIENT=new Set(['sb','pair','pairShared','pairPersonalRev','pairSoloRev','pairBagCap','lastReal','t','passNext','chatFrom',...CLIENT_KEYS]);
 const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function changes(before,after,path=[],out=[]){
  if(!path.length&&(!before||!after))return out;
- if(isObject(before)&&isObject(after)){
+ if(isObject(before)&&isObject(after)&&!(path.length===1&&path[0]==='run')){
   for(const k of new Set([...Object.keys(before),...Object.keys(after)])){
    if(!path.length&&LOCAL_TRANSIENT.has(k))continue;
    changes(before[k],after[k],[...path,k],out);
@@ -72,7 +86,7 @@ function replayChanges(list){
    if(op.has)parent[key]=clone(op.to);else delete parent[key];
   }
  }
- S=target;
+ replaceLocalState(target);
 }
 function markDirty(){
  if(!PJ.ready||!PJ.baseline||!active())return;
@@ -89,8 +103,8 @@ function backupOnFailure(reason,snapshot){
 function apply(r){
  if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.peerCache=null;PJ.baseline=null;PJ.pending=[];}return;}
  if(!r.ok){PJ.ready=false;PJ.error=r.message||'공동 기록을 준비하고 있습니다.';return;}
- PJ.snapshot=r;PJ.ready=true;PJ.error='';PJ.peerCache=null;PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;PJ.clockBasis=Number(r.self?.lastReal)||Date.now();
- const keep={};for(const k of ['sb','chatTab','chatMode','chatFilter'])if(S[k]!==undefined)keep[k]=S[k];
+ PJ.snapshot=r;PJ.ready=true;PJ.error='';PJ.failures=0;PJ.retryAt=0;PJ.peerCache=null;PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;PJ.clockBasis=Number(r.self?.lastReal)||Date.now();
+ const keep={};for(const k of ['sb',...CLIENT_KEYS])if(S[k]!==undefined)keep[k]=S[k];
  const pairList={inbox:S.pair?.inbox||[],sent:S.pair?.sent||[],partner:S.pair?.partner||null,at:S.pair?.at||0};
  Object.assign(S,clone(r.self),keep);
  S.pair={...(S.pair||{}),...pairList,mine:r.pair||null};
@@ -138,7 +152,10 @@ function sameSnapshot(r){
 }
 // A response may arrive after a profile/input save. Capture changes after the await.
 async function read(quiet=false,preserve=true){
- const r=await rpc('get');
+ const action=quiet&&Number(PJ.snapshot?.syncVersion)>=2?'peek':'get';
+ const r=await rpc(action);
+ if(r.busy){const e=Error(r.message||'공동 기록이 사용 중입니다. 잠시 후 저장합니다.');e.code='55P03';throw e;}
+ if(action==='get'&&r.ok)PJ.lastAuthoritativeReadAt=Date.now();
  const local=preserve&&PJ.baseline?changes(PJ.baseline,S):[];
  const localState=local.length?clone(S):null;
  if(quiet&&sameSnapshot(r)){
@@ -157,12 +174,13 @@ function rememberCommit(value){
  PJ.unconfirmed=value;
  try{if(value)localStorage.setItem(receiptKey(),JSON.stringify(value));else localStorage.removeItem(receiptKey());}catch(_){}
 }
-async function sendCommit(args,base){
- rememberCommit({args,base});
+async function sendCommit(args,base,context={}){
+ rememberCommit({args,base,context});
  let error;
  for(let attempt=0;attempt<2;attempt++){
   try{
    const r=await rpc('commit',args);
+   if(r?.busy){const e=Error(r.message||'공동 기록이 사용 중입니다. 잠시 후 저장합니다.');e.code='55P03';throw e;}
    if(!r||r.ok!==true)throw Error(r?.message||'공동 기록 저장 결과를 확인하지 못했습니다.');
    rememberCommit(null);
    if(Number(r.pairId)!==Number(base.pairShared)){
@@ -173,7 +191,8 @@ async function sendCommit(args,base){
   }catch(e){
    error=e;
    // PostgREST validation/auth errors are definitive rejections, not lost ACKs.
-   let code;try{code=JSON.parse(e.message).code;}catch(_){}
+   const code=errorCode(e);
+   if(['57014','55P03','40P01','40001','PAIR_NETWORK_TIMEOUT'].includes(code))throw e;
    if(code&&!['40P01','40001','57014','55P03','53300','57P01','PGRST000','PGRST001','PGRST002'].includes(code)){
     rememberCommit(null);throw e;
    }
@@ -185,21 +204,43 @@ async function recoverCommit(){
  let pending=PJ.unconfirmed;
  if(!pending){try{pending=JSON.parse(localStorage.getItem(receiptKey())||'null');}catch(_){}}
  if(!pending)return;
- // Keep edits made after the unconfirmed request, but never replay the paid action.
- const later=PJ.ready?changes(pending.args.p_save,S):[];
- const r=await sendCommit(pending.args,pending.base);
- apply(r);PJ.pending=[];
- if(r.conflict)replayChanges(changes(pending.base,pending.args.p_save));
- if(later.length)replayChanges(later);
- oldSave();markDirty();
- if(!PJ.pending.length)cache();
+ let later=PJ.ready?changes(pending.args.p_save,S):[];
+ for(let attempt=0;attempt<2;attempt++){
+  const r=await sendCommit(pending.args,pending.base,pending.context);
+  apply(r);PJ.pending=[];
+  if(r.conflict){
+   let context=pending.context||{};
+   try{
+    if(context.tag==='tick'&&context.before){
+     replayChanges(changes(pending.base,context.before));
+     context={tag:'tick',before:compactSave()};calculateTick();
+    }else replayChanges(changes(pending.base,pending.args.p_save));
+    if(later.length)replayChanges(later);
+   }
+   catch(e){backupOnFailure(e.message,pending.args.p_save);throw e;}
+   // Keep the original shared XP, buffs and damage when an unconfirmed
+   // action is rebased. A generic profile flush must not discard them.
+   pending={base:clone(PJ.baseline),context,args:{...pending.args,
+    ...(context.tag==='tick'?{p_xp:PJ.sharedXp,p_loss:PJ.loss}:{}),p_revision:r.revision,
+    p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),
+    p_save:compactSave(),p_wallet:wallet(),p_progress:progress(),p_meta:metadata()}};
+   rememberCommit(pending);later=[];continue;
+  }
+  if(later.length)replayChanges(later);
+  oldSave();markDirty();if(!PJ.pending.length)cache();return;
+ }
+ markDirty();const e=Error('공동 기록 갱신이 몰려 잠시 후 저장을 다시 시도합니다.');e.code='55P03';throw e;
 }
-function showError(e){if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:String(e?.message||e).slice(0,180)});const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
+function showError(e){
+ if(['57014','55P03','40P01','40001','PAIR_NETWORK_TIMEOUT'].includes(errorCode(e))){
+  PJ.failures++;PJ.retryAt=Date.now()+Math.min(90000,5000*2**Math.min(4,PJ.failures-1))+Math.floor(Math.random()*1000);
+ }
+if(PJ.pending.length&&typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:true,error:String(e?.message||e).slice(0,180)});const message=String(e?.message||e).includes('PGRST202')?'공동 플레이 SQL 설치가 필요합니다.':String(e?.message||e).slice(0,180);PJ.error=message;if(!e.waiting&&(PJ.lastErrorMessage!==message||Date.now()-(PJ.lastErrorAt||0)>60000)){oldToast(message,'bad');PJ.lastErrorAt=Date.now();PJ.lastErrorMessage=message;}renderTop();renderMain(true);}
 
 function rerender(){renderTop();renderNav();renderMain(true);}
 async function init(){
- if(!active()||PJ.busy||Date.now()-PJ.lastPoll<PAIR_POLL_MS)return;
- PJ.lastPoll=Date.now();return enqueue(async()=>{
+ if(!active()||PJ.busy||PJ.initQueued||cooling()||Date.now()-PJ.lastPoll<PAIR_POLL_MS)return;
+ PJ.initQueued=true;PJ.lastPoll=Date.now();return enqueue(async()=>{
   PJ.busy=true;try{
    await recoverCommit();
    markDirty();
@@ -223,12 +264,13 @@ async function init(){
     oldToast(warning,'bad');
    }
    if(didChange)rerender();
-  }catch(e){showError(e);}finally{PJ.busy=false;}
+  }catch(e){showError(e);}finally{PJ.busy=false;PJ.initQueued=false;}
  });
 }
 function isGroup(tag){return /^(takeExam|examPractice|climbTower|climbGuard|startRun|runQuest|runReturn|runClear|endRun|hitBoss|arenaGo)$/.test(tag);}
 async function transact(tag,fn,queue=true,options={}){
  if(queue)return enqueue(()=>transact(tag,fn,false,options));
+ if(cooling()){if(!['tick','profile','offline'].includes(tag))oldToast('서버 저장을 다시 연결하고 있습니다. 잠시 후 다시 눌러 주세요.','bad');return false;}
  PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,sentState=null,transactionBase=null;
  try{
   await recoverCommit();
@@ -237,7 +279,7 @@ async function transact(tag,fn,queue=true,options={}){
   // Immediately following an acknowledged server response, we can use that
   // version for a second click without another GET round-trip. If the other
   // player has changed it, the commit CAS rejects the stale revision safely.
-  const recent=!!(PJ.ready&&!unsaved.length&&PJ.lastServerReadAt&&Date.now()-PJ.lastServerReadAt<2000);
+  const recent=!!(PJ.ready&&PJ.lastAuthoritativeReadAt&&Date.now()-PJ.lastAuthoritativeReadAt<15000);
   if(!recent)await read(false,true);
   if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
   transactionBase=clone(PJ.baseline);
@@ -246,8 +288,8 @@ async function transact(tag,fn,queue=true,options={}){
   let oldClock;
   if(options.fishBar!==undefined){oldClock=fishBarAt;fishBarAt=()=>options.fishBar;}
   try{
-   if(tag!=='tick'&&tag!=='offline'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(S.lastReal)||Date.now()))/60000));if(elapsed>0)tick(elapsed);}
-   if(tag==='tick'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(S.lastReal)||Date.now()))/60000));tick(elapsed);}else await fn();
+   if(tag!=='tick'&&tag!=='offline'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Number(S.lastReal)||Date.now()))/60000));if(elapsed>0)tick(elapsed,false);}
+   if(tag==='tick'){const elapsed=Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Number(S.lastReal)||Date.now()))/60000));tick(elapsed);}else await fn();
   }finally{if(oldClock)fishBarAt=oldClock;PJ.depth--;PJ.combat=previousCombat;PJ.groupAward=false;}
   S.lastReal=Date.now();
   const effects={};
@@ -256,21 +298,25 @@ async function transact(tag,fn,queue=true,options={}){
    for(const k of ['eat','dess'])if(JSON.stringify(S.kit[k])!==JSON.stringify(before.kit[k]))effects[k]=S.kit[k];
   }
   const request=(crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random());
-  const args={p_revision:PJ.snapshot.revision,p_request:request,p_save:clone(S),p_wallet:wallet(),p_progress:progress(),p_xp:PJ.sharedXp,p_meta:metadata(),p_effects:effects,p_loss:PJ.loss};
+  const args={p_revision:PJ.snapshot.revision,p_request:request,p_save:compactSave(),p_wallet:wallet(),p_progress:progress(),p_xp:PJ.sharedXp,p_meta:metadata(),p_effects:effects,p_loss:PJ.loss};
   // p_save has already been deep-copied for a stable retry receipt.
-  sentState=args.p_save;
+  sentState=clone(S);
   let r;
-  for(let attempt=0;attempt<4;attempt++){
-   r=await sendCommit(args,transactionBase);
+  for(let attempt=0;attempt<2;attempt++){
+   r=await sendCommit(args,transactionBase,{tag,before:tag==='tick'?compactSave(before):undefined});
    if(!r.conflict)break;
    // Rebase the computed result; do not rerun combat, rewards or random rolls.
    const local=clone(S),delta=changes(transactionBase,local);
    apply(r);PJ.pending=[];
-   try{replayChanges(delta);}catch(e){backupOnFailure(e.message,local);throw e;}
+   try{
+    if(tag==='tick'){
+     replayChanges(changes(transactionBase,before));before=clone(S);calculateTick();
+    }else replayChanges(delta);
+   }catch(e){backupOnFailure(e.message,local);throw e;}
    transactionBase=clone(PJ.baseline);
    sentState=clone(S);
-   Object.assign(args,{p_revision:r.revision,p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),p_save:sentState,p_wallet:wallet(),p_progress:progress(),p_meta:metadata()});
-   if(attempt===3){markDirty();throw Error('공동 기록 갱신이 몰리고 있습니다. 변경 기록을 보관했으니 저장을 다시 시도해 주세요.');}
+   Object.assign(args,{p_revision:r.revision,p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),p_save:compactSave(),p_wallet:wallet(),p_progress:progress(),p_meta:metadata(),p_xp:PJ.sharedXp,p_loss:PJ.loss});
+   if(attempt===1){rememberCommit({args:clone(args),base:clone(transactionBase),context:{tag,before:tag==='tick'?compactSave(before):undefined}});markDirty();const e=Error('공동 기록 갱신이 몰려 잠시 후 저장을 다시 시도합니다.');e.code='55P03';throw e;}
   }
   const laterChanges=changes(sentState,S);
   apply(r);PJ.pending=[];PJ.acc=0;
@@ -282,10 +328,10 @@ async function transact(tag,fn,queue=true,options={}){
   backupOnFailure(e?.message,sentState||dirtyLocal||S);
   // Preserve the exact outstanding state on a network failure. A later retry
   // must settle its receipt before reading or sending any new transaction.
-  if(!sentState&&before)S=before;
+  if(!sentState&&before)replaceLocalState(before);
   if(PJ.unconfirmed){oldSave();markDirty();}
   else if(PJ.baseline){markDirty();oldSave();}
-  if(PJ.rollbackGames){FISHGAME=PJ.rollbackGames.fish;if(FISHGAME)FISHGAME.state='idle';BG=PJ.rollbackGames.bg;OUTING=PJ.rollbackGames.outing;}closeModal();showError(e);rerender();return false;
+  if(PJ.rollbackGames&&['fishHook','fishScoop','fishStop','outChoose','takeSouv'].includes(tag)){FISHGAME=PJ.rollbackGames.fish;if(FISHGAME)FISHGAME.state='idle';BG=PJ.rollbackGames.bg;OUTING=PJ.rollbackGames.outing;}showError(e);rerender();return false;
  }finally{PJ.busy=false;PJ.messages=null;PJ.modal=null;PJ.depth=0;document.body.classList.remove('pair-action-busy');const status=document.querySelector('.pair-team-status');if(status)status.textContent=PJ.error?'연결 상태 확인':PJ.ready?'공동 지갑 연결됨':'파트너 연결 대기';}
 }
 toast=function(...args){if(PJ.depth&&PJ.messages){PJ.messages.push(args);return;}return oldToast(...args);};
@@ -295,18 +341,24 @@ acctPush=function(force){if(active()){if(PJ.depth)return Promise.resolve(false);
  // No changes to upload: a recently confirmed snapshot is already saved.
  if(!force||Date.now()-PJ.lastServerReadAt<10000)return Promise.resolve(true);
  return enqueue(async()=>{try{const r=await read(true,true);if(!r.unchanged){cache();rerender();}return true;}catch(e){showError(e);return false;}});
- }return transact('profile',()=>{}).then(r=>!!(r&&r.ok));}return oldPush.apply(this,arguments);};
+ }if(PJ.savePromise)return PJ.savePromise;
+ PJ.savePromise=transact('profile',()=>{}).then(r=>!!(r&&r.ok)).finally(()=>{PJ.savePromise=null;});return PJ.savePromise;}return oldPush.apply(this,arguments);};
 function cache(){oldSave();if(typeof accountSyncSetMeta==='function')accountSyncSetMeta({pending:!!PJ.pending.length,error:'',lastSuccess:Date.now()});if(typeof ACCOUNT_SYNC_LAST_SUCCESS!=='undefined')ACCOUNT_SYNC_LAST_SUCCESS=Date.now();}
 const oldSync=syncUp;syncUp=function(force){if(PJ.depth)return Promise.resolve();return oldSync.apply(this,arguments);};
 const xp=gainExp;gainExp=function(n){const result=xp.apply(this,arguments);if(PJ.depth&&!PJ.personal)PJ.sharedXp+=result;return result;};
 for(const name of ['finishPeriod','finishResearch']){const f=window[name];window[name]=function(...args){const old=PJ.personal;PJ.personal=true;try{return f.apply(this,args);}finally{PJ.personal=old;}};}
 for(const [name,key] of [['damageHP','hp'],['damageSN','sn']]){const f=window[name];window[name]=function(n){const old=S[key],r=f.apply(this,arguments);if(PJ.depth&&PJ.groupAward)PJ.loss[key]+=Math.max(0,old-S[key]);return r;};}
-function tick(minutes){
+function calculateTick(){
+ PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.depth++;
+ try{tick(Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Date.now()))/60000)));S.lastReal=Date.now();}
+ finally{PJ.depth--;}
+}
+function tick(minutes,advanceRun=true){
  const absoluteBuffs=clone((S.buffs||[]).filter(b=>b.pairExpiresAt>Date.now())),absoluteMeals={};for(const k of ['eat','dess'])if(S.kit[k]?.pairExpiresAt>Date.now())absoluteMeals[k]=clone(S.kit[k]);
  const tokens={pass:S.pass,tickets:S.wb.tickets,passNext:S.passNext,next:S.wb.next};
  const rate=manaRate,max=maxMana;manaRate=()=>0;maxMana=()=>Number(PJ.snapshot.wallet.mana)+Object.values(PJ.snapshot.meta||{}).reduce((n,v)=>n+Number(v.cap||0),0);
  try{oldStep(minutes);}finally{manaRate=rate;maxMana=max;S.pass=tokens.pass;S.passNext=tokens.passNext;S.wb.tickets=tokens.tickets;S.wb.next=tokens.next;for(const b of absoluteBuffs){S.buffs=S.buffs.filter(x=>!(x.n===b.n&&x.key===b.key));S.buffs.push(b);}Object.assign(S.kit,absoluteMeals);normalizeEffects();}
- if(S.run&&!S.run.done){
+ if(advanceRun&&S.run&&!S.run.done){
   const R=S.run,m=Math.min(R.left,Math.max(0,(Date.now()-(R.lastTick||Date.now()))/60000));
   R.lastTick=Date.now();R.left-=m;R.acc=(R.acc||0)+m;
   const combat=PJ.combat,group=PJ.groupAward;PJ.combat=true;PJ.groupAward=true;
@@ -315,7 +367,7 @@ function tick(minutes){
 }
 function passiveTickThreshold(){
  // Keep urgent gameplay deadlines fast; idle characters need no write every 30s.
- if(S.run&&!S.run.done)return .5;
+ if(S.run&&!S.run.done)return 1;
  let until=PAIR_PASSIVE_TICK_MIN;
  for(const task of [S.lesson,S.study,S.book]){
   if(task&&Number.isFinite(Number(task.left)))until=Math.min(until,Math.max(.1,Number(task.left)));
@@ -328,8 +380,8 @@ step=function(minutes){
  PJ.acc+=Math.max(0,Number(minutes)||0);
  // Browsers throttle background tabs, so real elapsed wall time is also checked.
  const wallElapsed=PJ.clockBasis?Math.max(0,(Date.now()-PJ.clockBasis)/60000):0;
- if(PJ.ready&&Math.max(PJ.acc,wallElapsed)>=passiveTickThreshold()&&!PJ.busy){
-  PJ.acc=0;transact('tick',()=>{});
+ if(PJ.ready&&Math.max(PJ.acc,wallElapsed)>=passiveTickThreshold()&&!PJ.busy&&!PJ.tickQueued&&!cooling()){
+  PJ.acc=0;PJ.tickQueued=true;transact('tick',()=>{}).finally(()=>{PJ.tickQueued=false;});
  }
  if(!PJ.ready)init();
 };
@@ -356,12 +408,14 @@ const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return ol
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
- if(PJ.busy&&active()){oldToast('공동 기록을 반영하고 있습니다. 잠시만 기다려 주세요.');return;}
  const group=/^(takeExam|runQuest|startRun|climbTower|climbGuard)$/.test(name);
  if(!active()){if(group){oldToast('먼저 파트너를 맺어 두 사람이 함께 출발해 주세요.','bad');return;}return f.apply(this,args);}
  if(!PJ.ready){if(['runReturn','runClear'].includes(name)&&S.run){const r=f.apply(this,args);oldSave();oldPush(true);return r;}init();oldToast(PJ.error||'공동 지갑을 연결하고 있습니다. 잠시 후 다시 눌러 주세요.');return;}
+ if(name==='fishCast')return f.apply(this,args);
+ const key=name+JSON.stringify(args.map(a=>a&&typeof a==='object'?null:a));
+ if(PJ.actions.has(key))return PJ.actions.get(key);
  const opt={};if(name==='fishHook'&&FISHGAME?.state==='run'){opt.fishBar=fishBarAt(FISHGAME,performance.now());if(FISHGAME.frame)cancelAnimationFrame(FISHGAME.frame);}
- return transact(name,()=>f.apply(this,args),true,opt);
+ const job=transact(name,()=>f.apply(this,args),true,opt).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
 };}
 for(const n of ['legacyQuestRoom','pairRunHTML']){const f=window[n];if(f)window[n]=function(){return PJ.ready?'':f.apply(this,arguments);};}
 const oldMerge=pairMergeApply;pairMergeApply=function(){return PJ.ready?false:oldMerge.apply(this,arguments);};

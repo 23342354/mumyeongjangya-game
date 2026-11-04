@@ -4,9 +4,12 @@
   "scripts": {
     "test": "node tests/check-files.cjs && node tests/pair-save.cjs",
     "test:browser": "node tests/browser-smoke.cjs",
-    "test:combat": "python3 tests/combat-model.py"
+    "test:combat": "python3 tests/combat-model.py",
+    "test:sql": "node tests/pair-sql.cjs",
+    "test:pair-browser": "node tests/pair-browser.cjs"
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "playwright": "1.62.1",
+    "@electric-sql/pglite": "0.5.15"
   }
 }
