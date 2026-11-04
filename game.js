@@ -1442,7 +1442,7 @@ VIEWS.class=()=>{
       <div class="tiny muted" style="margin-top:5px">Lv ${d.lv+1}까지 ${subjectLessonsLeft(d)}교시 남음 · 이 레벨 총 ${subjectLessonCount(d.lv)}교시</div>
       <div class="tiny muted" style="margin:7px 0 4px">${s.d}</div>
       <div class="quote">${s.q}</div>
-      <div class="row" style="margin-top:8px">
+      <div class="row sub-act">
         <button class="btn sm" onclick="quickLesson('${s.id}')">1교시 듣기 · ${hhmm(subjectLessonMinutes(d))}</button>
         <button class="btn sm ghost" onclick="subjectSyllabus('${s.id}')">강의계획서</button>
         <span class="tiny muted">지식 +${Math.round(lessonReward(s.id).know*(1+mod("know")))}</span>
@@ -1486,7 +1486,7 @@ VIEWS.class=()=>{
     <span class="tiny muted" style="margin-left:12px">필터</span>
     <span class="seg">${["전체",...STATS.map(s=>s.n)].map(x=>`<button class="${CLASSFILTER===x?"on":""}" onclick="setCF('${x}')">${x}</button>`).join("")}</span>
   </div>
-  <div class="grid g2">${subCards}</div>`;
+  <div class="grid sub-grid">${subCards}</div>`;
 };
 function examPlan(){
   const c=COURSES[S.course-1];
