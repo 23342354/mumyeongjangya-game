@@ -13,6 +13,8 @@ const PJ=window.PAIR_PLAY={ready:false,busy:false,depth:0,combat:false,personal:
 const PAIR_POLL_MS=30000;
 const PAIR_PASSIVE_TICK_MIN=2;
 const RUN_BATCH_MIN=5;
+let fishingHook=null,fishingBox=null,fishingBoxKey='',fishingPump=null,fishingRetry=null;
+const fishingClient=crypto.randomUUID?.()||String(Date.now())+'-'+Math.random();let fishingSequence=0;
 function pollInterval(){return S?.run&&!S.run.done?RUN_BATCH_MIN*60000:PAIR_POLL_MS;}
 const oldSave=save,oldPush=acctPush,oldStep=step,oldOffline=offline,oldC=C,personalMax=maxMana,oldToast=toast,oldModal=modal;
 const CLIENT_KEYS=['msgs','chatReset','chatFrom','chatTab','chatMode','chatFilter','dmWith'];
@@ -46,6 +48,7 @@ const LOCAL_TRANSIENT=new Set(['sb','pair','pairShared','pairPersonalRev','pairS
 const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function changes(before,after,path=[],out=[]){
+ if(path.length===2&&path[0]==='balance20'&&path[1]==='lastCast')return out;
  if(!path.length&&(!before||!after))return out;
  if(isObject(before)&&isObject(after)&&!(path.length===1&&path[0]==='run')){
   for(const k of new Set([...Object.keys(before),...Object.keys(after)])){
@@ -106,9 +109,11 @@ function apply(r){
  if(r.solo){if(r.self){Object.assign(S,clone(r.self));delete S.pairShared;delete S.pairPersonalRev;if(S.pair)S.pair.mine=null;PJ.ready=false;PJ.snapshot=null;PJ.peerCache=null;PJ.baseline=null;PJ.pending=[];}return;}
  if(!r.ok){PJ.ready=false;PJ.error=r.message||'공동 기록을 준비하고 있습니다.';return;}
  PJ.snapshot=r;PJ.ready=true;PJ.error='';PJ.failures=0;PJ.retryAt=0;PJ.peerCache=null;PJ.lastServerReadAt=Date.now();PJ.lastPoll=PJ.lastServerReadAt;PJ.clockBasis=Number(r.self?.lastReal)||Date.now();
+ const localCast=Number(S.balance20?.lastCast)||0;
  const keep={};for(const k of ['sb',...CLIENT_KEYS])if(S[k]!==undefined)keep[k]=S[k];
  const pairList={inbox:S.pair?.inbox||[],sent:S.pair?.sent||[],partner:S.pair?.partner||null,at:S.pair?.at||0};
  Object.assign(S,clone(r.self),keep);
+ if(S.balance20)S.balance20.lastCast=Math.max(localCast,Number(S.balance20.lastCast)||0);
  S.pair={...(S.pair||{}),...pairList,mine:r.pair||null};
 
  const w=r.wallet,p=r.progress;
@@ -216,6 +221,10 @@ async function recoverCommit(){
     if(context.tag==='tick'&&context.before){
      replayChanges(changes(pending.base,context.before));
      context={tag:'tick',before:compactSave()};calculateTick();
+    }else if(context.tag==='fishReward'&&context.fishEvents){
+     replayChanges(changes(pending.base,context.before));
+     context={...context,before:compactSave()};PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.depth++;
+     try{tick(Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Date.now()))/60000)),false);for(const event of context.fishEvents)replayFish(event);S.lastReal=Date.now();}finally{PJ.depth--;}
     }else replayChanges(changes(pending.base,pending.args.p_save));
     if(later.length)replayChanges(later);
    }
@@ -223,7 +232,7 @@ async function recoverCommit(){
    // Keep the original shared XP, buffs and damage when an unconfirmed
    // action is rebased. A generic profile flush must not discard them.
    pending={base:clone(PJ.baseline),context,args:{...pending.args,
-    ...(context.tag==='tick'?{p_xp:PJ.sharedXp,p_loss:PJ.loss}:{}),p_revision:r.revision,
+    ...(['tick','fishReward'].includes(context.tag)?{p_xp:PJ.sharedXp,p_loss:PJ.loss}:{}),p_revision:r.revision,
     p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),
     p_save:compactSave(),p_wallet:wallet(),p_progress:progress(),p_meta:metadata()}};
    rememberCommit(pending);later=[];continue;
@@ -266,13 +275,13 @@ async function init(){
     oldToast(warning,'bad');
    }
    if(didChange)rerender();
-  }catch(e){showError(e);}finally{PJ.busy=false;PJ.initQueued=false;}
+  }catch(e){showError(e);}finally{PJ.busy=false;PJ.initQueued=false;if(PJ.ready)pumpFishing();}
  });
 }
 function isGroup(tag){return /^(takeExam|examPractice|climbTower|climbGuard|startRun|runQuest|runReturn|runClear|endRun|hitBoss|arenaGo)$/.test(tag);}
 async function transact(tag,fn,queue=true,options={}){
  if(queue)return enqueue(()=>transact(tag,fn,false,options));
- if(cooling()){if(!['tick','profile','offline'].includes(tag))oldToast('서버 저장을 다시 연결하고 있습니다. 잠시 후 다시 눌러 주세요.','bad');return false;}
+ if(cooling()){if(!['tick','profile','offline','fishReward'].includes(tag))oldToast('서버 저장을 다시 연결하고 있습니다. 잠시 후 다시 눌러 주세요.','bad');return false;}
  PJ.busy=true;document.body.classList.add('pair-action-busy');let before=null,dirtyLocal=null,sentState=null,transactionBase=null;
  try{
   await recoverCommit();
@@ -305,7 +314,7 @@ async function transact(tag,fn,queue=true,options={}){
   sentState=clone(S);
   let r;
   for(let attempt=0;attempt<2;attempt++){
-   r=await sendCommit(args,transactionBase,{tag,before:tag==='tick'?compactSave(before):undefined});
+   r=await sendCommit(args,transactionBase,{tag,before:['tick','fishReward'].includes(tag)?compactSave(before):undefined,fishEvents:options.fishEvents});
    if(!r.conflict)break;
    // Rebase the computed result; do not rerun combat, rewards or random rolls.
    const local=clone(S),delta=changes(transactionBase,local);
@@ -313,12 +322,15 @@ async function transact(tag,fn,queue=true,options={}){
    try{
     if(tag==='tick'){
      replayChanges(changes(transactionBase,before));before=clone(S);calculateTick();
+    }else if(tag==='fishReward'){
+     replayChanges(changes(transactionBase,before));before=clone(S);PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.depth++;
+     try{tick(Math.min(1440,Math.max(0,(Date.now()-(Number(PJ.clockBasis)||Date.now()))/60000)),false);fn();S.lastReal=Date.now();}finally{PJ.depth--;}
     }else replayChanges(delta);
    }catch(e){backupOnFailure(e.message,local);throw e;}
    transactionBase=clone(PJ.baseline);
    sentState=clone(S);
    Object.assign(args,{p_revision:r.revision,p_request:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),p_save:compactSave(),p_wallet:wallet(),p_progress:progress(),p_meta:metadata(),p_xp:PJ.sharedXp,p_loss:PJ.loss});
-   if(attempt===1){rememberCommit({args:clone(args),base:clone(transactionBase),context:{tag,before:tag==='tick'?compactSave(before):undefined}});markDirty();const e=Error('공동 기록 갱신이 몰려 잠시 후 저장을 다시 시도합니다.');e.code='55P03';throw e;}
+   if(attempt===1){rememberCommit({args:clone(args),base:clone(transactionBase),context:{tag,before:['tick','fishReward'].includes(tag)?compactSave(before):undefined,fishEvents:options.fishEvents}});markDirty();const e=Error('공동 기록 갱신이 몰려 잠시 후 저장을 다시 시도합니다.');e.code='55P03';throw e;}
   }
   const laterChanges=changes(sentState,S);
   apply(r);PJ.pending=[];PJ.acc=0;
@@ -426,19 +438,108 @@ const oldTop=renderTop;renderTop=function(){oldTop.apply(this,arguments);if(PJ.r
 const oldRecord=myRecord;myRecord=function(){const r=oldRecord();if(PJ.ready){r.pair_id=PJ.snapshot.pairId;r.pair_name=[S.name,PJ.snapshot.peer.name].sort().join(' · ');}return r;};
 const oldRentTick=pairRentTick;pairRentTick=function(){return active()?true:oldRentTick.apply(this,arguments);};
 const oldRent=payPairRent;payPairRent=function(automatic){if(!active())return oldRent.apply(this,arguments);return enqueue(async()=>{try{await recoverCommit();markDirty();if(PJ.pending.length){const saved=await transact('profile',()=>{},false);if(!saved)return false;}await read();const r=await rpc('rent',{p_revision:PJ.snapshot.revision,p_request:crypto.randomUUID()});if(r.conflict)throw Error('일세 정산 중 파트너의 공동 잔액이 변경되었습니다. 다시 시도해 주세요.');if(!r?.ok)throw Error(r?.message||'일세 저장 확인 실패');apply(r);cache();rerender();return true;}catch(e){showError(e);return false;}});};
+// Fishing input is local. Only confirmed rewards pass through the shared queue.
+// Each successful click has a durable ID and a fixed roll for safe replay.
+function fishingKey(){return 'mmjy_pair_fishing_v1_'+String(ACCT.id)+'_'+String(S.pairShared||S.pair?.mine?.id||PJ.snapshot?.pairId||'');}
+function fishingData(){
+ const key=fishingKey();
+ if(fishingBoxKey!==key){
+  fishingBoxKey=key;fishingBox={lastCast:0,events:[]};
+  try{const stored=JSON.parse(localStorage.getItem(key)||'null');if(stored&&Array.isArray(stored.events))fishingBox=stored;}catch(_){}
+ }
+ PJ.fishingPending=fishingBox.events.length;return fishingBox;
+}
+function storeFishing(next){
+ try{localStorage.setItem(fishingKey(),JSON.stringify(next));fishingBox=next;PJ.fishingPending=next.events.length;return true;}
+ catch(_){oldToast('어획 기록을 기기에 보관하지 못했습니다. 저장 공간을 확인해 주세요.','bad');return false;}
+}
+function fishingStatus(){
+ if(!active())return;
+ const box=fishingData(),host=document.querySelector('#modalroot .mbody');if(!host)return;
+ let label=document.getElementById('pair-fishing-save-status');
+ if(!label){host.insertAdjacentHTML('beforeend','<div class="tiny muted" id="pair-fishing-save-status" role="status" style="margin-top:8px"></div>');label=document.getElementById('pair-fishing-save-status');}
+ const count=document.getElementById('balance-fish-count');if(count)count.textContent=`오늘 어획 보상 ${S.balance20?.fish||0}/${window.BALANCE20?.fishDaily||60} · 던지기 간격 ${window.BALANCE20?.castSeconds||10}초`;
+ if(label)label.textContent=box.events.length?`어획 ${box.events.length}건 저장 대기 · 낚시는 계속할 수 있습니다.`:PJ.ready?'어획 기록 저장 완료':'서버 연결 대기 · 낚시는 계속할 수 있습니다.';
+}
+function hasFishReceipt(event,state=S){return Number(state.pairFishingReceipts?.[event.client]||0)>=event.seq;}
+function replayFish(event){
+ if(Number(event.pairId)!==Number(S.pairShared||PJ.snapshot?.pairId))throw Error('이전 페어의 어획 기록을 보관 중입니다. 연결 상태를 확인해 주세요.');
+ if(hasFishReceipt(event))return;
+ const live=FISHGAME,bar=fishBarAt,draw=drawFish2,get=document.getElementById,random=Math.random;
+ const top=renderTop,main=renderMain,nav=renderNav;let seed=event.seed>>>0;
+ const sink={innerHTML:'',textContent:''};
+ try{
+  FISHGAME={...event.game,state:'run',frame:null};fishBarAt=()=>event.bar;drawFish2=()=>{};
+  renderTop=renderMain=renderNav=()=>{};
+  document.getElementById=function(id){if(id==='fres'||id==='balance-fish-count')return sink;if(id.startsWith('life-'))return null;return get.call(document,id);};
+  Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  fishingHook();
+  S.pairFishingReceipts={...(S.pairFishingReceipts||{}),[event.client]:event.seq};
+ }finally{
+  FISHGAME=live;fishBarAt=bar;drawFish2=draw;document.getElementById=get;Math.random=random;
+  renderTop=top;renderMain=main;renderNav=nav;
+ }
+}
+function retryFishing(){
+ clearTimeout(fishingRetry);
+ fishingRetry=setTimeout(()=>{fishingRetry=null;pumpFishing();},Math.max(1000,PJ.retryAt-Date.now()+250));
+}
+function pumpFishing(){
+ if(fishingPump||!active()||!PJ.ready||!fishingHook)return fishingPump;
+ const box=fishingData();if(!box.events.length)return;
+ if(cooling()){retryFishing();return;}
+ const key=fishingKey(),batch=box.events.slice(0,10);
+ fishingPump=enqueue(()=>key===fishingKey()?transact('fishReward',()=>{for(const e of batch)replayFish(e);},false,{fishEvents:batch}):false).then(r=>{
+  if(key!==fishingKey())return;
+  if(r?.ok){
+   const current=fishingData();
+   if(!storeFishing({...current,events:current.events.filter(e=>!hasFishReceipt(e,r.self||{}))}))return;
+  }
+ }).catch(e=>showError(e)).finally(()=>{
+  fishingPump=null;fishingStatus();if(active()&&fishingData().events.length)retryFishing();
+ });
+ return fishingPump;
+}
+function hookFishingNow(){
+ const F=FISHGAME;if(!F||F.state!=='run')return;
+ const box=fishingData(),bar=fishBarAt(F,performance.now());
+ const hit=bar>=F.target&&bar<=F.target+16;
+ const reserved=box.events.filter(e=>e.day===S.balance20?.day&&!hasFishReceipt(e)).length;
+ const practice=Number(S.balance20?.fish||0)+reserved>=Number(window.BALANCE20?.fishDaily||60);
+ if(!hit||practice){
+  const originalBar=fishBarAt,count=S.balance20?.fish;
+  try{fishBarAt=()=>bar;if(practice&&S.balance20)S.balance20.fish=Number(window.BALANCE20?.fishDaily||60);return fishingHook();}
+  finally{fishBarAt=originalBar;if(practice&&S.balance20)S.balance20.fish=count;fishingStatus();}
+ }
+ const event={client:fishingClient,seq:++fishingSequence,id:crypto.randomUUID?.()||ACCT.id+'-'+Date.now()+'-'+Math.random(),pairId:S.pairShared||S.pair?.mine?.id,day:S.balance20?.day,at:Date.now(),seed:Math.floor(Math.random()*4294967296),bar,game:{...F,frame:null}};
+ if(!storeFishing({...box,events:[...box.events,event]}))return;
+ F.state='idle';if(F.frame)cancelAnimationFrame(F.frame);F.frame=null;
+ drawFish2();const result=document.getElementById('fres');
+ if(result)result.innerHTML='<div class="sub tiny">챔질 성공 · 어획 기록을 보관했습니다. 보상은 서버 저장 확인 후 반영됩니다.</div>';
+ fishingStatus();pumpFishing();
+ return {queued:true,id:event.id};
+}
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
 const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto'];
-for(const name of actions){const f=window[name];if(typeof f!=='function')continue;window[name]=function(...args){
+for(const name of actions){const f=window[name];if(typeof f!=='function')continue;if(name==='fishHook')fishingHook=f;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
  const group=/^(takeExam|runQuest|startRun|climbTower|climbGuard)$/.test(name);
  if(!active()){if(group){oldToast('먼저 파트너를 맺어 두 사람이 함께 출발해 주세요.','bad');return;}return f.apply(this,args);}
+ if(name==='fishCast'){
+  if(!PJ.ready)init();
+  const box=fishingData();if(S.balance20)S.balance20.lastCast=Math.max(Number(S.balance20.lastCast)||0,box.lastCast||0);
+  const was=FISHGAME?.state,result=f.apply(this,args);
+  if(was!=='run'&&FISHGAME?.state==='run')storeFishing({...box,lastCast:Number(S.balance20?.lastCast)||Date.now()});
+  fishingStatus();return result;
+ }
+ if(name==='fishHook'){if(!PJ.ready)init();return hookFishingNow();}
  if(!PJ.ready){if(['runReturn','runClear'].includes(name)&&S.run){const r=f.apply(this,args);oldSave();oldPush(true);return r;}init();oldToast(PJ.error||'공동 지갑을 연결하고 있습니다. 잠시 후 다시 눌러 주세요.');return;}
- if(name==='fishCast')return f.apply(this,args);
  const key=name+JSON.stringify(args.map(a=>a&&typeof a==='object'?null:a));
  if(PJ.actions.has(key))return PJ.actions.get(key);
- const opt={};if(name==='fishHook'&&FISHGAME?.state==='run'){opt.fishBar=fishBarAt(FISHGAME,performance.now());if(FISHGAME.frame)cancelAnimationFrame(FISHGAME.frame);}
- const job=transact(name,()=>f.apply(this,args),true,opt).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
+ const job=transact(name,()=>f.apply(this,args),true).finally(()=>PJ.actions.delete(key));PJ.actions.set(key,job);return job;
 };}
+const drawFishing=drawFish2;drawFish2=function(){const result=drawFishing.apply(this,arguments);fishingStatus();return result;};
+PJ.flushFishing=()=>pumpFishing();
 for(const n of ['legacyQuestRoom','pairRunHTML']){const f=window[n];if(f)window[n]=function(){return PJ.ready?'':f.apply(this,arguments);};}
 const oldMerge=pairMergeApply;pairMergeApply=function(){return PJ.ready?false:oldMerge.apply(this,arguments);};
 const oldPanel=coopRoomPanel;coopRoomPanel=function(kind){return active()?'<div class="card pad tiny muted" style="margin-top:12px">페어 자동 동행으로 진행합니다. 별도 합동방 모집 없이 바로 출발할 수 있습니다.</div>':oldPanel.apply(this,arguments);};

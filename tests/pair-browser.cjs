@@ -13,17 +13,17 @@ const root=path.resolve(__dirname,'..');
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,headless:true,args:['--no-sandbox','--disable-gpu','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
  const context=await browser.newContext();await context.addInitScript(()=>{window.setInterval=()=>1;});
- let hold=null,notify=null,timeout=false,commitCalls=0;
+ let hold=null,notify=null,timeout=false,commitCalls=0,dropReplies=0;
  await context.route('**/*',async route=>{
   const request=route.request(),url=request.url();
   if(url.includes('/rpc/pair_play')){
    const a=request.postDataJSON();if(a.p_action==='commit'){commitCalls++;if(timeout)return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:'57014',message:'canceling statement due to statement timeout'})});if(hold){const gate=hold;hold=null;notify();await gate;}}
-   try{const out=await db.query(`select pair_play($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) as r`,[a.p_user,a.p_token,a.p_action,a.p_revision||0,a.p_request||'',a.p_save||null,a.p_wallet||null,a.p_progress||null,a.p_xp||0,a.p_meta||{},a.p_effects||{},a.p_loss||{}]);return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(out.rows[0].r)});}catch(e){return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:e.code,message:e.message})});}
+   try{const out=await db.query(`select pair_play($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) as r`,[a.p_user,a.p_token,a.p_action,a.p_revision||0,a.p_request||'',a.p_save||null,a.p_wallet||null,a.p_progress||null,a.p_xp||0,a.p_meta||{},a.p_effects||{},a.p_loss||{}]);if(a.p_action==='commit'&&dropReplies>0){dropReplies--;return route.abort('failed');}return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(out.rows[0].r)});}catch(e){return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:e.code,message:e.message})});}
   }
   if(url.startsWith('http://127.0.0.1:'))return route.continue();
   return route.fulfill({status:200,contentType:request.resourceType()==='stylesheet'?'text/css':'application/json',body:request.resourceType()==='stylesheet'?'':'[]'});
  });
- const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`http://127.0.0.1:${server.address().port}/`);
+ let page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`http://127.0.0.1:${server.address().port}/`);
  const seed=await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='';MMJY_CONFIG.supabaseKey='';S=newState();S.made=true;S.name='Alice';S.t=nowMin();S.dayStamp=cal().day;boot();S.farm.seeds[FARM_NORMALS[0].id]=2;return JSON.parse(JSON.stringify(S));});
  for(const id of ['alice','bob'])await db.query('insert into accounts(id,pw,save,name) values($1,$2,$3,$1)',[id,'secret',seed]);
  await db.exec(`insert into pairs values(1,'alice','bob','accepted',0)`);
@@ -31,14 +31,26 @@ const root=path.resolve(__dirname,'..');
  assert.equal(await page.evaluate(()=>PAIR_PLAY.ready),true);
  await page.evaluate(async()=>{await startRun(1,false,10);});
  assert.equal(await page.evaluate(()=>!!S.run&&!S.run.done),true,'real quest is active');
+ const hook=async()=>{await page.evaluate(()=>{FISHGAME.spd=1;FISHGAME.target=45;FISHGAME.started=performance.now()-53000;});await page.locator('button[onpointerdown^="fishHook"]').click();};
+ const recast=async()=>{await page.evaluate(()=>{if(!window.realFishingNow){window.realFishingNow=Date.now;window.fishingOffset=0;Date.now=()=>window.realFishingNow()+window.fishingOffset;}window.fishingOffset+=11000;fishCast();});};
  // Delay a real PostgreSQL-backed commit while UI actions are entered.
  let release;hold=new Promise(r=>release=r);const entered=new Promise(r=>notify=r);
  await page.evaluate(()=>{S.bio='pending background save';save();window.delayed=acctPush(true);});await entered;
  await page.evaluate(()=>{window.lessonJob=startLesson(0);window.studyJob=startStudy('r1');window.farmJob=plant(0,FARM_NORMALS[0].id);openFish();fishCast();});
  assert.equal(await page.evaluate(()=>FISHGAME.state),'run','fishing works while quest save waits');
  assert.equal(await page.locator('#modalroot button').first().evaluate(el=>getComputedStyle(el).pointerEvents),'auto','modal buttons are not globally locked');
+ // The exact bug: a successful hook must return to idle while the
+ // unrelated server commit is still held, and another cast must be possible.
+ await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle','hook resolves before any server response');
+ assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),1);
+ await page.evaluate(()=>fishCast());assert.equal(await page.evaluate(()=>FISHGAME.state),'idle','normal ten-second cast cooldown remains');
+ await recast();assert.equal(await page.evaluate(()=>FISHGAME.state),'run','second cast does not wait for reward persistence');
+ await hook();assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),2);
+ await recast();assert.equal(await page.evaluate(()=>FISHGAME.state),'run');
  await page.evaluate(()=>{chatRows([{id:777,tab:'전체',scope:'',from_id:'bob',who:'Bob',body:'새 채팅',created_at:new Date().toISOString(),mode:'RP'}]);});
  release();await page.evaluate(async()=>{await Promise.all([window.delayed,window.lessonJob,window.studyJob,window.farmJob]);});
+ await page.waitForFunction(()=>PAIR_PLAY.fishingPending===0);
+ assert.equal(await page.evaluate(()=>S.balance20.fish),2,'two queued catches are credited once each');
  const activities=await page.evaluate(()=>({run:!!S.run&&!S.run.done,lesson:!!S.lesson,study:!!S.study,msg:S.msgs.some(m=>m.sid===777),fish:FISHGAME?.state,farm:!!S.farm.plots[0]}));
  assert.deepEqual(activities,{run:true,lesson:true,study:true,msg:true,fish:'run',farm:true});
  // Check the real combat implementation, not just the scheduler fixture.
@@ -61,6 +73,26 @@ const root=path.resolve(__dirname,'..');
  assert.equal(await page.evaluate(()=>S.msgs.some(m=>m.sid===777)),true);
  timeout=false;await page.evaluate(async()=>{PAIR_PLAY.retryAt=0;await acctPush(true);});
  assert.equal(await page.evaluate(()=>S.msgs.some(m=>m.sid===777)),true);
- assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown recovery and five-minute combat checkpoints');
+ // Persist a real catch, lose its response, then close/reopen the page.
+ // The durable click must recover without awarding that catch a second time.
+ dropReplies=1;await hook();
+ assert.equal(await page.evaluate(()=>FISHGAME.state),'idle');
+ await page.waitForFunction(()=>PAIR_PLAY.fishingPending>0&&PAIR_PLAY.retryAt>Date.now());
+ const credited=(await db.query("select (save#>>'{balance20,fish}')::int as n from accounts where id='alice'")).rows[0].n;
+ assert.equal(credited,3,'third catch committed despite response loss');
+ timeout=true;await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(`http://127.0.0.1:${server.address().port}/`);
+ await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='https://pair.test';MMJY_CONFIG.supabaseKey='mock';ACCT={id:'alice',tok:'secret'};S=JSON.parse(localStorage.getItem(SAVEKEY));window.realFishingNow=Date.now;window.fishingOffset=60000;Date.now=()=>window.realFishingNow()+window.fishingOffset;boot();openFish();});
+ await recast();assert.equal(await page.evaluate(()=>FISHGAME.state),'run','cast also works before server reconnection');
+ await page.evaluate(async()=>{await PAIR_PLAY.queue;});
+ timeout=false;await page.evaluate(async()=>{PAIR_PLAY.retryAt=0;await PAIR_PLAY.refresh();await PAIR_PLAY.flushFishing();});
+ await page.waitForFunction(()=>PAIR_PLAY.fishingPending===0);
+ assert.equal((await db.query("select (save#>>'{balance20,fish}')::int as n from accounts where id='alice'")).rows[0].n,credited,'reload recovery does not duplicate the catch');
+ assert.equal(await page.evaluate(()=>FISHGAME.state),'run','catch recovery never resets the current cast');
+ await db.query("update accounts set save=jsonb_set(save,'{balance20,fish}','60'),pair_play_rev=pair_play_rev+1 where id='alice'");
+ await page.evaluate(async()=>{await PAIR_PLAY.refresh();});const atLimit=commitCalls;
+ await hook();assert.equal(await page.evaluate(()=>FISHGAME.state),'idle');
+ assert.equal(await page.evaluate(()=>S.balance20.fish),60);assert.equal(await page.evaluate(()=>PAIR_PLAY.fishingPending),0);
+ assert.equal(commitCalls,atLimit,'daily-cap practice needs no reward save');
+ assert.deepEqual(errors,[]);console.log('PASS: real browser + PostgreSQL-backed quest, simultaneous lesson/research/fishing/farm, delayed save, incoming chat, timeout cooldown recovery, five-minute combat checkpoints, immediate hooks, durable fishing outbox and reload deduplication');
  }finally{await browser.close();server.close();await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
