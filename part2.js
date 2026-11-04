@@ -211,7 +211,7 @@ function ensureV2(){
   });
   d("mat",{가루:120,약초:0,어물:0,열매:0,뿌리:0,꽃:0,혼백:0});
   d("tower",0); d("tower2",0);
-  d("wb",{dmg:0,tickets:3,next:300,total:6160000000,week:0,boss:0,rank:0});
+  d("wb",{dmg:0,tickets:3,next:300,total:0,week:0,boss:0,rank:0});
   d("arena",{round:1,best:0,cool:0});
   d("farm",{plots:Array.from({length:9},()=>null),skill:1,exp:0,fert:3,order:null,done:0});
   d("fish",{skill:1,exp:0,cool:0,catches:{}});
@@ -297,7 +297,7 @@ power=function(){ return _power()+gearPower(); };
 function mkGear(lv,gradeHint,fromLoot=false){
   const slot=pick(SLOTS);
   let g=gradeHint!==undefined?gradeHint:(()=> {
-    const r=Math.random()*100*(1+mod("loot"));
+    const r=Math.random()*100;
     return r>97?4:r>88?3:r>70?2:r>44?1:0; })();
   g=clamp(g,0,4);
   if(fromLoot&&gradeHint===undefined&&g<4&&Math.random()<lootQualityChance()) g++;
@@ -307,7 +307,7 @@ function mkGear(lv,gradeHint,fromLoot=false){
   const pool=[...OPTS].sort(()=>Math.random()-.5).slice(0,G.opt);
   pool.forEach(o=>opts.push({k:o.k,n:o.n,v:+(rnd(o.v[0]*10,o.v[1]*10)/10*(1+g*.12)).toFixed(1)}));
   return {id:S.gid++, slot:slot.k, name:`${pick(PREFIX)} ${pick(GEARWORD[slot.k])}`,
-    grade:g, lv:Math.max(1,lv), enh:0, main:{st:slot.st,v:base}, opts, isNew:true};
+    grade:g, lv:Math.max(1,Math.min(lv,S.lvl)), enh:0, main:{st:slot.st,v:base}, opts, isNew:true};
 }
 function gearScore(it){
   let p=it.main.v*900+it.enh*210*GRADES[it.grade].m;
@@ -614,7 +614,7 @@ step=function(m){
   // 월드 보스 도전권
   S.wb.next-=m;
   if(S.wb.next<=0){ if(S.wb.tickets<3){ S.wb.tickets++; toast("업귀 토벌 도전권이 1장 충전되었습니다."); } S.wb.next=300; }
-  S.wb.total+=Math.round(m*rnd(900000,2400000)/60);
+
   // 모임 축복
   if(S.club&&S.club.blessed>0) S.club.blessed=Math.max(0,S.club.blessed-m);
   // 연무제 쿨
@@ -932,7 +932,7 @@ function climbTower(chain){
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
-  if(gained){ gainRin(rin); S.sari+=sari; drops.forEach(d=>S.bag.push(d)); gainExp(260*gained); addMark(6*Math.min(5,gained)); }
+  if(gained){ gainRin(rin); S.sari+=sari; drops.forEach(d=>balanceStoreLoot(d)); gainExp(260*gained); addMark(6*Math.min(5,gained)); }
   damageHP(rnd(4,14)); damageSN(rnd(3,10));
   modal("석탑",`
     <div class="log">${logs.join("<br>")}</div>
@@ -991,7 +991,7 @@ function climbGuard(chain){
     if(fl%10===0) S.lotus+=3;
     if(!chain) break;
   }
-  if(gained){ gainRin(rin); drops.forEach(d=>S.bag.push(d)); gainExp(220*gained); addMark(6*Math.min(5,gained)); }
+  if(gained){ gainRin(rin); drops.forEach(d=>balanceStoreLoot(d)); gainExp(220*gained); addMark(6*Math.min(5,gained)); }
   damageHP(rnd(5,16));
   modal("결계의 탑",`<div class="log">${logs.join("<br>")}</div>
     <div class="card pad" style="margin-top:12px"><div class="tiny" style="color:${gained?"var(--jade)":"var(--red)"}">
@@ -1128,12 +1128,12 @@ function arenaGo(mode){
     S.arena.round++; S.arena.best=Math.max(S.arena.best,r);
     const rin=gainRin((900+r*520)*sn), ex=gainExp((500+r*240)*sn);
     S.lotus+=1; addMark(10);
-    const drop=mkGear(Math.round(r*4+S.lvl*.4+sn*20),undefined,true); S.bag.push(drop);
+    const drop=mkGear(Math.round(r*4+S.lvl*.4+sn*20),undefined,true); balanceStoreLoot(drop);
     rew=`륜 +${nf(rin)} · 경험치 +${nf(ex)} · 연등 +1 · 법구 「${drop.name}」`;
     if(S.arena.round>15){
       S.arena.season=sn+1; S.arena.round=1;
       S.lotus+=30; S.sari+=10;
-      const prize=mkGear(Math.round(S.lvl+sn*24), 4); S.bag.push(prize);
+      const prize=mkGear(Math.round(S.lvl+sn*24), 4); balanceStoreLoot(prize,true);
       rew+=`<br><b style="color:var(--gold)">${sn}회 연무제 완주 · 연등 +30 · 사리 +10 · 전설 법구 「${prize.name}」</b><br>${sn+1}회 연무제가 열립니다. 상대가 한층 강해집니다.`;
     }
   }

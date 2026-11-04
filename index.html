@@ -2120,7 +2120,7 @@ VIEWS.research=()=>{
 };
 function effText(r,lv){
   if(lv===0) return "없음";
-  const m={r1:["파장 재생",6],r2:["파장 한도","+"+lv*3+"시간분"],r3:["수업 효율",2],r4:["공격력",4],r5:["생명력",4],
+  const m={r1:["파장 재생",6],r2:["파장 한도","+"+lv*4+"시간분"],r3:["수업 효율",2],r4:["공격력",4],r5:["생명력",4],
     r6:["륜 획득",4],r7:["지식 획득",4],r8:["경험치",4],r9:["전리품 확률",2.5],r10:["공명 배율","+"+(lv*.1).toFixed(1)],
     r11:["가방 칸","+"+lv*5],r12:["강화 성공률",3],r13:["공격·생명력",2]}[r.id];
   if(typeof m[1]==="string") return `${m[0]} ${m[1]}`;
@@ -2584,7 +2584,7 @@ VIEWS.exam=()=>{
     <div class="card pad">
       <div class="page-kicker">${S.course}과정</div>
       <h3 style="margin:2px 0 8px;font-size:19px">${S.course}과정 승급 · ${c.n}</h3>
-      <div class="tiny muted">대련 상대: ${["잔류 파장체","폭주한 마무기","영혼 밀매 조직원","개조 의체 괴한","업귀","마녀의 사역물","무명의 업귀"][S.course-1]} (의뢰 ${S.course*8}단계 보스급) · 과제: 10턴 안에 쓰러뜨리기</div>
+      <div class="tiny muted">대련 상대: ${["잔류 파장체","폭주한 마무기","영혼 밀매 조직원","개조 의체 괴한","업귀","마녀의 사역물","무명의 업귀"][S.course-1]} (과정별 모의 대련) · 과제: 10턴 안에 쓰러뜨리기</div>
       <hr class="hr">
       <div class="sect-t">시험 과목</div>
       ${c.subs.map(id=>{const s=SUBJECTS.find(x=>x.id===id), d=S.sub[id];
@@ -2635,7 +2635,7 @@ function rest(){
   renderTop(); renderNav(); renderMain(); save();
 }
 function examPractice(){
-  const me=meFighter(); const foe=enemyFor(S.course*8,true);
+  const me=meFighter(); const foe=examOpponent();
   const res=simBattle(me,[],[foe],10);
   modal("대련 연습",`<div class="tiny muted" style="margin-bottom:8px">연습 결과는 기록되지 않으며 체력·이성에도 반영되지 않습니다.</div>
     <div class="log">${res.log.join("<br>")}</div>
@@ -2645,8 +2645,9 @@ function examPractice(){
 }
 function takeExam(){
   if(!examReady()){ toast("응시 자격이 충족되지 않았습니다.","bad"); return; }
+  const examCourse=S.course;
   const sc=examScore();
-  const me=meFighter(); const foe=enemyFor(S.course*8,true);
+  const me=meFighter(); const foe=examOpponent();
   const res=simBattle(me,[],[foe],10);
   const duel = res.win ? 31.9 : 31.9*clamp(1-foe.hp/foe.max,0,1)*0.7;
   const total=sc.theory+duel;
@@ -2662,8 +2663,8 @@ function takeExam(){
     if(g==="S"&&!S.titleUnlock) { S.titleUnlock=true; }
     S.course=Math.min(7,S.course+1);
     gainExp(1200*S.course);
-    rewardTxt=`연등 +${lo} · 사리 +${sa} · 륜 +${nf(rin)} · <b>${S.course}과정으로 승급</b>`;
-    pushNews(`[수석 진급] ${S.name} 학생이 ${S.course-1}과정 시험을 ${g}등급(${total.toFixed(0)}점)으로 통과하고 ${S.course}과정으로 진급했습니다.`);
+    rewardTxt=`연등 +${lo} · 사리 +${sa} · 륜 +${nf(rin)} · <b>${examCourse===7?"전 과정 수료":S.course+"과정으로 승급"}</b>`;
+    pushNews(`[수석 진급] ${S.name} 학생이 ${examCourse}과정 시험을 ${g}등급(${total.toFixed(0)}점)으로 통과하고 ${examCourse===7?"전 과정을 수료했습니다.":S.course+"과정으로 진급했습니다."}`);
   }
   modal("승급 시험 결과",`
     <div style="text-align:center;padding:6px 0 10px">
@@ -3666,11 +3667,11 @@ else setTimeout(()=>init(),0);
 </script>
 <script src="config.js?v=20261104-login-restore1"></script>
 <script src="notifications.js"></script>
-<script src="part2.js"></script>
-<script src="part3.js"></script>
+<script src="part2.js?v=20261104-balance20-1"></script>
+<script src="part3.js?v=20261104-balance20-1"></script>
 <script src="part4.js"></script>
 <script src="part5.js"></script>
-<script src="part6.js?v=20261103-pair-chat-recovery1"></script>
+<script src="part6.js?v=20261104-balance20-1"></script>
 <script src="part7.js?v=20261104-login-restore1"></script>
 <script src="social.js"></script>
 <script src="part8.js?v=20261103-pairthread-unlimited1"></script>
@@ -3684,5 +3685,6 @@ else setTimeout(()=>init(),0);
 <script src="part14.js?v=20261104-novel-layout-fix1"></script>
 <script src="pixel-scenes.js?v=20261104-simple2"></script>
 <script src="pixel-life.js?v=20261104-simple2"></script>
+<script src="balance20.js?v=20261104-1"></script>
 </body>
 </html>

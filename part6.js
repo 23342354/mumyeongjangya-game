@@ -84,7 +84,7 @@ function syncRoster(force){
   S.sb.rosterAt=now;
   sbGet("students?select=*&order=power.desc&limit=200")
     .then(rows=>{ S.sb.roster=rows||[]; S.sb.state="ok"; S.sb.err="";
-      if(["roster","rank","hallv"].includes(VIEW)) renderMain(); save(); })
+      if(["roster","rank","hallv","wboss"].includes(VIEW)) renderMain(); save(); })
     .catch(sbErr);
 }
 /* ─── 방 목록 ─── */

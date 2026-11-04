@@ -343,7 +343,7 @@ function runStep(){
     pushRun(`<span class="d">${esc(foe.n)}을(를) 쓰러뜨렸다.</span> <span class="s">륜 +${nf(got)} · 경험치 +${nf(exg)} · 지식 +${nf(kng)}</span>`);
     if(foe.boss){ ct("boss"); }
     if(Math.random()<(0.14+mod("loot"))){
-      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); S.bag.push(it);
+      const it=mkGear(Math.round(R.stage*1.2+S.lvl*.3),undefined,true); balanceStoreLoot(it);
       pushRun(`<span class="s">${GRADES[it.grade].n} 법구 「${esc(it.name)}」를 주웠다.</span>`);
     }
     if(Math.random()<0.18){ const dd=rnd(1,3)+Math.floor(R.stage/12); S.mat.가루+=dd;
@@ -356,7 +356,7 @@ function endRun(ok){
   const R=S.run; if(!R||R.done) return;
   R.done=true;
   const q=R.q;
-  const cleared=ok&&(R.stage%10!==0||R.left<=0); // 관문은 끝까지 버틴 뒤에만 통과
+  const cleared=ok&&R.left<=0&&R.kills>0; // 관문은 끝까지 버틴 뒤에만 통과
   let hpL=rnd(q.rank.hp[0],q.rank.hp[1]), snL=rnd(q.rank.sn[0],q.rank.sn[1]);
   if(R.pos==="선봉") hpL=Math.round(hpL*1.1);
   if(R.pos==="지원"){ hpL=Math.round(hpL*.8); snL=Math.round(snL*.8); }
@@ -378,7 +378,7 @@ function endRun(ok){
   }
   pushRun(`<span class="turn">정산 · 처치 ${R.kills}체 · 륜 ${nf(R.rin||0)}${rin?` +해결 ${nf(rin)}`:""} · 경험치 ${nf(R.exp||0)}${ex?` +해결 ${nf(ex)}`:""} · 지식 ${nf(R.know||0)} · 체력 −${hpL} · 이성 −${snL}</span>`);
   pushRun(cleared?`<span class="s">■ 의뢰를 해결하고 사무전으로 돌아왔다.</span>`
-    :ok?`<span class="turn">■ 관문 도중 귀환했다. 모은 몫만 정산되며 다음 구간은 열리지 않는다.</span>`
+    :ok?`<span class="turn">■ 의뢰 도중 귀환했다. 모은 몫만 정산되며 다음 구간은 열리지 않는다.</span>`
     :`<span class="h">■ 더 버티지 못하고 현장에서 철수했다.</span>`);
   S.quests.log.unshift({no:q.no,t:q.t,win:cleared,time:cal().str});
   if(S.quests.log.length>30) S.quests.log.pop();
@@ -736,7 +736,7 @@ function martBuy(id){
   const g=m.give; let msg=[];
   if(g.sari){ S.sari+=g.sari; msg.push(`사리 +${g.sari}`); }
   if(g.lotus){ S.lotus+=g.lotus; msg.push(`연등 +${g.lotus}`); }
-  if(g.rin){ const r=gainRin(g.rin); msg.push(`륜 +${nf(r)}`); }
+  if(g.rin){ const r=g.rin;S.rin+=r; msg.push(`륜 +${nf(r)}`); }
   if(g.dust){ S.mat.가루+=g.dust; msg.push(`부적가루 +${g.dust}`); }
   if(g.mana){ S.mana=Math.min(maxMana()*3, S.mana+manaRate()*g.mana); msg.push(`파장 +${nf(Math.round(manaRate()*g.mana))}`); }
   if(g.wb){ S.wb.tickets+=g.wb; msg.push(`토벌 도전권 +${g.wb}`); }
