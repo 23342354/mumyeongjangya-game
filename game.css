@@ -136,8 +136,8 @@ a:hover{text-decoration:underline}
 .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 
 /* ── 레이아웃 ─────────────────────── */
-#app{display:grid;grid-template-columns:208px minmax(0,1fr) clamp(320px,25vw,360px);gap:16px;
-  max-width:1680px;margin:0 auto;padding:16px;align-items:start}
+#app{display:grid;grid-template-columns:200px minmax(0,1fr) clamp(312px,24vw,348px);gap:13px;
+  max-width:1680px;margin:0 auto;padding:13px;align-items:start}
 @media(max-width:1180px){
   #app{grid-template-columns:184px minmax(0,1fr)}
   #chatcol{grid-column:1/-1;order:3}
@@ -145,8 +145,8 @@ a:hover{text-decoration:underline}
 @media(max-width:780px){#app{grid-template-columns:1fr;padding:10px} #navcol{order:2} #chatcol{order:3}}
 
 .card{background:linear-gradient(180deg,var(--cardA),var(--cardB));backdrop-filter:blur(3px);border:1px solid var(--line);border-radius:10px}
-.pad{padding:14px 16px}
-.sect-t{font-size:11px;color:var(--dim2);letter-spacing:.1em;margin:0 0 8px;font-weight:600}
+.pad{padding:11px 13px}
+.sect-t{font-size:11px;color:var(--dim2);letter-spacing:.1em;margin:0 0 6px;font-weight:600}
 
 /* 좌측 내비 */
 .nav-g{margin-bottom:4px}
@@ -188,12 +188,12 @@ a:hover{text-decoration:underline}
 .tag.r{border-color:var(--red2);color:var(--red)}
 .tag.j{border-color:var(--jadeD);color:var(--jade)}
 .tag.v{border-color:var(--s6);color:var(--violet)}
-h1.page{font-size:25px;margin:2px 0 3px;font-weight:600;letter-spacing:-.01em}
+h1.page{font-size:22px;margin:1px 0 2px;font-weight:600;letter-spacing:-.01em}
 .page-kicker{font-size:11px;color:var(--gold2);letter-spacing:.16em;font-weight:500}
-.page-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;
-  padding-bottom:12px;border-bottom:1px solid var(--line)}
+.page-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:11px;
+  padding-bottom:9px;border-bottom:1px solid var(--line)}
 .page-head .rt{margin-left:auto;font-size:12px;color:var(--dim);text-align:right}
-.grid{display:grid;gap:12px}
+.grid{display:grid;gap:10px}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -832,22 +832,22 @@ textarea.inp{min-height:76px;resize:vertical}
 #main .pixel-plaza-art>svg{display:none}
 #main .pixel-plaza-art,#main .pixel-plaza-art *{pointer-events:none}
 #main .page-head{padding:0 0 14px;margin-bottom:16px;min-height:64px}
-#main h1.page{font-size:25px;line-height:1.4}
+#main h1.page{font-size:22px;line-height:1.35}
 #main .page-kicker{color:var(--dim);font-size:11px;letter-spacing:.08em}
 .card{backdrop-filter:blur(8px)}
 :root{--cardA:#171023f2;--cardB:#130c20f5;--subBg:#21172eea;--dim:#c6b5d6;--dim2:#a38bb7;--scrim2:rgba(8,4,18,.84)}
 :root[data-theme="light"]{--cardA:#fffefdf5;--cardB:#faf6fff7;--subBg:#f1eaf8f2;--dim:#59416f;--dim2:#766085;--scrim2:rgba(245,239,252,.88)}
-#navcol .nav-i{padding-top:9px;padding-bottom:9px}
+#navcol .nav-i{padding-top:6px;padding-bottom:6px}
 #navcol>.card:first-child{max-height:calc(100dvh - var(--chat-top,112px) - 16px);overflow:auto;scrollbar-width:thin}
 /* Share the measured header offset: buff chips can wrap onto several rows. */
 #chatcol{height:calc(100dvh - var(--chat-top,112px) - 16px);max-height:850px;top:var(--chat-top,112px);background:var(--s0)}
 #main .farm-crop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:13px;border-bottom:1px solid var(--line)}
 #main .farm-crop-row .life-sprite{width:42px;height:42px}
 #main .farm-crop-row button{max-width:100%}
-.pair-team-card{margin:0 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}
+.pair-team-card{margin:0 0 12px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--s1)}
 .pair-team-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.pair-team-members{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;margin-top:12px;align-items:center}
-.pair-team-person{min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--s0)}
+.pair-team-members{display:grid;grid-template-columns:1fr 24px 1fr;gap:7px;margin-top:8px;align-items:center;max-width:640px}
+.pair-team-person{min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--s0)}
 .pair-team-person b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pair-team-link{text-align:center;color:var(--gold);font-size:20px}
 .pair-team-state{font-size:11px;line-height:1.7;color:var(--dim)}

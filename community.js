@@ -2279,7 +2279,7 @@ VIEWS.shop=()=>{
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread" style="margin-bottom:8px"><div class="sect-t" style="margin:0">여와의 진열대</div>
       <div class="tiny muted">말랑이 ${S.dex.plush.length}/${YOWA_DUMPLINGS.length} · 영혼 인형 ${S.dex.doll.length}/${YOWA_DOLLS.length}</div></div>
-    <div class="grid g4">${YOWA_SPECIALS.map(yowaSpecialCard).join("")}</div>
+    <div class="grid g2">${YOWA_SPECIALS.map(yowaSpecialCard).join("")}</div>
   </div>
   <div class="grid g4" style="margin-bottom:14px">
     ${MART.map(m=>{
