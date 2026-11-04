@@ -3338,7 +3338,7 @@ function ensureV6(){
     if(CF.supabaseKey) S.sb.key=String(CF.supabaseKey);
   }
 }
-function sbOn(){ return !!(S.sb && S.sb.url && S.sb.key); }
+function sbOn(){ return !!(S && S.sb && S.sb.url && S.sb.key); }
 function sbHead(extra){
   return Object.assign({apikey:S.sb.key, Authorization:"Bearer "+S.sb.key}, extra||{});
 }
@@ -4617,15 +4617,29 @@ function acctCfg(){
   return {url:url.replace(/\/+$/,""), key};
 }
 function acctOn(){ const c=acctCfg(); return !!(c.url && c.key); }
-function acctFetch(path, opt){
+async function acctFetch(path, opt){
   const c=acctCfg();
   const o=Object.assign({}, opt||{});
   o.headers=Object.assign({apikey:c.key, Authorization:"Bearer "+c.key}, o.headers||{});
-  return fetch(c.url+"/rest/v1/"+path, o).then(async r=>{
+  // Bound the complete request, including the response body. Never retry writes here:
+  // an aborted response does not mean the server rolled back the transaction.
+  const controller=new AbortController(), external=o.signal;
+  const abort=()=>controller.abort();
+  if(external){
+    if(external.aborted) abort();
+    else external.addEventListener('abort',abort,{once:true});
+  }
+  o.signal=controller.signal;
+  const timer=setTimeout(abort,20000);
+  try{
+    const r=await fetch(c.url+"/rest/v1/"+path,o);
     const t=await r.text();
     if(!r.ok) throw new Error(t.slice(0,180)||("HTTP "+r.status));
     return t?JSON.parse(t):[];
-  });
+  }finally{
+    clearTimeout(timer);
+    if(external) external.removeEventListener('abort',abort);
+  }
 }
 
 /* ── 로그인 상태 ─────────────────────────────────── */
@@ -4664,6 +4678,8 @@ function acctPush(force){
     return true;
   }).catch(e=>{
     PUSHERROR=e;
+    // A failed upload must not suppress background recovery for five minutes.
+    PUSHAT=Date.now()-5*60*1000+30000;
     if(force && typeof VIEW!=="undefined" && VIEW==="market" && typeof toast==="function")
       toast("저장본 동기화 필요 · 중개소 매물 새로 고침을 먼저 눌러 주세요.","bad");
     return false;
@@ -4753,7 +4769,14 @@ function gateLogin(){
       ACCT={id:v.id,tok:acctHash(v.id,v.pw)};acctStore();
       acctBoot(row.save||null);
     })
-    .catch(e=>{gateBusy(false);gateMsg('아이디나 비밀번호를 확인해 주세요.',1);gateShow();});
+    .catch(e=>{
+      gateBusy(false);
+      const reason=String(e?.message||e||'');
+      const invalid=/아이디 또는 비밀번호|아이디나 비밀번호|계정이 없|인증이 필요/.test(reason);
+      gateMsg(invalid ? '아이디나 비밀번호를 확인해 주세요.'
+        : '서버 응답을 받지 못했습니다. 잠시 후 다시 로그인해 주세요. 기존 기록은 초기화하지 않았습니다.',1);
+      gateShow();
+    });
 }
 /* 저장본을 자리에 앉히고 게임을 시작합니다 */
 const OLDHALL={h1:"dorm",h2:"dorm",h3:"dorm",h4:"dorm"};
