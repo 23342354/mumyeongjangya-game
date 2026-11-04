@@ -1,6 +1,0 @@
-.auction-lot{min-width:0;display:flex;flex-direction:column}
-.auction-lot button{margin-top:auto}
-.auction-pending,.auction-history{padding:10px 0;border-bottom:1px solid var(--line);gap:10px}
-.auction-pending:last-child,.auction-history:last-child{border-bottom:0}
-.auction-history>span{min-width:0}
-#main .grid.g3:has(.auction-lot){grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr))}

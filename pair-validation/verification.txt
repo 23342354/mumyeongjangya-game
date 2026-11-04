@@ -1,7 +1,0 @@
-2026-11-04
-JavaScript syntax: 23 scripts passed.
-SQL: install/reinstall; merge; shared spend; peer XP/progression; personal research; retry receipts; CAS; insufficient funds; stale saves; market atomicity; escrow equipment IDs; regeneration; breakup conservation passed.
-Browser: two independent contexts with PostgreSQL-backed RPC, 1440px and 390px layouts passed.
-Not executed on production Supabase.
-
-Combat/UI update: SQL arena migration preserves wallet, chooses advanced round, reinstall idempotent; two-browser arena sharing and low-HP hold loss; HEX/action parser/menu/chat layout regression passed.
