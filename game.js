@@ -988,7 +988,11 @@ let CHATRESIZE=null;
 function chatLayout(){
   const top=document.getElementById("topbar");
   if(!top) return;
-  const fit=()=>document.documentElement.style.setProperty("--chat-top",Math.ceil(top.getBoundingClientRect().height+16)+"px");
+  const fit=()=>{
+    const height=top.getBoundingClientRect().height;
+    document.documentElement.style.setProperty("--chat-top",Math.ceil(height+16)+"px");
+    document.documentElement.style.setProperty("--mobile-top-height",height+"px");
+  };
   fit();
   if(!CHATRESIZE&&typeof ResizeObserver!=="undefined"){
     CHATRESIZE=new ResizeObserver(fit); CHATRESIZE.observe(top);

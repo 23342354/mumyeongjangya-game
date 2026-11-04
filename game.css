@@ -1200,3 +1200,11 @@ body.auth-gate #mobile-chat-toggle{
   #main .life-empty-label{grid-row:3;min-height:0;margin:0;font-size:9px!important;line-height:1.2;white-space:nowrap}
   #main .life-empty>.btn{grid-row:4;margin:0;align-self:end}
 }
+
+/* Join the mobile header and its compact secondary navigation without a seam. */
+@media(max-width:780px){
+  body.mobile-game #topbar{background-color:var(--s0)}
+  body.mobile-game #mobile-subnav{gap:3px;margin-top:-1px;margin-bottom:12px;padding:5px 12px;background:var(--s0)}
+  body.mobile-game:not(.top-open) #mobile-subnav{top:calc(var(--mobile-top-height,57px) - 1px)}
+  body.mobile-game #mobile-subnav button{padding:6px 10px;min-height:28px;font-size:12px;line-height:1.3}
+}
