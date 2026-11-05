@@ -1219,7 +1219,7 @@ function gearUpgradeHTML(it){
  if(!it?.main||!Array.isArray(it.opts)||!SLOTS.some(s=>s.k===it.slot))return '';
  const current=S.gear[it.slot],delta=gearScore(it)-(current?gearScore(current):0);
  if(!(delta>0))return '';
- return `<span class="gear-upgrade tag g" title="같은 부위의 현재 장비와 비교 · 전투력 +${delta.toLocaleString('ko-KR')}">▲ +${delta.toLocaleString('ko-KR')}${gearCanEquip(it)?'':` · Lv ${it.lv} 필요`}</span>`;
+ return `<span class="gear-upgrade" title="같은 부위의 현재 장비와 비교 · 전투력 +${delta.toLocaleString('ko-KR')}"><span class="gear-upgrade-value">▲ +${delta.toLocaleString('ko-KR')}</span>${gearCanEquip(it)?'':`<span class="gear-upgrade-level">Lv ${it.lv} 필요</span>`}</span>`;
 }
 function gearCanEquip(it){ return !!it && SLOTS.some(s=>s.k===it.slot) && (Number(it.lv)||1)<=S.lvl; }
 function equip(id){
@@ -1583,14 +1583,15 @@ function gearLine(it){
 }
 function gearCard(it,where){
   const G=GRADES[it.grade];
-  const equipped = where==="on", can=gearCanEquip(it);
-  return `<div class="sub" style="border-color:${equipped?G.c:"var(--line)"}">
-    <div class="spread"><div>
+  const equipped = where==="on", can=gearCanEquip(it), upgrade=gearUpgradeHTML(it);
+  return `<div class="sub gear-card" style="border-color:${equipped?G.c:"var(--line)"}">
+    <div class="gear-card-header"><div class="gear-card-info">
       <b style="color:${G.c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
       ${it.isNew?'<span class="tag r">NEW</span>':""}${it.merchantElite?'<span class="tag g">상인 특선</span>':""}
       <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} · Lv ${it.lv} · ${G.n}${can?"":` · <span style="color:var(--red)">착용 불가 (Lv ${it.lv} 필요)</span>`}</div>
-    </div><div style="text-align:right"><div class="tiny muted">전투력</div>
-      <b style="color:var(--gold)">${nf(gearScore(it))}</b> ${gearUpgradeHTML(it)}</div></div>
+    </div><div class="gear-card-score"><div class="tiny muted">전투력</div>
+      <b>${nf(gearScore(it))}</b></div></div>
+    ${upgrade?`<div class="gear-card-comparison"><span class="gear-card-comparison-label">현재 착용 대비</span>${upgrade}</div>`:''}
     <div class="tiny" style="margin:6px 0 8px;color:var(--jade)">${gearLine(it)}</div>
     <div class="row">
       ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
