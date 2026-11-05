@@ -883,6 +883,9 @@ const NAVDEF=[
  {id:"soc",   ic:ic("candle"), n:"교류",      sub:[{id:"map",n:"지도"},{id:"rel",n:"인연·관계"}]},
  {id:"rec",   ic:ic("scroll"), n:"기록",      sub:[{id:"record",n:"기록·성적"}]},
 ];
+function effectiveStatsHTML(){
+  return STATS.map(s=>`<div class="mini-stat" data-eff-stat="${s.k}" title="분배·거주지·법구를 반영한 현재 능력치"><span>${esc(s.n)}</span><b>${effStat(s.k)}</b></div>`).join("");
+}
 function renderNav(){
   // 1초 주기 갱신에도 안내도 내부 스크롤 위치를 보존합니다.
   const navHost=document.getElementById("navcol");
@@ -900,11 +903,6 @@ function renderNav(){
         ${g.sub.map(s=>`<div class="nav-i ${VIEW===s.id?"on":""}" onclick="go('${s.id}')">${s.n}${s.bd?`<span class="bd">${s.bd}</span>`:""}</div>`).join("")}
       </div></div>`;
   }).join("");
-
-  const sRow=k=>{const c=statCap(k),v=stat(k),e=effStat(k);
-    return `<div class="mini-stat" title="수업으로 오른 값 ${v} (한계 ${c}) · 분배·거주지·법구 포함 ${e}">
-      <span>${STATS.find(s=>s.k===k).n}</span>
-      <b>${e} <span class="muted tiny">수업 ${v}/${c}</span></b></div>`;};
 
   $("#navcol").innerHTML=`
   <div class="card pad" style="margin-bottom:12px">
@@ -928,7 +926,7 @@ function renderNav(){
     <div class="bar sn" style="margin:3px 0 10px"><i style="width:${snP}%"></i></div>
     <hr class="hr">
     <div class="mini-stat"><span>전투력</span><b style="color:var(--gold)">${nf(power())}</b></div>
-    ${STATS.map(s=>sRow(s.k)).join("")}
+    ${effectiveStatsHTML()}
     <hr class="hr">
     <div class="tiny muted">${homeOf(S.hall).n} 혜택 · ${typeof hallBenefitText==="function"?hallBenefitText(S.hall):homeOf(S.hall).b}</div>
   </div>`;
@@ -2773,7 +2771,7 @@ function drawMe(){
     </div>
     <div class="grid g2" style="margin-top:12px">
       <div><div class="sect-t">능력치</div>
-        ${STATS.map(s=>`<div class="mini-stat"><span>${s.n}</span><b>${stat(s.k)}${hallBonus(s.k)?` <span style="color:var(--jade)">+${hallBonus(s.k)}</span>`:""} <span class="muted tiny">/${statCap(s.k)}</span></b></div>`).join("")}
+        ${effectiveStatsHTML()}
       </div>
       <div><div class="sect-t">소개</div>
         <div class="tiny" style="white-space:pre-wrap">${esc(S.bio||"자기소개가 비어 있습니다.")}</div></div>
