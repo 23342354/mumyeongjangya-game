@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:"20261106-chat-message-wrap",date:"2026-11-06",title:"채팅 본문 줄바꿈과 전송 상태 표시 개선",items:["채팅의 이름·태그와 본문을 분리해 긴 문장과 행동 지문을 읽기 쉽게 정리했습니다.","긴 이름·칭호·URL도 채팅 너비 안에서 줄바꿈되도록 보완하고, 전송 중·전송 실패 상태는 본문 아래에 따로 표시합니다."]},
  {id:"20261106-ledger-ui-refresh",date:"2026-11-06",title:"용돈 기입장 보기 개선",items:["잔고와 수입·지출·순변동을 한눈에 볼 수 있도록 기입장을 정리했습니다.","기간·수입/지출·사용자 필터와 날짜별 거래 목록을 추가했습니다. 날짜와 시간은 한국 시간으로 표시합니다.","요약은 선택한 기간과 사용자의 보관 기록을 기준으로 보여 줍니다."]},
  {id:"20261106-market-save-revision-recovery",date:"2026-11-06",title:"복구 지급 후 저장 충돌 보완",items:["중개소 버전 정보를 개인 변경 내역으로 다시 덮어쓰지 않도록 수정했습니다.","운영진이 저장 버전 정합성 패치를 적용하면 복구 지급 후 버전 정보가 어긋나 저장이 거부되던 서버 기록을 바로잡고 재발을 방지합니다."]},
  {id:"20261106-auction-compare-checkbox-refresh",date:"2026-11-06",title:"상인 장비 비교 체크박스 수정",items:["떠돌이 상인에서 각인 제외·장비 비교를 눌러도 내용이 바뀌지 않던 화면 갱신 오류를 수정했습니다. 체크하면 기준 수치와 비교표가 바로 반영됩니다."]},
@@ -1052,7 +1053,7 @@ function chatMessages(){
 function chatMessageHTML(m){
   const mode=chatModeOf(m.mode);
   return `<div class="cmsg"><span class="ctime">${esc(m.time||"")}</span>
-    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
+    <div class="cbody"><div class="cmessage-header"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span>`:""}<b class="cname" style="color:${m.tab==="모임"&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b></div><div class="cmessage-text">${m.body||''}</div>${m.failed?'<div class="cmessage-status failed" role="status">전송 실패 · 이 메시지는 서버에 저장되지 않았습니다.</div>':m.pending?'<div class="cmessage-status" role="status">전송 중</div>':''}</div></div>`;
 }
 let CHATRESIZE=null;
 function chatLayout(){
