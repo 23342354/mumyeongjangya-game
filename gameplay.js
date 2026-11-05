@@ -2060,6 +2060,7 @@ function runStep(){
     const attack=live.reduce((sum,f)=>sum+f.atk,0),res=live.reduce((sum,f)=>sum+f.res,0)/live.length;
     const damage=pairSoulQuestPower(attack,res);
     foe.hp=Math.max(0,foe.hp-damage);R.soulSeconds=0;R.soulCasts=(R.soulCasts||0)+1;
+    R.soulName=pairSoulName();
     log.push(`<span class="s quest-soul">${esc(R.me.n)} · ${esc(R.allies.find(a=>a.hp>0)?.n||"페어")}의 영혼의 공명 ⌈${esc(pairSoulName())}⌋! ${nf(damage)} 피해</span>`);
   }
   if(foe.hp>0)resolveAttack(attacker, target, log);

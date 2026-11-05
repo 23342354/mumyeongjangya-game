@@ -1052,30 +1052,40 @@ async function pairFontPreview(){
 function pairHeadState(){ return PAIRHEAD; }
 /* 바뀌었을 때만 내려받습니다 — 그림이 커서 20초마다 받으면 느려집니다 */
 let PAIRHEADAT=0;
-function pairHeadFetch(force){
+function pairHeadFetchCore(force){
   const P=pairEnsure();
   if(!sbOn() || !P.mine) return Promise.resolve(false);
   const H=pairHeadState();
   if(!force && Date.now()-PAIRHEADAT<20000) return Promise.resolve(false);
   PAIRHEADAT=Date.now();
-  const id=encodeURIComponent(P.mine.id);
+  const pairId=String(P.mine.id),id=encodeURIComponent(pairId);
   return sbGet(`pairs?select=id,header_at&id=eq.${id}&limit=1`)
     .then(rows=>{
       const row=(rows||[])[0];
-      if(!row) return false;
+      if(!row||String(pairEnsure().mine?.id)!==pairId) return false;
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
-      if(!at){ H.img=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
+      if(!at){ pairSoulRememberName(pairId,'');H.img=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
                if(VIEW==="pairhub") renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
-        const f=(full||[])[0]||{};
-        Object.assign(H,pairHeadDecode(f.header||"")); H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
-        if(VIEW==="pairhub") renderMain(true);
+        const f=(full||[])[0];
+        if(!f||String(pairEnsure().mine?.id)!==pairId)return false;
+        if(H.forId===pairId&&H.at&&f.header_at&&H.at>f.header_at)return false;
+        Object.assign(H,pairHeadDecode(f.header||""));
+        pairSoulRememberName(pairId,H.soulName||''); H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
+        if(["pairhub","quest","tower","guard","wboss"].includes(VIEW)) renderMain(true);
         return true;
       });
     })
     .catch(()=>{ pairHeadState().loading=false; return false; });
+}
+let PAIRHEADREQUEST=null;
+function pairHeadFetch(force){
+ const pairId=String(pairEnsure().mine?.id||'');
+ if(PAIRHEADREQUEST?.pairId===pairId)return PAIRHEADREQUEST.task;
+ const task=Promise.resolve(pairHeadFetchCore(force)).finally(()=>{if(PAIRHEADREQUEST?.task===task)PAIRHEADREQUEST=null;});
+ PAIRHEADREQUEST={pairId,task};return task;
 }
 /* 그림을 1500×1000 안쪽으로 줄여 글자로 바꿉니다 */
 function pairHeadShrink(img){
@@ -4066,7 +4076,19 @@ VIEWS.shop=function(){return _reforgeShop.apply(this,arguments)+`<div class="car
 function talismanDustCard(){return `<div class="sub talisman-dust-card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><img src="assets/pixel-life/talisman-dust.png?v=1" width="64" height="64" alt="부적 가루" style="object-fit:contain;image-rendering:pixelated"><b>부적 가루</b></div><div class="tiny muted">재련 재료 · 보유 ${nf(S.mat.부적가루||0)}</div><div class="tiny muted" style="margin:5px 0 8px;min-height:36px">부적 1개 → 부적 가루 10개</div><div class="row" style="gap:6px;flex-wrap:wrap">${[10,100].map(n=>`<button class="btn sm pri" ${S.mat.가루>=n?'':'disabled'} onclick="talismanExchange(${n})">${n} → ${nf(n*10)}</button>`).join('')}</div></div>`;}
 
 /* Soul resonance: shared pair-only skill, evaluated at explicit combat times. */
-function pairSoulName(){return pairHeadState().soulName?.trim()||'영혼의 공명';}
+function pairSoulRememberName(pairId,name){
+ try{localStorage.setItem('mmjy:pair-soul-name:'+String(pairId),JSON.stringify({name:String(name||'').trim().slice(0,30)}));}catch(_){}
+}
+function pairSoulName(){
+ const pairId=pairEnsure().mine?.id,H=pairHeadState();
+ if(pairId!==undefined&&pairId!==null){
+  if(sbOn())void pairHeadFetch(false);
+  if(H.forId===String(pairId))return H.soulName?.trim()||'영혼의 공명';
+  try{const cached=JSON.parse(localStorage.getItem('mmjy:pair-soul-name:'+String(pairId))||'null');if(cached&&typeof cached.name==='string')return cached.name.trim()||'영혼의 공명';}catch(_){}
+  if(String(S.run?.pairId)===String(pairId)&&typeof S.run?.soulName==='string')return S.run.soulName.trim()||'영혼의 공명';
+ }
+ return '영혼의 공명';
+}
 function pairSoulReady(){const p=window.PAIR_PLAY;return !!(pairEnsure().mine&&p?.ready&&p.snapshot?.peer&&typeof window.pairSoulProfile==='function');}
 function pairSoulStats(c){
  if(!pairSoulReady())return null;const peer=window.pairSoulProfile();if(!peer)return null;
@@ -4091,7 +4113,7 @@ async function pairSoulSaveName(){
  // Fetch latest shared header first so renaming never removes a partner's tokens/font.
  await pairHeadFetch(true);const H=pairHeadState();if(H.forId!==String(P.mine.id)){toast('페어 헤더 정보를 불러온 뒤 다시 저장해 주세요.','bad');return;}
  const data=JSON.parse(pairHeadEncode(H.img,H.tokens||['','']));data.soulName=name;const at=new Date().toISOString();
- try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
+ try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;H.forId=String(P.mine.id);pairSoulRememberName(P.mine.id,name);if(S.run&&String(S.run.pairId)===String(P.mine.id))S.run.soulName=name;save();renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
 }
 for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?`첫 5분 후 · 이후 ${Math.round(pairSoulPeriod(300))}초마다`:`첫 15초 · 이후 ${Math.round(pairSoulPeriod(60))}초마다`} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰 피해 = 두 사람의 공격 합계 × 6 × (1 + 평균 공명 적성 ÷ 100).':''}</div></div>`;};}
 
@@ -4285,3 +4307,6 @@ const _alchemyExplorationView=VIEWS.alche;
 VIEWS.alche=function(){return `<div class="card pad" style="margin-bottom:12px"><div class="spread"><span>조제 재료가 부족하다면?</span><button class="btn sm pri" onclick="go('explore')">재료 탐사 보내기</button></div></div>`+_alchemyExplorationView();};
 const _explorationStep=step;
 step=function(minutes){const result=_explorationStep.apply(this,arguments);if(VIEW==='explore')renderMain(true);return result;};
+
+const _pairSoulNameStep=step;
+step=function(){const result=_pairSoulNameStep.apply(this,arguments);if(sbOn()&&pairEnsure().mine)void pairHeadFetch(false);return result;};

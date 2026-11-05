@@ -311,6 +311,7 @@ async function transact(tag,fn,queue=true,options={}){
   const recent=!!(PJ.ready&&PJ.lastAuthoritativeReadAt&&Date.now()-PJ.lastAuthoritativeReadAt<15000);
   if(!recent)await read(false,true);
   if(!PJ.ready)throw Error(PJ.error||'공동 지갑이 아직 연결되지 않았습니다.');
+  if(typeof pairHeadFetch==='function'&&(isGroup(tag)||tag==='offline'||(tag==='tick'&&S.run)))await pairHeadFetch(false);
   transactionBase=clone(PJ.baseline);
   before=clone(S);PJ.rollbackGames={fish:typeof FISHGAME!=='undefined'&&FISHGAME?clone(FISHGAME):null,bg:typeof BG!=='undefined'&&BG?clone(BG):null,outing:typeof OUTING!=='undefined'&&OUTING?clone(OUTING):null};PJ.sharedXp=0;PJ.loss={hp:0,sn:0};PJ.messages=[];PJ.modal=null;
   PJ.depth++;const previousCombat=PJ.combat;PJ.combat=isGroup(tag);PJ.groupAward=isGroup(tag);
