@@ -6062,9 +6062,24 @@ if(typeof openSettings==="function"){
 /* Internal support inbox: authenticated account IDs, private DM threads. */
 const SUPPORT_INBOX={actor:null,threads:[],staff:false,loading:false,loaded:false,error:'',busy:false,pending:null};
 function inboxAccount(){return boardAccountCredentials();}
+const INBOX_CHARACTER_NAMES=new Map();
+function inboxCharacterName(id){
+ if(id&&String(id)===String(ACCT?.id)&&S?.name)return S.name;
+ const rows=[...(typeof SOCIAL!=='undefined'?SOCIAL.students||[]:[]),...(S.sb?.roster||[])];
+ return INBOX_CHARACTER_NAMES.get(String(id))||rows.find(r=>String(r.id)===String(id))?.name||'학생';
+}
+async function inboxLoadCharacterNames(data){
+ const ids=[...new Set([...(data.threads||[]).map(t=>t.author_id),data.thread?.author_id,...(data.messages||[]).map(m=>m.sender_id)].filter(Boolean).map(String))];
+ if(!ids.length)return;
+ try{const rows=await sbGet('students?select=id,name&id=in.'+encodeURIComponent('('+ids.map(id=>JSON.stringify(id)).join(',')+')')+'&limit=1000');
+ for(const r of rows||[])if(r.name?.trim())INBOX_CHARACTER_NAMES.set(String(r.id),r.name.trim());
+ }catch(_){} // Public profile lookup must not prevent reading an authenticated thread.
+}
+
 async function inboxRpc(action,args={}){
  const account=inboxAccount();if(!sbOn())throw Error('내부 문의함 서버 연결을 확인해 주세요.');
  const data=await sbSend('POST','rpc/suggestion_inbox_v2',{...account,p_action:action,...args});
+ await inboxLoadCharacterNames(data);
  if(inboxAccount().p_actor!==account.p_actor)throw Error('계정이 바뀌었습니다. 문의함을 다시 열어 주세요.');
  return data;
 }
@@ -6082,19 +6097,19 @@ VIEWS.board=function(){
  let actor;try{actor=inboxAccount().p_actor;}catch(e){return head('공개 건의와 비공개 문의',ic('mailbox')+' 건의함','')+`<div class="card pad">${esc(e.message)}</div>`;}
  if(SUPPORT_INBOX.actor!==actor||(!SUPPORT_INBOX.loaded&&!SUPPORT_INBOX.loading&&!SUPPORT_INBOX.error))setTimeout(inboxFetch,0);
  const own=SUPPORT_INBOX.actor===actor;
- return head('공개 건의 · 비공개 문의',ic('mailbox')+' 건의함',`@${esc(actor)}`)+`
- <div class="card pad" style="margin-bottom:12px"><div class="spread"><b>${own&&SUPPORT_INBOX.staff?'운영진 문의함':'건의함'}</b><div class="row"><button class="btn sm" onclick="inboxFetch()">새로고침</button><button class="btn sm pri" onclick="inboxCompose()">문의 보내기</button></div></div><div class="tiny muted" style="margin-top:8px">로그인 ID @${esc(actor)}로 작성자를 확인합니다. 공개 건의와 답변은 모두에게 보입니다. 비공개 문의와 답변은 작성자와 운영진만 볼 수 있습니다.</div></div>
+ return head('공개 건의 · 비공개 문의',ic('mailbox')+' 건의함',esc(inboxCharacterName(actor)))+`
+ <div class="card pad" style="margin-bottom:12px"><div class="spread"><b>${own&&SUPPORT_INBOX.staff?'운영진 문의함':'건의함'}</b><div class="row"><button class="btn sm" onclick="inboxFetch()">새로고침</button><button class="btn sm pri" onclick="inboxCompose()">문의 보내기</button></div></div><div class="tiny muted" style="margin-top:8px">캐릭터 이름으로 표시하며, 작성자 확인은 로그인한 계정으로 처리합니다. 공개 건의와 답변은 모두에게 보입니다. 비공개 문의와 답변은 작성자와 운영진만 볼 수 있습니다.</div></div>
  ${SUPPORT_INBOX.error?`<div class="card pad" role="alert">${esc(SUPPORT_INBOX.error)}<div class="tiny muted" style="margin-top:8px">운영진은 내부 문의함 설치 SQL이 적용되었는지 확인해 주세요.</div></div>`:''}
- <div class="card pad">${own&&SUPPORT_INBOX.loading?'<div class="tiny muted">불러오는 중…</div>':''}${own?SUPPORT_INBOX.threads.map(t=>`<button type="button" class="btn" style="display:block;text-align:left;width:100%;margin-bottom:8px;white-space:normal" onclick="inboxOpen(${Number(t.id)})"><div class="spread"><b>${esc(t.title)}</b><span class="tag">${t.secret?'비공개':'공개'} · ${esc(t.status)}</span></div><div class="tiny muted">@${esc(t.author_id)} · ${esc(boardDate(t.updated_at))}</div></button>`).join(''):''}${own&&SUPPORT_INBOX.loaded&&!SUPPORT_INBOX.threads.length?'<div class="tiny muted">아직 문의가 없습니다.</div>':''}</div>`;
+ <div class="card pad">${own&&SUPPORT_INBOX.loading?'<div class="tiny muted">불러오는 중…</div>':''}${own?SUPPORT_INBOX.threads.map(t=>`<button type="button" class="btn" style="display:block;text-align:left;width:100%;margin-bottom:8px;white-space:normal" onclick="inboxOpen(${Number(t.id)})"><div class="spread"><b>${esc(t.title)}</b><span class="tag">${t.secret?'비공개':'공개'} · ${esc(t.status)}</span></div><div class="tiny muted">${esc(inboxCharacterName(t.author_id))} · ${esc(boardDate(t.updated_at))}</div></button>`).join(''):''}${own&&SUPPORT_INBOX.loaded&&!SUPPORT_INBOX.threads.length?'<div class="tiny muted">아직 문의가 없습니다.</div>':''}</div>`;
 };
 function inboxCompose(){
  let account;try{account=inboxAccount();}catch(e){toast(e.message,'bad');return;}
- modal('운영진에게 문의 보내기',`<div class="tiny muted">작성 계정 @${esc(account.p_actor)}</div><label class="f" for="support_visibility">공개 설정</label><select class="inp" id="support_visibility"><option value="public">공개 — 모든 사용자가 글과 답변 열람</option><option value="private" selected>비공개 — 작성자와 운영진만 열람</option></select><label class="f">제목</label><input class="inp" id="support_title" maxlength="100"><label class="f">내용</label><textarea class="inp" id="support_body" maxlength="5000" style="min-height:160px"></textarea><div class="tiny" id="support_error" role="alert" style="margin-top:8px"></div><button class="btn pri" id="support_send" style="margin-top:12px" onclick="inboxSend()">문의 보내기</button>`);
+ modal('운영진에게 문의 보내기',`<div class="tiny muted">작성자 ${esc(inboxCharacterName(account.p_actor))}</div><label class="f" for="support_visibility">공개 설정</label><select class="inp" id="support_visibility"><option value="public">공개 — 모든 사용자가 글과 답변 열람</option><option value="private" selected>비공개 — 작성자와 운영진만 열람</option></select><label class="f">제목</label><input class="inp" id="support_title" maxlength="100"><label class="f">내용</label><textarea class="inp" id="support_body" maxlength="5000" style="min-height:160px"></textarea><div class="tiny" id="support_error" role="alert" style="margin-top:8px"></div><button class="btn pri" id="support_send" style="margin-top:12px" onclick="inboxSend()">문의 보내기</button>`);
 }
 async function inboxOpen(id){
  try{const r=await inboxRpc('read',{p_thread:Number(id)}),t=r.thread;
- modal('문의 · '+esc(t.title),`<div class="spread"><span>@${esc(t.author_id)}</span><span class="tag">${t.secret?'비공개':'공개'} · ${esc(t.status)}</span></div><div class="tiny muted" style="margin-top:8px">${t.secret?'작성자와 운영진만 볼 수 있습니다.':'이 글과 답변은 모든 사용자가 볼 수 있습니다.'}</div>
- <div style="margin:12px 0;max-height:48dvh;overflow-y:auto">${r.messages.map(m=>`<div class="sub" style="margin-bottom:8px"><div class="spread tiny"><b>${m.staff?'운영진 ':''}${m.sender_id?'@'+esc(m.sender_id):'(이전 답변)'}</b><span class="muted">${esc(boardDate(m.created_at))}</span></div><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:7px">${esc(m.body)}</div></div>`).join('')}</div>
+ modal('문의 · '+esc(t.title),`<div class="spread"><span>${esc(inboxCharacterName(t.author_id))}</span><span class="tag">${t.secret?'비공개':'공개'} · ${esc(t.status)}</span></div><div class="tiny muted" style="margin-top:8px">${t.secret?'작성자와 운영진만 볼 수 있습니다.':'이 글과 답변은 모든 사용자가 볼 수 있습니다.'}</div>
+ <div style="margin:12px 0;max-height:48dvh;overflow-y:auto">${r.messages.map(m=>`<div class="sub" style="margin-bottom:8px"><div class="spread tiny"><b>${m.staff?'운영진 ':''}${m.sender_id?esc(inboxCharacterName(m.sender_id)):'(이전 답변)'}</b><span class="muted">${esc(boardDate(m.created_at))}</span></div><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:7px">${esc(m.body)}</div></div>`).join('')}</div>
  ${r.staff?`<div class="row" style="margin:8px 0"><label for="support_status">처리 상태</label><select class="inp" id="support_status" onchange="inboxStatus(${Number(id)},this.value)">${['접수','확인 중','답변','완료'].map(v=>`<option ${t.status===v?'selected':''}>${v}</option>`).join('')}</select></div>`:''}
  ${(r.staff||t.author_id===inboxAccount().p_actor)?`<label class="f">${r.staff?'운영진 답변':'추가 문의'}</label><textarea class="inp" id="support_body" maxlength="5000" style="min-height:90px"></textarea><div class="tiny" id="support_error" role="alert"></div><button class="btn pri" id="support_send" style="margin-top:8px" onclick="inboxSend(${Number(id)})">${r.staff?'답변 보내기':'추가 문의 보내기'}</button>`:''}`);
  }catch(e){toast(String(e.message||e),'bad');}
