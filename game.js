@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:'20261105-club-chat-color-normalization',date:'2026-11-05',title:'모임 채팅 이름 색상 반영 보완',items:['서버 대화를 화면용 메시지로 변환할 때 작성자 ID와 영혼 컬러가 누락되던 원인을 수정했습니다.','기존 모임 대화도 작성자 정보를 확인해 영혼 컬러를 표시합니다.']},
  {id:'20261105-pair-owned-theme-skins',date:'2026-11-05',title:'우리 페어만의 테마 스킨 3종',items:['설정 → 보기에서 자기 페어 전용 스킨을 선택할 수 있습니다. 다른 페어의 스킨은 사용할 수 없습니다.','페어 테마색 / 페어 테마색 + 헤더 그림 / 페어 테마색 + 직접 올린 공유 배경, 세 가지를 밝은·어두운 테마로 제공합니다.','두 캐릭터의 영혼 컬러를 그라데이션으로 적용하고, 그림 배경은 채팅창 뒤까지 은은하게 비치도록 구성했습니다.','스킨 선택은 각자 이 브라우저에 저장하며, 업로드한 배경 그림은 페어 두 사람이 공유합니다. 기본 테마를 고르면 원래 무명장야 테마로 돌아갑니다.']},
  {id:'20261105-club-chat-soul-color-fix',date:'2026-11-05',title:'모임 채팅 영혼 컬러 수정',items:['모임 채팅에서 작성자 이름에 각 캐릭터의 영혼 컬러가 표시되도록 수정했습니다.','이전 대화도 최신 프로필 컬러로 표시합니다.']},
  {id:'20261105-club-colors-chat-layout',date:'2026-11-05',title:'모임 이름 컬러·채팅 메뉴 정리',items:['모임 부원·모임방·게시글·가입 신청·활동 기록의 이름에 영혼 테마 컬러를 적용했습니다.','채팅 탭 순서를 전체 → 이웃 → 계통 → 모임 → 페어로 정리했습니다.','접힌 채팅 버튼의 세로 글자와 읽지 않은 개수 배지가 겹치지 않도록 배치를 수정했습니다.']},
@@ -1039,7 +1040,7 @@ function chatMessages(){
 function chatMessageHTML(m){
   const mode=chatModeOf(m.mode);
   return `<div class="cmsg"><span class="ctime">${esc(m.time||"")}</span>
-    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&m._clubVerified===true&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
+    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
 }
 let CHATRESIZE=null;
 function chatLayout(){

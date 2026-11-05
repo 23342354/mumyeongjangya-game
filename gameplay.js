@@ -5165,7 +5165,7 @@ function chatRows(rows, silent=true, advanceCursor=true){
     const isNPC=String(r.from_id||"").startsWith("mmjy-npc:");
     const d=new Date(r.created_at||Date.now());
     const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
-    const fields={sid:r.id, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
+    const fields={sid:r.id, from_id:r.from_id, _clubVerified:r.tab==="모임"&&r._clubVerified===true, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
       npc:isNPC, mine:own, c:r.color||"var(--violetL)", title:r.title||"",
       mode:chatModeOf(r.mode), ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`, pending:false, failed:false};
     /* 메시지를 보낸 직후 임시 로컬 행과 서버에 확정된 행을 결합합니다.

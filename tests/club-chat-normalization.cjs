@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const social=fs.readFileSync('social.js','utf8'),play=fs.readFileSync('gameplay.js','utf8'),game=fs.readFileSync('game.js','utf8');
+const c={S:{color:'#123456',sb:{id:'me',roster:[{id:'peer',color:'#abcdef'}]},msgs:[]},ACCT:{id:'me'},CLUBNET:{members:[{user_id:'peer',name:'동료'}]},esc:String,save(){},chatModeOf:m=>m==='오너'?'오너':'RP'};vm.createContext(c);
+vm.runInContext(social.slice(social.indexOf('function clubSoulColor('),social.indexOf('const CLUBNET=')),c);
+vm.runInContext(play.slice(play.indexOf('function chatRows('),play.indexOf('function chatPull(')),c);
+vm.runInContext(game.slice(game.indexOf('function chatMessageHTML('),game.indexOf('let CHATRESIZE=')),c);
+c.chatRows([{id:'club:1',from_id:'peer',who:'동료',tab:'모임',scope:'club:7',body:'안녕',color:c.clubSoulColor({from_id:'peer'}),_clubVerified:true}],true,false);
+const m=c.S.msgs[0];assert.equal(m.from_id,'peer');assert.equal(m._clubVerified,true);assert.equal(m.c,'#abcdef');assert.match(c.chatMessageHTML(m),/color:#abcdef/);
+c.S.sb.roster[0].color='#654321';assert.match(c.chatMessageHTML(m),/color:#654321/,'existing rows use latest profile');
+assert.match(c.chatMessageHTML({tab:'모임',sid:'club:old',who:'동료',body:'옛 대화',c:'var(--violetL)'}),/color:#654321/,'legacy row resolves unique member name');
+assert.match(c.chatMessageHTML({tab:'전체',who:'일반',body:'다른 채널',c:'#778899'}),/color:#778899/);
+console.log('PASS: actual server-to-chat normalization preserves author/color/verification, rendered club names use soul colors, profile changes and legacy rows covered');
