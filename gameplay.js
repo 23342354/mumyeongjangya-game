@@ -1989,7 +1989,7 @@ function runStep(){
   const live=[R.me,...R.allies].filter(x=>x.hp>0);
   if(!live.length){ endRun(false); return; }
   R.soulSeconds=(R.soulSeconds||0)+30;
-  const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=300&&R.foes[0]?.hp>0;
+  const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=(R.soulCasts?pairSoulPeriod(300):300)&&R.foes[0]?.hp>0;
   const r=soulReady?.5:Math.random();
   if(r<0.14){ pushRun(`<span class="muted quest-flavor">${pick(RUNFLAVOR)}</span>`); return; }
   if(r<0.2 && R.me.hp<R.me.max*.7){
@@ -2767,23 +2767,23 @@ const ING=[
 ];
 /* ─── 조제법 ─── */
 const POTIONS=[
- {id:"q1", n:"집중의 물약", c:"var(--blue)", dur:120, mana:1512,
+ {id:"q1", n:"정심청로", c:"var(--blue)", dur:120, mana:1512,
   mat:{먼지:18},               buf:[["study",.30]], d:"2시간 수업 효율 +30%"},
- {id:"q2", n:"투지의 물약", c:"var(--red)", dur:120, mana:4026,
+ {id:"q2", n:"홍련전액", c:"var(--red)", dur:120, mana:4026,
   mat:{먼지:12,홍월초:6},       buf:[["atkP",.25]], d:"2시간 공격력 +25%"},
- {id:"q3", n:"수호의 물약", c:"var(--ok)", dur:120, mana:4026,
+ {id:"q3", n:"금강호혼탕", c:"var(--ok)", dur:120, mana:4026,
   mat:{먼지:18,홍월초:6},       buf:[["hpP",.25],["defP",.20]], d:"2시간 생명력 +25%, 방어력 +20%"},
- {id:"q4", n:"안신의 물약", c:"var(--violet)", dur:120, mana:4026,
+ {id:"q4", n:"안혼정로", c:"var(--violet)", dur:120, mana:4026,
   mat:{먼지:15,홍월초:9},       buf:[["rest",.25],["heal",.10]], d:"2시간 이성 회복 +25%, 치유·보호막 위력 +10%"},
- {id:"q5", n:"맨드레이크 각성제", c:"var(--gold)", dur:120, mana:6039,
+ {id:"q5", n:"명근각성액", c:"var(--gold)", dur:120, mana:6039,
   mat:{먼지:12,뿌리:3,약초:6},  buf:[["exp",.25],["study",.15]], d:"2시간 경험치 +25%, 수업 효율 +15%", farm:true},
- {id:"q6", n:"황금 물약", c:"var(--gold)", dur:120, mana:12000,
+ {id:"q6", n:"윤회금로", c:"var(--gold)", dur:120, mana:12000,
   mat:{톱니:12,홍월초:6},       buf:[["gold",.40]], d:"2시간 륜 획득 +40%"},
- {id:"q7", n:"잿불 진정제", c:"var(--gold)", dur:120, mana:8052,
+ {id:"q7", n:"일륜진정탕", c:"var(--gold)", dur:120, mana:8052,
   mat:{집광편:3,잿불씨:6,홍월초:6}, buf:[["hpP",.15],["defP",.25]], d:"2시간 생명력 +15%, 방어력 +25%"},
- {id:"q8", n:"네잎 행운초", c:"var(--jadeD)", dur:120, mana:9400,
+ {id:"q8", n:"해광길상로", c:"var(--jadeD)", dur:120, mana:9400,
   mat:{인광:6,꽃:6},            buf:[["loot",.20],["crit",.03]], d:"2시간 전리품 확률 +20%, 치명타 확률 +3%", farm:true},
- {id:"q9", n:"행운의 물약", c:"var(--pink)", dur:120, mana:16000,
+ {id:"q9", n:"홍월천운액", c:"var(--pink)", dur:120, mana:16000,
   mat:{종모래:3,심연정:1,인광:4}, buf:[["crit",.08],["critD",.20]], d:"2시간 치명타 확률 +8%, 치명타 피해 +20%", req:5},
 ];
 
@@ -2891,6 +2891,7 @@ function ensureV4(){
   if(S.ing===undefined){ S.ing={}; ING.forEach(i=>S.ing[i.k]=0); S.ing.먼지=60; S.ing.홍월초=8; }
   ING.forEach(i=>{ if(S.ing[i.k]===undefined) S.ing[i.k]=0; });
   if(S.potion===undefined) S.potion={};
+  for(const b of S.buffs||[]){const potion=POTIONS.find(p=>p.id===b.pid);if(potion)b.n=potion.n;}
   if(S.brewN===undefined) S.brewN=3;
   syncHall();
 }
@@ -2902,6 +2903,7 @@ function matName(k){ const i=ING.find(x=>x.k===k); return i?i.n:k; }
 function brewEff(){ return +(1 + mod("brew") + S.course*.06 + S.lvl*.004).toFixed(2); }
 function brewMana(p){ return Math.round(p.mana/brewEff()); }
 function canBrew(p,n){
+  if(!p||!Number.isSafeInteger(n)||n<1||n>1000)return false;
   if(p.req&&S.course<p.req) return false;
   if(S.mana < brewMana(p)*n) return false;
   for(const k in p.mat) if(matHave(k) < p.mat[k]*n) return false;
@@ -2909,6 +2911,7 @@ function canBrew(p,n){
 }
 function brew(id,n){
   const p=POTIONS.find(x=>x.id===id);
+  if(!p)return;
   if(p.req&&S.course<p.req){ toast(`${p.req}과정부터 조제할 수 있습니다.`,"bad"); return; }
   if(!canBrew(p,n)){ toast("재료나 파장이 모자랍니다.","bad"); return; }
   S.mana-=brewMana(p)*n;
@@ -2921,7 +2924,8 @@ function brew(id,n){
 }
 function drink(id){
   const p=POTIONS.find(x=>x.id===id);
-  if(!(S.potion[id]>0)){ toast("보유한 물약이 없습니다.","bad"); return; }
+  if(!p||!(S.potion[id]>0)){ toast("보유한 물약이 없습니다.","bad"); return; }
+  if(p.group){const replaced=new Set(POTIONS.filter(q=>q.id!==p.id&&q.group===p.group).map(q=>q.id));S.buffs=S.buffs.filter(b=>!replaced.has(b.pid));}
   S.potion[id]--;
   const mine=S.buffs.filter(b=>b.pid===p.id);
   if(mine.length) mine.forEach(b=>b.left=Math.min(p.dur*3, b.left+p.dur));
@@ -2961,7 +2965,7 @@ VIEWS.alche=()=>{
         return `<div style="padding:10px 0;border-bottom:1px solid var(--s3);${lock?"opacity:.45":""}">
           <div class="spread">
             <div><span class="dot" style="background:${p.c};margin-right:6px"></span><b>${p.n}</b>
-              <span class="tiny muted">효과 2시간 0분</span></div>
+              <span class="tiny muted">효과 ${hhmm(p.dur)}</span></div>
             <button class="btn sm ${ok?"pri":""}" ${ok?"":"disabled"} onclick="brew('${p.id}',${n})">${lock?`${p.req}과정부터`:`${n}병 만들기`}</button>
           </div>
           <div class="tiny muted" style="margin:3px 0 6px">${p.d}</div>

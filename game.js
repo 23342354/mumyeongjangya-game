@@ -2312,10 +2312,10 @@ function outChoose(i){
     /* 걸음마다 바로 지급합니다. 예전에는 O.got에 쌓아 마지막에 보여 주기만 하고
        실제로 더하지 않아, 통행패만 쓰고 아무것도 받지 못했습니다.
        걸음마다 지급하면 도중에 창이 닫혀도 그때까지 번 몫은 남습니다. */
-    if(ok){ O.got.rin+=gainRin(rnd(60,180)); O.got.know+=gainKnow(rnd(10,40)); O.got.exp+=gainExp(rnd(40,110));
+    if(ok){ O.got.rin+=gainRin(Math.round(rnd(60,180)*(1+mod("outing")))); O.got.know+=gainKnow(Math.round(rnd(10,40)*(1+mod("outing")))); O.got.exp+=gainExp(Math.round(rnd(40,110)*(1+mod("outing"))));
             if(Math.random()<.3){ S.lotus++; O.got.lotus++; } }
-    else { damageHP(rnd(2,9)); damageSN(rnd(1,7)); O.got.exp+=gainExp(rnd(10,30)); }
-  }else{ txt=`<div style="font-size:15px">${c.g}</div>`; O.got.exp+=gainExp(rnd(15,35)); }
+    else { damageHP(rnd(2,9)); damageSN(rnd(1,7)); O.got.exp+=gainExp(Math.round(rnd(10,30)*(1+mod("outing")))); }
+  }else{ txt=`<div style="font-size:15px">${c.g}</div>`; O.got.exp+=gainExp(Math.round(rnd(15,35)*(1+mod("outing")))); }
   addMark(4);
   O.step++;
   modal("결과", txt+`<div class="row" style="margin-top:14px"><button class="btn pri" onclick="drawOuting()">계속 걷는다</button></div>`);

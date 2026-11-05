@@ -52,7 +52,7 @@ const server=http.createServer((q,r)=>{
   const top=document.querySelector('#topbar').textContent;
   out.shown={
     식사:top.includes('연근산채 만두'), 디저트:top.includes('달빛대추 만두'),
-    버프:top.includes('월병'), 물약:top.includes('맨드레이크 각성제'),
+    버프:top.includes('월병'), 물약:top.includes('명근각성액'),
     띠항목수:(typeof mealChips==='function'?mealChips().length:0)+S.buffs.filter(b=>!b.hide).length
   };
 

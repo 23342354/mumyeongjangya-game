@@ -4055,12 +4055,12 @@ function pairSoulStats(c){
  return {attack,resonance,burst:Math.round(Math.min(raw,c.dps*6)),shield:Math.round(Math.min(c.hp*.10,raw*.05))};
 }
 function pairSoulQuestPower(attack,res){return Math.max(1,Math.round(attack*6*(1+res/100)));}
-function pairSoulCount(seconds){return seconds<15?0:1+Math.floor((seconds-15)/60);}
+function pairSoulCount(seconds){return seconds<15?0:1+Math.floor((seconds-15)/pairSoulPeriod(60));}
 function pairSoulDamage(c,seconds){const skill=pairSoulStats(c);return c.dps*seconds+(skill?skill.burst*pairSoulCount(seconds):0);}
 function pairSoulTime(c,hp){
  const skill=pairSoulStats(c);if(!skill)return hp/Math.max(1,c.dps);
  let time=hp/Math.max(1,c.dps);
- for(let proc=15;proc<=time;proc+=60){const dealt=c.dps*proc+skill.burst*pairSoulCount(proc);if(dealt>=hp)return proc;time=(hp-skill.burst*pairSoulCount(proc))/Math.max(1,c.dps);}
+ for(let proc=15;proc<=time;proc+=pairSoulPeriod(60)){const dealt=c.dps*proc+skill.burst*pairSoulCount(proc);if(dealt>=hp)return proc;time=(hp-skill.burst*pairSoulCount(proc))/Math.max(1,c.dps);}
  return Math.max(0,time);
 }
 function pairSoulGuardHP(c){const skill=pairSoulStats(c);return c.hp+(skill?skill.shield:0);}
@@ -4072,7 +4072,7 @@ async function pairSoulSaveName(){
  const data=JSON.parse(pairHeadEncode(H.img,H.tokens||['','']));data.soulName=name;const at=new Date().toISOString();
  try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
 }
-for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?'첫 5분 후 · 이후 5분마다':'첫 15초 · 이후 60초마다'} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰 피해 = 두 사람의 공격 합계 × 6 × (1 + 평균 공명 적성 ÷ 100).':''}</div></div>`;};}
+for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?`첫 5분 후 · 이후 ${Math.round(pairSoulPeriod(300))}초마다`:`첫 15초 · 이후 ${Math.round(pairSoulPeriod(60))}초마다`} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰 피해 = 두 사람의 공격 합계 × 6 × (1 + 평균 공명 적성 ÷ 100).':''}</div></div>`;};}
 
 let ROSTER_HEADER_REQUEST=0;
 function rosterPairScene(row,header){
@@ -4174,3 +4174,32 @@ takeSouv=function(wid,index){
 };
 const _profileOutingView=VIEWS.outing;
 VIEWS.outing=function(){const collected=outingCollection(),read=new Set(S.outing.read||[]);return _profileOutingView()+`<div class="card pad" style="margin-top:14px"><div class="sect-t">구역 기념품 수집첩 · ${collected.length}종</div><div class="tiny muted">이야기 ${read.size}/${OUTING_PROFILE_STORIES.length}개 · 새 기념품은 한 번의 나들이에 하나씩 얻습니다. 같은 종류는 중복 획득·중복 적용되지 않습니다. 기존 기념품에도 공명 +2 · 품질 +0.5%p가 적용됩니다. 품질 효과는 기존 최대 확률 제한 안에서 작동하며 높은 등급을 보장하지 않습니다.</div>${WARDS.map(w=>`<details style="margin-top:12px" data-disclosure-key="outing-keepsakes-${w.id}"><summary style="cursor:pointer;color:${w.c}">${w.n} · ${collected.filter(s=>s.w===w.id).length}/${OUTING_PROFILE_STORIES.filter(e=>e.w===w.id).length}종</summary><div class="grid g2" style="gap:8px;margin-top:8px">${OUTING_PROFILE_STORIES.filter(e=>e.w===w.id).map(e=>{const owned=collected.some(s=>s.id===e.item.id);return `<div class="sub"><b>${owned?'✓ ':''}${esc(e.item.n)}</b><div class="tiny muted">${read.has(e.id)?'이야기 확인':`미경험 · ${esc(e.title)}`}</div><div class="tiny" style="color:var(--jade);margin-top:4px">${esc(outingBonusText(e.item))}</div><div class="tiny muted" style="margin-top:4px">${esc(e.item.lore)}</div></div>`;}).join('')}</div></details>`).join('')}${collected.filter(s=>s.id.startsWith('legacy-')).map(s=>`<div class="tiny muted" style="margin-top:6px">${esc(s.n)} · ${esc(outingBonusText(s))}</div>`).join('')}</div>`;};
+
+/* 명계 조제법 확장. 기존 q1~q9 재고와 지속시간은 그대로 유지합니다. */
+POTIONS.find(p=>p.id==='q2').group='soul-might';
+POTIONS.find(p=>p.id==='q3').group='soul-guard';
+POTIONS.find(p=>p.id==='q4').group='soul-calm';
+POTIONS.push(
+ {id:'q10',n:'몽행영로',c:'var(--jade)',dur:360,mana:12800,mat:{인광:6,꽃:2,약초:4},buf:[['outing',.30],['mana',.30]],d:'6시간 나들이 륜·지식·경험치 보상 +30%, 파장 재생 +30%',farm:true},
+ {id:'q11',n:'현명개안로',c:'var(--blue)',dur:120,mana:28000,mat:{집광편:4,먼지:24,먹잉크:2},buf:[['exp',.60],['know',.40]],d:'2시간 경험치 +60%, 지식 획득 +40%',req:2},
+ {id:'q12',n:'환생봉혼액',c:'var(--red)',dur:120,mana:38400,mat:{잿불씨:4,홍월초:12,뿌리:8},buf:[['hpP',.20],['atkP',.10],['lifesteal',.01]],d:'2시간 생명력 +20%, 공격력 +10%, 의뢰 타격 피해의 1% 생명력 흡수',req:3,farm:true},
+ {id:'q13',n:'일륜육화단',c:'var(--gold)',dur:360,mana:72000,mat:{집광편:8,종모래:4,인광:8,홍월초:12},buf:[['atkP',.20],['hpP',.20],['gold',.20],['know',.20],['study',.20],['exp',.20]],d:'6시간 공격력·생명력·륜·지식·수업 효율·경험치 +20%',req:4},
+ {id:'q14',n:'찰나유전액',c:'var(--violet)',dur:120,mana:96000,mat:{종모래:6,톱니:12,먹잉크:4},buf:[['soulHaste',.08],['spd',.15]],d:'2시간 영혼의 공명 재사용 대기시간 -8%, 공격 속도 +15% (첫 발동 시간 유지)',req:4},
+ {id:'q15',n:'심연혈전액',c:'var(--red)',dur:120,mana:128000,mat:{심연정:2,잿불씨:8,홍월초:16},buf:[['atkP',.45],['boss',.10]],d:'2시간 공격력 +45%, 업귀 피해 +10% · 홍련전액과 교체',req:5,group:'soul-might'},
+ {id:'q16',n:'심연금강액',c:'var(--jade)',dur:120,mana:128000,mat:{심연정:2,집광편:8,먼지:36},buf:[['hpP',.45],['defP',.35]],d:'2시간 생명력 +45%, 방어력 +35% · 금강호혼탕과 교체',req:5,group:'soul-guard'},
+ {id:'q17',n:'심연정혼액',c:'var(--violet)',dur:120,mana:128000,mat:{심연정:2,인광:10,먹잉크:6},buf:[['rest',.45],['heal',.20]],d:'2시간 체력·이성 회복 +45%, 치유·보호막 위력 +20% · 안혼정로와 교체',req:5,group:'soul-calm'}
+);
+const _alchemyOptName=OPTNAME;OPTNAME=function(k){return ({outing:'나들이 보상',soulHaste:'공명 재사용 대기시간 감소',lifesteal:'의뢰 생명력 흡수'})[k]||_alchemyOptName(k);};
+function pairSoulPeriod(seconds){
+ const peer=window.PAIR_PLAY?.ready?window.PAIR_PLAY.snapshot?.peer:null;
+ const other=(peer?.buffs||[]).filter(b=>b.key==='soulHaste'&&b.left>0).reduce((v,b)=>v+b.v,0);
+ return seconds*(1-clamp(Math.max(mod('soulHaste'),other),0,.25));
+}
+const _alchemyAttack=resolveAttack;
+resolveAttack=function(A,D,log,opts){
+ const R=S.run,own=R&&A===R.me,peer=R&&R.allies?.includes(A);
+ let rate=own?mod('lifesteal'):peer?(window.PAIR_PLAY?.snapshot?.peer?.buffs||[]).filter(b=>b.key==='lifesteal'&&b.left>0).reduce((v,b)=>v+b.v,0):0;
+ const before=D.hp,result=_alchemyAttack(A,D,log,opts),dealt=Math.max(0,before-D.hp);
+ if(rate>0&&dealt>0&&A.hp>0){const heal=Math.min(A.max-A.hp,Math.max(1,Math.round(dealt*rate)));if(heal>0){A.hp+=heal;log.push(`<span class="s">${esc(A.n)} · 봉혼 생명력 흡수 +${nf(heal)}</span>`);}}
+ return result;
+};
