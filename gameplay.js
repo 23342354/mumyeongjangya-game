@@ -982,7 +982,7 @@ function guardFoe(n){ return {dps:Math.round(240*Math.pow(1.07,n)), n:n}; }
 
 VIEWS.tower=()=>{
   const fl=(S.tower||0)+1, f=towerFoe(fl), c=C();
-  const sec=f.hp/Math.max(1,c.dps);
+  const sec=typeof pairSoulTime==="function"?pairSoulTime(c,f.hp):f.hp/Math.max(1,c.dps);
   const canKill=sec<=60;
   const survive=c.hp/Math.max(1,f.dps*Math.max(0,1-c.def/(c.def+9000)));
   const win=canKill&&survive>=Math.min(60,sec)&&(fl%50!==0||sec<=45);
@@ -1024,7 +1024,7 @@ function climbTower(chain){
   let gained=0, logs=[], rin=0, sari=0, drops=[];
   for(let k=0;k<(chain?10:1);k++){
     const fl=(S.tower||0)+1, f=towerFoe(fl), c=C();
-    const sec=f.hp/Math.max(1,c.dps);
+    const sec=typeof pairSoulTime==="function"?pairSoulTime(c,f.hp):f.hp/Math.max(1,c.dps);
     const mit=Math.max(0,1-c.def/(c.def+9000));
     const survive=c.hp/Math.max(1,f.dps*mit);
     const boss=fl%50===0;
@@ -1055,7 +1055,8 @@ function climbTower(chain){
 VIEWS.guard=()=>{
   const fl=(S.tower2||0)+1, f=guardFoe(fl), c=C();
   const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
-  const sustain=c.hp*c.heal/Math.max(1,f.dps*mit);
+  const baseSustain=c.hp*c.heal/Math.max(1,f.dps*mit);
+  const sustain=(baseSustain>=15&&typeof pairSoulGuardHP==="function"?pairSoulGuardHP(c):c.hp)*c.heal/Math.max(1,f.dps*mit);
   const win=sustain>=30;
   return head("쓰러뜨리지 않고 버티는 탑",ic("shield")+" 결계의 탑", `최고 ${S.tower2||0}층`)+`
   ${buffStrip()}
@@ -1087,7 +1088,8 @@ function climbGuard(chain){
   for(let k=0;k<(chain?10:1);k++){
     const fl=(S.tower2||0)+1, f=guardFoe(fl), c=C();
     const mit=Math.max(0,1-c.def/(c.def+9000))*(S.tendency==="수호"?.8:1);
-    const sustain=c.hp*c.heal/Math.max(1,f.dps*mit);
+    const baseSustain=c.hp*c.heal/Math.max(1,f.dps*mit);
+  const sustain=(baseSustain>=15&&typeof pairSoulGuardHP==="function"?pairSoulGuardHP(c):c.hp)*c.heal/Math.max(1,f.dps*mit);
     const win=sustain>=30;
     logs.push(`<span class="${win?"s":"h"}">${fl}층</span> — 버틴 시간 ${Math.min(99,sustain).toFixed(1)}초 / 30초 → ${win?"방어 성공":"붕괴"}`);
     if(!win) break;
@@ -1152,13 +1154,14 @@ function hitBoss(){
   if(S.wb.tickets<1) return;
   S.wb.tickets--;
   const c=C();
-  const dmg=Math.round(c.dps*30*(1+mod("boss"))*(0.92+Math.random()*0.18));
+  const dmg=Math.round((typeof pairSoulDamage==="function"?pairSoulDamage(c,30):c.dps*30)*(1+mod("boss"))*(0.92+Math.random()*0.18));
   S.wb.dmg+=dmg; S.wb.total+=dmg;
   const rin=gainRin(Math.round(dmg/3000)+400), ex=gainExp(600);
   addMark(10);
   modal("업귀 토벌",`
     <div style="text-align:center;padding:8px 0">
       <div class="tiny muted">30초 동안 입힌 피해</div>
+      ${typeof pairSoulReady==='function'&&pairSoulReady()?`<div class="tiny" style="color:var(--jade)">${esc(pairSoulName())} · 15초에 1회 발동</div>`:""}
       <div style="font-size:34px;font-weight:600;color:var(--gold)">${nf(dmg)}</div></div>
     <div class="card pad"><div class="tiny" style="color:var(--jade)">
       륜 +${nf(rin)} · 경험치 +${nf(ex)} · 이번 주 누적 ${nf(S.wb.dmg)}</div></div>
@@ -1967,7 +1970,9 @@ function runStep(){
   const R=S.run; if(!R||R.done) return;
   const live=[R.me,...R.allies].filter(x=>x.hp>0);
   if(!live.length){ endRun(false); return; }
-  const r=Math.random();
+  R.soulSeconds=(R.soulSeconds||0)+30;
+  const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=(R.soulCasts?60:15)&&R.foes[0]?.hp>0;
+  const r=soulReady?.5:Math.random();
   if(r<0.14){ pushRun(`<span class="muted">${pick(RUNFLAVOR)}</span>`); return; }
   if(r<0.2 && R.me.hp<R.me.max*.7){
     const heal=Math.round(R.me.max*0.06*(1+mod("heal")));
@@ -1989,7 +1994,13 @@ function runStep(){
   const attacker = Math.random()<0.58 ? pick(live) : foe;
   const target   = attacker===foe ? pick(live) : foe;
   resolveAttack(attacker, target, log);
-  pushRun(log[0]||"");
+  if(soulReady&&foe.hp>0){
+    const attack=live.reduce((sum,f)=>sum+f.atk,0),res=live.reduce((sum,f)=>sum+f.res,0)/live.length;
+    const damage=Math.max(1,Math.min(Math.round(foe.max*.15),Math.round(attack*.6*(1+.5*res/(res+100)))));
+    foe.hp=Math.max(0,foe.hp-damage);R.soulSeconds=0;R.soulCasts=(R.soulCasts||0)+1;
+    log.push(`<span class="s">${esc(pairSoulName())} 발동 · 영혼의 공명 · 피해 ${nf(damage)}</span>`);
+  }
+  pushRun(log.join("<br>")||"");
   if(foe.hp<=0){
     R.kills++; ct("mon");
     /* 획득 시점의 배율로 계산하고 정산 전까지 의뢰 주머니에 보관합니다. */

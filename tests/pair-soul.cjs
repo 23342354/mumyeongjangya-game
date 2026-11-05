@@ -1,0 +1,18 @@
+const {chromium}=require('playwright');
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{const rel=decodeURIComponent(req.url.split('?')[0]);if(rel.includes('..')){res.writeHead(404).end();return;}try{const f=path.join(root,rel==='/'?'index.html':rel);res.setHeader('Content-Type',({'html':'text/html','js':'text/javascript','css':'text/css','png':'image/png','webp':'image/webp'})[path.extname(f).slice(1)]||'application/octet-stream');res.end(fs.readFileSync(f));}catch{res.writeHead(404).end();}});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox']});
+try{
+ const page=await browser.newPage({viewport:{width:1721,height:950}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.fulfill({status:200,contentType:r.request().resourceType()==='stylesheet'?'text/css':'application/json',body:r.request().resourceType()==='stylesheet'?'':'[]'}));
+ await page.addInitScript(()=>{window.setInterval=()=>0;});
+ await page.goto(`http://127.0.0.1:${server.address().port}/`);
+ const result=await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='';MMJY_CONFIG.supabaseKey='';S=newState();S.made=true;S.name='검증';S.t=nowMin();S.dayStamp=cal().day;boot();pairEnsure=()=>({mine:{id:1}});PAIR_PLAY.ready=true;PAIR_PLAY.snapshot={pairId:1,peer:{name:'페어'}};pairSoulProfile=()=>({stats:{atk:30,res:50}});effStat=k=>k==='atk'?30:50;const c={dps:10000,hp:10000};const stats=pairSoulStats(c);const timings=[0,14,15,30,74,75,135].map(pairSoulCount);const before=pairSoulTime(c,100000),after=pairSoulTime(c,200000);const burst=pairSoulDamage(c,30)-300000;const shield=pairSoulGuardHP(c)-10000;
+ resolveAttack=()=>{};Math.random=()=>.5;S.run={pairId:1,stage:1,done:false,left:60,me:{n:'나',atk:30,res:50,hp:100,max:100},allies:[{n:'페어',atk:30,res:50,hp:100,max:100}],foes:[{n:'적',hp:100000,max:100000}],logs:[],kills:0};runStep();const first=S.run.soulCasts;runStep();const second=S.run.soulCasts;runStep();const third=S.run.soulCasts;const log=S.run.logs.map(l=>l.t).join('');PAIR_PLAY.ready=false;const solo=pairSoulDamage(c,30)===300000&&pairSoulTime(c,200000)===20&&pairSoulGuardHP(c)===10000;
+ const defaults=pairHeadDecode('');PAIRHEAD.soulName='함께하는 빛';const saved=pairHeadDecode(pairHeadEncode('',[])).soulName;
+ return {timings,before,after,burst,shield,stats,first,second,third,log,solo,saved,defaultName:defaults.soulName};});
+ assert.deepEqual(result.timings,[0,0,1,1,1,2,3]);assert.equal(result.before,10);assert.ok(result.after>=15&&result.after<20);assert.ok(result.burst<=60000&&result.burst>0);assert.ok(result.shield<=1000&&result.shield>0);assert.deepEqual([result.first,result.second,result.third],[1,1,2]);assert.ok(result.log.includes('영혼의 공명'));assert.ok(result.solo);assert.equal(result.saved,'함께하는 빛');assert.equal(result.defaultName,'');assert.deepEqual(errors,[]);console.log('PASS: 15/60-second timing, bounded burst/shield, discrete tower time, quest 30-second ticks with cooldown/logging, solo exclusion and shared skill name');
+}finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

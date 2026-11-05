@@ -162,6 +162,7 @@ function peerView(){
   return view;
  }finally{S=own;}
 }
+window.pairSoulProfile=()=>PJ.ready?peerView():null;
 function metadata(){const p=peerView(),m={};m[ACCT.id]={rate:manaRate(),cap:personalMax()};if(p)m[PJ.snapshot.peerId]={rate:p.rate,cap:p.cap};return m;}
 function enqueue(fn){const job=PJ.queue.catch(()=>{}).then(fn);PJ.queue=job.catch(()=>{});return job;}
 function sameSnapshot(r){
@@ -400,7 +401,7 @@ function tick(minutes,advanceRun=true,forceRun=false){
   // Simulate every original combat turn, but retain one concise checkpoint.
   // Combat remains unchanged; checkpoints list the whole unclaimed pouch.
   const ending=R.done?(R.logs||[]).filter(l=>/정산 대기 ·|■/.test(l.t)).slice(-2):[];
-  const summary={t:`<b>${runTimeText(Math.max(0,R.total-R.left))} 의뢰 진행</b> · 누적 처치 ${nf(R.kills||0)}체 · ${runRewardText(R)} · 정산 대기`,time:cal().str.replace(/^(오전|오후) /,'')};
+  const summary={t:`<b>${runTimeText(Math.max(0,R.total-R.left))} 의뢰 진행</b> · 누적 처치 ${nf(R.kills||0)}체 · ${runRewardText(R)} · 정산 대기${R.soulCasts?` · ${esc(pairSoulName())} 누적 ${R.soulCasts}회`:""}`,time:cal().str.replace(/^(오전|오후) /,'')};
   R.logs=[...previousLogs,summary,...ending].slice(-80);
  }
 }

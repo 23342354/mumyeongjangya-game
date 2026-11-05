@@ -713,6 +713,7 @@ VIEWS.pairhub=()=>{
         <div class="tiny muted" style="margin-bottom:8px">아직 페어가 없습니다. 명부에서 신청해 보세요.</div>
         <button class="btn sm" onclick="go('roster')">학생 명부</button></div>`)
     + '</div>'
+    + pairSoulSettingsHTML()
     + pairHousingHTML()
     + (typeof pairRunHTML==="function"?pairRunHTML():"");
 };
@@ -1000,13 +1001,13 @@ function pairOrder(){
 const PAIRHEADW=1500, PAIRHEADH=625, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
 /* 헤더 그림과 글 목록은 저장본에 넣지 않습니다 — 커서 저장이 무거워집니다.
    서버가 원본을 갖고 있으니 켤 때마다 다시 받아 옵니다. */
-const PAIRHEAD={img:"", tokens:["",""], fontCSS:"", at:"", loading:false, forId:null};
+const PAIRHEAD={img:"", tokens:["",""], fontCSS:"", soulName:"", at:"", loading:false, forId:null};
 function pairHeadDecode(raw){
- try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i])),fontCSS:typeof v.fontCSS==="string"?v.fontCSS.slice(0,12000):""};}catch{}
- return {img:pairHeadImage(raw),tokens:["",""],fontCSS:""};
+ try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i])),fontCSS:typeof v.fontCSS==="string"?v.fontCSS.slice(0,12000):"",soulName:typeof v.soulName==="string"?v.soulName.slice(0,30):""};}catch{}
+ return {img:pairHeadImage(raw),tokens:["",""],fontCSS:"",soulName:""};
 }
 function pairHeadImage(value){return typeof value==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value)?value:"";}
-function pairHeadEncode(img,tokens,fontCSS=pairHeadState().fontCSS||""){return JSON.stringify({v:2,img,tokens,fontCSS});}
+function pairHeadEncode(img,tokens,fontCSS=pairHeadState().fontCSS||""){return JSON.stringify({v:2,img,tokens,fontCSS,soulName:pairHeadState().soulName||""});}
 const PAIR_FONT_CACHE=new Map();
 function pairFontURL(raw){const u=new URL(raw);if(u.protocol!=="https:")throw Error("HTTPS 폰트 주소를 사용해 주세요.");return u.href;}
 function pairFontSpec(css){
@@ -1063,7 +1064,7 @@ function pairHeadFetch(force){
       if(!row) return false;
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
-      if(!at){ H.img=""; H.tokens=["",""]; H.fontCSS=""; H.at=""; H.forId=String(P.mine.id);
+      if(!at){ H.img=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
                if(VIEW==="pairhub") renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
@@ -4041,3 +4042,32 @@ const _reforgeShop=VIEWS.shop;
 VIEWS.shop=function(){return _reforgeShop.apply(this,arguments)+`<div class="card pad" style="margin-top:14px"><div class="sect-t">부적 가루 교환</div><div class="tiny muted">부적 1개를 부적 가루 10개로 교환합니다. 부적은 각인에, 부적 가루는 재련에 사용합니다. 교환 후 되돌릴 수 없습니다.</div><div class="tiny muted" style="margin-top:6px">보유 부적 ${nf(S.mat.가루||0)} · 부적 가루 ${nf(S.mat.부적가루||0)}</div><div class="row" style="margin-top:10px">${[1,10,100].map(n=>`<button class="btn sm" ${S.mat.가루>=n?'':'disabled'} onclick="talismanExchange(${n})">부적 ${n} → 가루 ${nf(n*10)}</button>`).join('')}<input class="inp" id="talisman-exchange-qty" type="number" min="1" max="1000000" step="1" value="1" aria-label="교환할 부적 수량" style="width:100px"><button class="btn sm" onclick="talismanExchange(document.getElementById('talisman-exchange-qty').value)">수량 교환</button></div></div>`;};
 
 function talismanDustCard(){return `<div class="sub talisman-dust-card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><img src="assets/pixel-life/talisman-dust.png?v=1" width="64" height="64" alt="부적 가루" style="object-fit:contain;image-rendering:pixelated"><b>부적 가루</b></div><div class="tiny muted">재련 재료 · 보유 ${nf(S.mat.부적가루||0)}</div><div class="tiny muted" style="margin:5px 0 8px;min-height:36px">부적 1개 → 부적 가루 10개</div><div class="row" style="gap:6px;flex-wrap:wrap">${[10,100].map(n=>`<button class="btn sm pri" ${S.mat.가루>=n?'':'disabled'} onclick="talismanExchange(${n})">${n} → ${nf(n*10)}</button>`).join('')}</div></div>`;}
+
+/* Soul resonance: shared pair-only skill, evaluated at explicit combat times. */
+function pairSoulName(){return pairHeadState().soulName?.trim()||'영혼의 공명';}
+function pairSoulReady(){const p=window.PAIR_PLAY;return !!(pairEnsure().mine&&p?.ready&&p.snapshot?.peer&&typeof window.pairSoulProfile==='function');}
+function pairSoulStats(c){
+ if(!pairSoulReady())return null;const peer=window.pairSoulProfile();if(!peer)return null;
+ const attack=Math.max(0,effStat('atk'))+Math.max(0,peer.stats.atk);
+ const resonance=(Math.max(0,effStat('res'))+Math.max(0,peer.stats.res))/2;
+ const raw=attack*380*(1+resonance*.035)*4;
+ return {attack,resonance,burst:Math.round(Math.min(raw,c.dps*6)),shield:Math.round(Math.min(c.hp*.10,raw*.05))};
+}
+function pairSoulCount(seconds){return seconds<15?0:1+Math.floor((seconds-15)/60);}
+function pairSoulDamage(c,seconds){const skill=pairSoulStats(c);return c.dps*seconds+(skill?skill.burst*pairSoulCount(seconds):0);}
+function pairSoulTime(c,hp){
+ const skill=pairSoulStats(c);if(!skill)return hp/Math.max(1,c.dps);
+ let time=hp/Math.max(1,c.dps);
+ for(let proc=15;proc<=time;proc+=60){const dealt=c.dps*proc+skill.burst*pairSoulCount(proc);if(dealt>=hp)return proc;time=(hp-skill.burst*pairSoulCount(proc))/Math.max(1,c.dps);}
+ return Math.max(0,time);
+}
+function pairSoulGuardHP(c){const skill=pairSoulStats(c);return c.hp+(skill?skill.shield:0);}
+function pairSoulSettingsHTML(){if(!pairEnsure().mine)return '';return `<div class="card pad" style="margin-bottom:14px"><div class="sect-t">영혼의 공명 · 페어 전용 스킬</div><label for="pair-soul-name">스킬명 (함께 사용 · 최대 30자)</label><div class="row" style="margin-top:6px"><input class="inp" id="pair-soul-name" maxlength="30" value="${esc(pairHeadState().soulName||'')}" placeholder="영혼의 공명" style="flex:1;min-width:0"><button class="btn sm" onclick="pairSoulSaveName()">저장</button></div><div class="tiny muted" style="margin-top:8px">의뢰·석탑·결계의 탑·업귀 토벌에서만 자동 발동합니다. 첫 발동 15초 후, 이후 60초마다. 의뢰는 30초 단위 판정으로 첫 30초에 발동합니다. 공격·공명 적성으로 위력이 증가하며 결계의 탑에서는 보호막으로 작동합니다. 이름을 비우면 기본 스킬명이 적용됩니다.</div></div>`;}
+async function pairSoulSaveName(){
+ const P=pairEnsure();if(!P.mine)return;const name=document.getElementById('pair-soul-name')?.value.trim().slice(0,30)||'';
+ // Fetch latest shared header first so renaming never removes a partner's tokens/font.
+ await pairHeadFetch(true);const H=pairHeadState();if(H.forId!==String(P.mine.id)){toast('페어 헤더 정보를 불러온 뒤 다시 저장해 주세요.','bad');return;}
+ const data=JSON.parse(pairHeadEncode(H.img,H.tokens||['','']));data.soulName=name;const at=new Date().toISOString();
+ try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
+}
+for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">첫 ${kind==='quest'?30:15}초 · 이후 60초마다 · ${kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰에서는 D5 전투 규모에 맞춘 피해와 적 최대 체력 15% 상한을 적용합니다.':''}</div></div>`;};}
