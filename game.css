@@ -1324,3 +1324,13 @@ body.auth-gate #mobile-chat-toggle{
 :root[data-pair-theme="wuthering-heights"] .tab.on,
 :root[data-pair-theme="wuthering-heights"] .ctab.on{border-color:var(--accEdge);background:linear-gradient(120deg,var(--accSoft),color-mix(in srgb,var(--pair-theme-b) 12%,transparent))}
 :root[data-pair-theme="wuthering-heights"] #mobile-nav button.on{background:linear-gradient(135deg,var(--accSoft),color-mix(in srgb,var(--pair-theme-b) 18%,transparent))}
+
+/* Keep both soul colors distinct instead of averaging the whole surface. */
+:root[data-pair-theme="wuthering-heights"] body::after{background:radial-gradient(ellipse at 0% 18%,color-mix(in srgb,var(--pair-raw-a) 40%,transparent),transparent 65%),radial-gradient(ellipse at 100% 70%,color-mix(in srgb,var(--pair-raw-b) 40%,transparent),transparent 65%),linear-gradient(115deg,color-mix(in srgb,var(--pair-raw-a) 14%,var(--s0)),color-mix(in srgb,var(--pair-raw-b) 14%,var(--s0)))}
+:root[data-pair-theme="wuthering-heights"] #topbar{background:linear-gradient(105deg,color-mix(in srgb,var(--pair-raw-a) 22%,var(--s0)),color-mix(in srgb,var(--pair-raw-b) 22%,var(--s0)))}
+:root[data-pair-theme="wuthering-heights"] #main .card,
+:root[data-pair-theme="wuthering-heights"] #chatcol .chat-panel{border:1px solid transparent;background:linear-gradient(120deg,color-mix(in srgb,var(--pair-raw-a) 16%,var(--s1)),color-mix(in srgb,var(--pair-raw-b) 16%,var(--s1))) padding-box,linear-gradient(120deg,var(--pair-theme-a),var(--pair-theme-b)) border-box}
+:root[data-pair-theme="wuthering-heights"] .btn.pri{background:linear-gradient(110deg,var(--pair-theme-a) 0%,var(--pair-theme-a) 18%,var(--pair-theme-b) 82%,var(--pair-theme-b) 100%)}
+:root[data-pair-theme="wuthering-heights"] .bar:not(.hp):not(.sn)>i{background:linear-gradient(90deg,var(--pair-theme-a),var(--pair-theme-b))}
+:root[data-pair-theme="wuthering-heights"] .nav-h.on,
+:root[data-pair-theme="wuthering-heights"] #mobile-nav button.on{background:linear-gradient(115deg,color-mix(in srgb,var(--pair-theme-a) 22%,transparent),color-mix(in srgb,var(--pair-theme-b) 22%,transparent))}
