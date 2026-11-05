@@ -3416,6 +3416,37 @@ function boardSubmissionKey(payload){
  if(!BOARD_PENDING||BOARD_PENDING.fingerprint!==fingerprint)BOARD_PENDING={fingerprint,id:window.crypto?.randomUUID?.()||'board-'+Date.now()+'-'+Math.random().toString(36).slice(2)};
  return BOARD_PENDING.id;
 }
+const boardGotId=v=>v!==undefined&&v!==null&&v!==''&&!(Array.isArray(v)&&!v.length);
+/* 글은 올라갔는데 번호만 못 받는 경우가 있습니다(구판 함수가 번호를 돌려주지 않거나
+   응답이 끊긴 경우). 공개 목록에서 방금 쓴 글을 찾아 등록을 확인합니다. 제목은
+   비공개 글도 목록에 보이므로 비공개 여부와 무관하게 쓸 수 있습니다. */
+async function boardFindJustPosted(payload){
+ const t=String(payload.p_title??payload.title??'').trim();
+ if(!t) return null;
+ const c=String(payload.p_cat??payload.cat??'').trim();
+ const n=String(payload.p_name??payload.name??'').trim();
+ const since=Date.now()-5*60*1000;
+ let rows;
+ try{ rows=await sbGet('suggestions_public?select=id,created_at,name,cat,title&order=id.desc&limit=40'); }
+ catch(_){ return null; }
+ const hit=(rows||[]).find(r=>String(r.title||'').trim()===t
+   && String(r.cat||'').trim()===c
+   && String(r.name||'').trim()===n
+   && (!r.created_at || !Number.isFinite(Date.parse(r.created_at)) || Date.parse(r.created_at)>=since));
+ return hit?hit.id:null;
+}
+/* 등록 여부를 끝내 알 수 없을 때 쓰는 알림. '보내지 못했습니다'라고 단정하지 않습니다 —
+   서버는 같은 요청 번호와 1분 안의 같은 내용을 한 글로 묶으므로 다시 눌러도 겹치지 않습니다. */
+const BOARD_UNSURE='올렸는지 확인하지 못했습니다. 글은 이미 올라갔을 수 있으니 건의함 목록을 확인해 주세요. 작성 내용은 그대로 두었고, 같은 내용으로 다시 눌러도 중복으로 올라가지 않습니다.';
+/* 보내기 실패 처리 — 등록 여부를 모르는 경우(BOARD_UNSURE)와 진짜 실패를 가릅니다.
+   모르는 경우에는 '보내지 못했습니다'라고 말하지 않고, 목록을 새로 고쳐 직접 보게 합니다. */
+function boardSubmitFailed(e,btn){
+ const msg=String(e&&e.message||e);
+ const unsure=msg===BOARD_UNSURE;
+ if(btn){ btn.disabled=false; btn.textContent=unsure?"다시 확인":"올리기"; }
+ toast(unsure?msg:("보내지 못했습니다 · "+msg),unsure?"":"bad");
+ if(unsure) boardFetch(true);
+}
 async function boardDeliver(payload,isSheet){
  if(BOARD_SUBMIT_BUSY)throw Error('글을 전송하고 있습니다. 잠시 기다려 주세요.');
  const request=boardSubmissionKey(payload);BOARD_SUBMIT_BUSY=true;
@@ -3424,7 +3455,7 @@ async function boardDeliver(payload,isSheet){
   try{
    result=isSheet?await boardSend({...payload,request_id:request}):await sbSend('POST','rpc/submit_account_suggestion_once',{...payload,p_request:request});
    const id=isSheet?(result?.ok?result.id:null):result;
-   if(id!==undefined&&id!==null&&id!=='')return id;
+   if(boardGotId(id))return id;
    throw Error(isSheet?(result?.error||'서버 응답에서 글 번호를 확인하지 못했습니다.'):'서버 응답에서 글 번호를 확인하지 못했습니다.');
   }catch(error){
    // A lost response does not mean the insert failed. Verify by request ID first.
@@ -3432,9 +3463,13 @@ async function boardDeliver(payload,isSheet){
     const account=boardAccountCredentials();
     const check=isSheet?await boardSend({action:'submission_status',...account,request_id:request}):await sbSend('POST','rpc/account_suggestion_status',{...account,p_request:request});
     const id=isSheet?(check?.ok?check.id:null):check;
-    if(id!==undefined&&id!==null&&id!=='')return id;
+    if(boardGotId(id))return id;
    }catch(_){}
-   throw Error('등록 여부를 확인하지 못했습니다. 작성 내용은 유지됩니다. 같은 내용으로 다시 누르면 등록 여부를 재확인합니다. · '+String(error.message||error));
+   // 요청 기록까지 없을 수 있습니다. 마지막으로 공개 목록에서 글 자체를 찾습니다.
+   if(!isSheet){
+    try{ const id=await boardFindJustPosted(payload); if(boardGotId(id))return id; }catch(_){}
+   }
+   throw Error(BOARD_UNSURE);
   }
  }finally{BOARD_SUBMIT_BUSY=false;}
 }
@@ -3494,10 +3529,7 @@ function boardSubmit(){
       }else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
-    .catch(e=>{
-      if(btn){ btn.disabled=false; btn.textContent="올리기"; }
-      toast("보내지 못했습니다 · "+esc(String(e.message||e)),"bad");
-    });
+    .catch(e=>boardSubmitFailed(e,btn));
 }
 function boardLike(id){
   if(S.board.liked.includes(id)){ toast("이미 공감했습니다."); return; }
@@ -4126,8 +4158,7 @@ boardSubmit=function(){
       else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
-    .catch(e=>{ if(btn){ btn.disabled=false; btn.textContent="올리기"; }
-      toast("보내지 못했습니다 · "+esc(String(e.message||e)),"bad"); });
+    .catch(e=>boardSubmitFailed(e,btn));
 };
 const _boardLike=boardLike;
 boardLike=function(id){
