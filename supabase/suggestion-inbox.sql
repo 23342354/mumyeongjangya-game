@@ -10,12 +10,13 @@ create table if not exists public.suggestion_dm(
  sender_id text references public.accounts(id),staff boolean not null default false,body text not null,
  request_id text not null,created_at timestamptz not null default now(),unique(sender_id,request_id)
 );
+alter table public.suggestion_threads add column if not exists secret boolean not null default true;
 -- 작성 계정이 검증되어 연결된 기존 문의만 가져옵니다. 이름으로 소유자를 추측하지 않습니다.
 alter table public.suggestion_threads add column if not exists legacy_id bigint unique;
 do $$begin
  if exists(select 1 from information_schema.columns where table_schema='public' and table_name='suggestions' and column_name='author_account_id') then
-  execute $m$insert into public.suggestion_threads(author_id,title,status,created_at,updated_at,legacy_id)
-   select s.author_account_id,s.title,coalesce(s.status,'접수'),s.created_at,s.created_at,s.id from public.suggestions s
+  execute $m$insert into public.suggestion_threads(author_id,title,status,created_at,updated_at,legacy_id,secret)
+   select s.author_account_id,s.title,coalesce(s.status,'접수'),s.created_at,s.created_at,s.id,coalesce(s.secret,true) from public.suggestions s
    where s.author_account_id is not null and exists(select 1 from public.accounts a where a.id=s.author_account_id)
    on conflict(legacy_id) do nothing$m$;
   execute $m$insert into public.suggestion_dm(thread_id,sender_id,staff,body,request_id,created_at)
@@ -32,7 +33,7 @@ alter table public.suggestion_staff enable row level security;
 alter table public.suggestion_threads enable row level security;
 alter table public.suggestion_dm enable row level security;
 revoke all on public.suggestion_staff,public.suggestion_threads,public.suggestion_dm from public,anon,authenticated;
-create or replace function public.suggestion_inbox(p_actor text,p_token text,p_action text default 'list',p_thread bigint default null,p_title text default '',p_body text default '',p_request text default '',p_status text default '')
+create or replace function public.suggestion_inbox_v2(p_actor text,p_token text,p_action text default 'list',p_thread bigint default null,p_title text default '',p_body text default '',p_request text default '',p_status text default '',p_secret boolean default true)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,public as $$
 declare v_staff boolean;v_thread public.suggestion_threads%rowtype;v_id bigint;v_rows jsonb;v_messages jsonb;
 begin
@@ -40,7 +41,7 @@ begin
  v_staff:=exists(select 1 from public.suggestion_staff where account_id=p_actor);
  if p_action='list' then
   select coalesce(jsonb_agg(to_jsonb(t) order by t.updated_at desc),'[]') into v_rows from (
-   select id,author_id,title,status,created_at,updated_at from public.suggestion_threads where author_id=p_actor or v_staff order by updated_at desc limit 200
+   select id,author_id,title,status,created_at,updated_at,secret from public.suggestion_threads where not secret or author_id=p_actor or v_staff order by updated_at desc limit 200
   )t;
   return jsonb_build_object('staff',v_staff,'threads',v_rows);
  end if;
@@ -54,13 +55,14 @@ begin
  end if;
  if p_action='send' then
   if nullif(btrim(p_title),'') is null or length(p_title)>100 then raise exception '제목을 1~100자로 적어 주세요.';end if;
-  insert into public.suggestion_threads(author_id,title) values(p_actor,btrim(p_title)) returning id into v_id;
+  insert into public.suggestion_threads(author_id,title,secret) values(p_actor,btrim(p_title),coalesce(p_secret,true)) returning id into v_id;
   insert into public.suggestion_dm(thread_id,sender_id,staff,body,request_id) values(v_id,p_actor,false,btrim(p_body),p_request);
   return jsonb_build_object('id',v_id);
  end if;
  select * into v_thread from public.suggestion_threads where id=p_thread for update;
- if not found or (v_thread.author_id<>p_actor and not v_staff) then raise exception '작성자와 운영진만 볼 수 있는 문의입니다.';end if;
+ if not found or (v_thread.secret and v_thread.author_id<>p_actor and not v_staff) then raise exception '작성자와 운영진만 볼 수 있는 문의입니다.';end if;
  if p_action='reply' then
+  if v_thread.author_id<>p_actor and not v_staff then raise exception '작성자와 운영진만 답변할 수 있습니다.';end if;
   insert into public.suggestion_dm(thread_id,sender_id,staff,body,request_id) values(p_thread,p_actor,v_staff,btrim(p_body),p_request);
   update public.suggestion_threads set updated_at=now(),status=case when v_staff then '답변' else '접수' end where id=p_thread;
   return jsonb_build_object('id',p_thread);
@@ -72,8 +74,8 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object('id',id,'sender_id',sender_id,'staff',staff,'body',body,'created_at',created_at) order by id),'[]') into v_messages from public.suggestion_dm where thread_id=p_thread;
  return jsonb_build_object('staff',v_staff,'thread',(select to_jsonb(t) from public.suggestion_threads t where id=p_thread),'messages',v_messages);
 end;$$;
-revoke all on function public.suggestion_inbox(text,text,text,bigint,text,text,text,text) from public;
-grant execute on function public.suggestion_inbox(text,text,text,bigint,text,text,text,text) to anon,authenticated;
+revoke all on function public.suggestion_inbox_v2(text,text,text,bigint,text,text,text,text,boolean) from public;
+grant execute on function public.suggestion_inbox_v2(text,text,text,bigint,text,text,text,text,boolean) to anon,authenticated;
 notify pgrst,'reload schema';
 commit;
 -- 운영진 지정: 아래 문자열을 실제 로그인 ID(@ 제외)로 바꾸고 별도로 실행합니다.
