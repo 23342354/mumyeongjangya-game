@@ -146,13 +146,14 @@ VIEWS.rpboard=()=>{
 /* 사용자 모임: 회원/경험치/비공개 채팅은 별도 인증 RPC가 관리합니다. */
 function clubSoulColor(row){
  const id=row.user_id||row.from_id||row.sender_id||row.actor_id||row.account_id;
- const roster=S.sb?.roster||[],members=typeof CLUBNET!=='undefined'?CLUBNET.members||[]:[];
+ const roster=[...(typeof SOCIAL!=='undefined'?SOCIAL.students||[]:[]),...(S.sb?.roster||[])],members=typeof CLUBNET!=='undefined'?CLUBNET.members||[]:[];
  const named=members.filter(m=>m.name===(row.name||row.who));
  const resolved=id||((named.length===1)?named[0].user_id:null);
  const profile=roster.find(r=>String(r.id)===String(resolved));
  const own=resolved&&String(resolved)===String(typeof ACCT!=='undefined'?ACCT.id:S.sb?.id);
- const color=own?S.color:profile?.color||row.color||named[0]?.color;
- return /^#[0-9a-f]{6}$/i.test(String(color||''))?color:'var(--violetL)';
+ const member=members.find(m=>String(m.user_id)===String(resolved));
+ const colors=own?[S.color]:[profile?.color,member?.color,row.color,named.length===1?named[0].color:null];
+ return colors.find(color=>/^#[0-9a-f]{6}$/i.test(String(color||'')))||'var(--violetL)';
 }
 function clubSoulName(row){return `<span class="club-soul-name" style="color:${clubSoulColor(row)}">${esc(row.name||row.who||row.user_id||'이름 없음')}</span>`;}
 const CLUBNET={owner:'',mine:null,clubs:[],members:[],ready:false,busy:false,error:'',at:0,cursor:0,scope:'',sending:false,directoryAt:0,epoch:0};
@@ -185,7 +186,7 @@ function clubApply(r,owner){
  Object.assign(CLUBNET,{owner,mine:r.mine,clubs:Array.isArray(r.clubs)?r.clubs:CLUBNET.clubs,members:r.members||[],ready:true,error:'',scope});
  Object.assign(CLUBNET,{version:r.version||1});for(const k of ['vault','posts','logs','requests'])if(r[k]!==undefined)CLUBNET[k]=r[k];
  if(Array.isArray(r.clubs))CLUBNET.directoryAt=Date.now();
- const rows=(r.messages||[]).map(m=>({...m,id:'club:'+m.id,tab:'모임',scope,body:fmtChat(m.body),_clubVerified:true}));
+ const rows=(r.messages||[]).map(m=>({...m,id:'club:'+m.id,tab:'모임',scope,c:clubSoulColor(m),body:fmtChat(m.body),_clubVerified:true}));
  if(rows.length){CLUBNET.cursor=Math.max(CLUBNET.cursor,...r.messages.map(m=>Number(m.id)));chatRows(rows,true,false);}
  renderTop();clubRender();if(S.chatTab==='모임')renderChat();
 }

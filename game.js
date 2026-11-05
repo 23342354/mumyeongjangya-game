@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:'20261105-club-chat-soul-color-fix',date:'2026-11-05',title:'모임 채팅 영혼 컬러 수정',items:['모임 채팅에서 작성자 이름에 각 캐릭터의 영혼 컬러가 표시되도록 수정했습니다.','이전 대화도 최신 프로필 컬러로 표시합니다.']},
  {id:'20261105-club-colors-chat-layout',date:'2026-11-05',title:'모임 이름 컬러·채팅 메뉴 정리',items:['모임 부원·모임방·게시글·가입 신청·활동 기록의 이름에 영혼 테마 컬러를 적용했습니다.','채팅 탭 순서를 전체 → 이웃 → 계통 → 모임 → 페어로 정리했습니다.','접힌 채팅 버튼의 세로 글자와 읽지 않은 개수 배지가 겹치지 않도록 배치를 수정했습니다.']},
  {id:'20261105-arena-ten-stories',date:'2026-11-05',title:'연무제 제10회까지 사건 기록 확장',items:['제4~10회에 회차별 15개 대진과 등장·승리·패배 스크립트를 추가했습니다.','매점 도난, 약물 운송 기록, 구조 신호, 검은 바다의 일기장과 전생의 기억을 따라가는 재현 교련으로 구성했습니다.','제10회 마지막에는 마녀 여와의 재현 기록과 마주합니다. 제10회 완주 후에는 전체 완료로 표시됩니다.']},
  {id:'20261105-mobile-soul-name',date:'2026-11-05',title:'모바일 영혼의 공명 스킬명 표시 수정',items:['페어 화면을 거치지 않고 전투를 시작해도 지정한 영혼의 공명 스킬명을 불러오도록 수정했습니다.','재접속 시 페어별로 기억한 이름을 먼저 사용하고, 서버에서 변경된 이름을 확인합니다.']},
@@ -1037,7 +1038,7 @@ function chatMessages(){
 function chatMessageHTML(m){
   const mode=chatModeOf(m.mode);
   return `<div class="cmsg"><span class="ctime">${esc(m.time||"")}</span>
-    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
+    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&m._clubVerified===true&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
 }
 let CHATRESIZE=null;
 function chatLayout(){
