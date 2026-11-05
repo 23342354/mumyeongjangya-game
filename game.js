@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:"20261106-chat-delivery-retry",date:"2026-11-06",title:"채팅 전송 실패 복구 개선",items:["운영진이 채팅 서버 패치를 적용한 뒤에는 전송 대기 메시지를 보관하고 일시적인 연결 오류에 최대 3회까지 재시도합니다.","실패한 메시지의 다시 보내기 버튼으로 원문을 재전송할 수 있습니다. 같은 요청 번호를 사용해 응답이 끊겨도 중복 저장을 막습니다.","로그인·권한 오류와 연결 오류를 구분해 표시합니다. 연결 복구와 재접속 시 보관된 전송 대기를 다시 확인합니다."]},
  {id:"20261106-ledger-ui-refresh",date:"2026-11-06",title:"용돈 기입장 보기 개선",items:["잔고와 수입·지출·순변동을 한눈에 볼 수 있도록 기입장을 정리했습니다.","기간·수입/지출·사용자 필터와 날짜별 거래 목록을 추가했습니다. 날짜와 시간은 한국 시간으로 표시합니다.","요약은 선택한 기간과 사용자의 보관 기록을 기준으로 보여 줍니다."]},
  {id:"20261106-market-save-revision-recovery",date:"2026-11-06",title:"복구 지급 후 저장 충돌 보완",items:["중개소 버전 정보를 개인 변경 내역으로 다시 덮어쓰지 않도록 수정했습니다.","운영진이 저장 버전 정합성 패치를 적용하면 복구 지급 후 버전 정보가 어긋나 저장이 거부되던 서버 기록을 바로잡고 재발을 방지합니다."]},
  {id:"20261106-auction-compare-checkbox-refresh",date:"2026-11-06",title:"상인 장비 비교 체크박스 수정",items:["떠돌이 상인에서 각인 제외·장비 비교를 눌러도 내용이 바뀌지 않던 화면 갱신 오류를 수정했습니다. 체크하면 기준 수치와 비교표가 바로 반영됩니다."]},
@@ -1052,7 +1053,7 @@ function chatMessages(){
 function chatMessageHTML(m){
   const mode=chatModeOf(m.mode);
   return `<div class="cmsg"><span class="ctime">${esc(m.time||"")}</span>
-    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패 · 다시 보내 주세요</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
+    <div class="cbody"><span class="cmode ${mode==="오너"?"owner":"rp"}">${mode}</span>${m.title?`<span class="ctitle">${esc(m.title)}</span> `:""}<b class="cname" style="color:${m.tab==="모임"&&typeof clubSoulColor==="function"?clubSoulColor(m):m.c||"var(--violetL)"}">${esc(m.who)}</b> ${m.failed?`<span class="ctitle" style="color:var(--red)">전송 실패</span> ${m.clientRequestId?`<button class="btn sm chat-retry" onclick="retryChat(${esc(JSON.stringify(m.clientRequestId))})">다시 보내기</button>`:`<button class="btn sm chat-retry" onclick="chatRestoreFailedDraft(${Number(m.ts)||0})">입력창에 복원</button>`} <span class="tiny muted">${esc(m.deliveryError||'')}</span> `:m.pending?`<span class="ctitle">전송 중</span> `:""}${m.body}</div></div>`;
 }
 let CHATRESIZE=null;
 function chatLayout(){
