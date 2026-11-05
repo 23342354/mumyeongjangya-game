@@ -3020,12 +3020,13 @@ function openSettings(){
       모든 러너가 같은 날짜와 같은 시각을 봅니다. 자리를 비운 동안의 진행은 최대 24시간까지 반영됩니다.</div>
     <div class="tiny muted" style="margin-top:6px">지금 명계력 <b>${cal().date} ${cal().str}</b></div>
     <hr class="hr">
-    <div class="sect-t">보기</div>
+    <div class="sect-t">보기 · 기본 테마</div>
     <div class="tiny muted">눈이 편한 쪽으로 고르세요. 이 브라우저에만 저장됩니다.</div>
     <div class="row" style="margin-top:8px"><span class="seg">
-      <button class="${THEME!=="light"?"on":""}" onclick="setTheme('dark');openSettings()">어두운 테마</button>
-      <button class="${THEME==="light"?"on":""}" onclick="setTheme('light');openSettings()">밝은 테마</button>
+      <button class="${THEME!=="light"&&(typeof PAIR_THEME_PREVIEW==='undefined'||!PAIR_THEME_PREVIEW.pairId)?"on":""}" onclick="pairThemePreviewChoose(null,'dark');openSettings()">어두운 테마</button>
+      <button class="${THEME==="light"&&(typeof PAIR_THEME_PREVIEW==='undefined'||!PAIR_THEME_PREVIEW.pairId)?"on":""}" onclick="pairThemePreviewChoose(null,'light');openSettings()">밝은 테마</button>
     </span></div>
+    <div id="admin-pair-theme-preview"></div>
     <hr class="hr">
     <div class="sect-t">기록</div>
     <div class="tiny muted">진행 상황은 이 브라우저에 자동 저장됩니다. 자리를 비운 동안에도 최대 24시간까지 시간이 흐릅니다.</div>

@@ -4334,23 +4334,61 @@ function pairTrialThemePalette(a,b,dark){
  '--pair-theme-a':pairThemeHex(primary),'--pair-theme-b':pairThemeHex(secondary),'--pair-raw-a':a,'--pair-raw-b':b});
  return palette;
 }
+const PAIR_THEME_PREVIEW={actor:null,authorized:false,pairId:null,request:0};
+function pairThemePreviewClear(){PAIR_THEME_PREVIEW.pairId=null;applyPairTrialTheme();}
 function applyPairTrialTheme(){
  const root=document.documentElement;
  const clear=()=>{for(const key of PAIR_TRIAL_THEME.keys)root.style.removeProperty(key);root.removeAttribute('data-pair-theme');PAIR_TRIAL_THEME.keys=[];PAIR_TRIAL_THEME.signature='';};
- if(!S?.made||typeof SOCIAL==='undefined'){clear();return;}
- const mine=pairEnsure().mine,shared=mine&&SOCIAL.pairs.find(p=>String(p.id)===String(mine.id));
- if(!shared||String(shared.pair_name||'').trim().replace(/\s+/g,' ').toLowerCase()!=='wuthering heights'){clear();return;}
+ const actor=typeof ACCT!=='undefined'?ACCT?.id:null;
+ if(!S?.made||!actor||PAIR_THEME_PREVIEW.actor!==actor||!PAIR_THEME_PREVIEW.authorized||!PAIR_THEME_PREVIEW.pairId||typeof SOCIAL==='undefined'){clear();return;}
+ const shared=SOCIAL.pairs.find(p=>String(p.id)===String(PAIR_THEME_PREVIEW.pairId));
+ if(!shared){clear();return;}
  const roster=[...(SOCIAL.students||[]),...(S.sb?.roster||[])];
  const profiles=[shared.from_id,shared.to_id].map(id=>String(id)===String(S.sb?.id)?{id,color:S.color}:roster.find(p=>String(p.id)===String(id)));
  if(profiles.some(p=>!pairThemeRGB(p?.color))){clear();return;}
- // Stable account order makes both members see the same two-color direction.
  profiles.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
  const signature=JSON.stringify([shared.id,profiles.map(p=>p.color),THEME]);if(signature===PAIR_TRIAL_THEME.signature)return;
  const palette=pairTrialThemePalette(profiles[0].color,profiles[1].color,THEME!=='light');clear();
  for(const [key,value]of Object.entries(palette))root.style.setProperty(key,value);
- PAIR_TRIAL_THEME.keys=Object.keys(palette);PAIR_TRIAL_THEME.signature=signature;root.setAttribute('data-pair-theme','wuthering-heights');
+ PAIR_TRIAL_THEME.keys=Object.keys(palette);PAIR_TRIAL_THEME.signature=signature;root.setAttribute('data-pair-theme','preview');
+}
+async function pairThemePreviewAccess(){
+ const actor=typeof ACCT!=='undefined'?ACCT?.id:null;
+ if(!actor){Object.assign(PAIR_THEME_PREVIEW,{actor:null,authorized:false,pairId:null});applyPairTrialTheme();return false;}
+ try{
+  const r=await inboxRpc('list');
+  if(ACCT.id!==actor)return false;
+  PAIR_THEME_PREVIEW.actor=actor;PAIR_THEME_PREVIEW.authorized=r?.staff===true;
+  if(!PAIR_THEME_PREVIEW.authorized){PAIR_THEME_PREVIEW.pairId=null;applyPairTrialTheme();}
+  return PAIR_THEME_PREVIEW.authorized;
+ }catch(_){Object.assign(PAIR_THEME_PREVIEW,{actor,authorized:false,pairId:null});applyPairTrialTheme();return false;}
+}
+function pairThemePreviewRows(){
+ return [...SOCIAL.pairs].filter(p=>!p.status||p.status==='accepted').sort((a,b)=>String(a.pair_name||'').localeCompare(String(b.pair_name||''),'ko')).map(p=>{
+  const selected=String(PAIR_THEME_PREVIEW.pairId)===String(p.id),name=p.pair_name?.trim()||'페어명 미설정';
+  return `<div class="pair-theme-preview-row"><b>${esc(name)}</b><div class="row"><button class="btn sm ${selected&&THEME==='dark'?'pri':''}" onclick="pairThemePreviewChoose(${Number(p.id)},'dark')">어두운 테마</button><button class="btn sm ${selected&&THEME==='light'?'pri':''}" onclick="pairThemePreviewChoose(${Number(p.id)},'light')">밝은 테마</button></div></div>`;
+ }).join('')||'<div class="tiny muted">등록된 페어가 없습니다.</div>';
+}
+async function pairThemePreviewSettings(){
+ const slot=document.getElementById('admin-pair-theme-preview');if(!slot)return;
+ const request=++PAIR_THEME_PREVIEW.request;
+ if(!await pairThemePreviewAccess()||document.getElementById('admin-pair-theme-preview')!==slot||request!==PAIR_THEME_PREVIEW.request)return;
+ await socialFetch(true);
+ if(!PAIR_THEME_PREVIEW.authorized||document.getElementById('admin-pair-theme-preview')!==slot||request!==PAIR_THEME_PREVIEW.request)return;
+ slot.innerHTML=`<div class="sect-t" style="margin-top:15px">운영진 전용 · 페어 테마 미리보기</div><div class="tiny muted" style="margin-bottom:8px">이 화면에서만 시험 적용합니다. 다른 계정의 테마는 바뀌지 않으며, 새로고침하면 기본 테마로 돌아갑니다.</div>${pairThemePreviewRows()}`;
+}
+async function pairThemePreviewChoose(id,mode){
+ if(id===null){PAIR_THEME_PREVIEW.pairId=null;setTheme(mode);return;}
+ if(!await pairThemePreviewAccess()){toast('운영진 계정에서만 미리볼 수 있습니다.','bad');return;}
+ const row=SOCIAL.pairs.find(p=>String(p.id)===String(id));if(!row)return;
+ const profiles=[row.from_id,row.to_id].map(user=>String(user)===String(S.sb?.id)?{color:S.color}:[...(SOCIAL.students||[]),...(S.sb?.roster||[])].find(p=>String(p.id)===String(user)));
+ if(profiles.some(p=>!pairThemeRGB(p?.color))){toast('두 캐릭터의 영혼 컬러를 불러온 뒤 다시 시도해 주세요.','bad');return;}
+ PAIR_THEME_PREVIEW.pairId=id;THEME=mode==='light'?'light':'dark';applyTheme();renderTop();renderMain();openSettings();
 }
 const _pairTrialThemeTop=renderTop;
 renderTop=function(){applyPairTrialTheme();return _pairTrialThemeTop.apply(this,arguments);};
 const _pairTrialThemeApply=applyTheme;
 applyTheme=function(){const result=_pairTrialThemeApply.apply(this,arguments);applyPairTrialTheme();return result;};
+
+const _pairThemePreviewSettingsBase=openSettings;
+openSettings=function(){_pairThemePreviewSettingsBase.apply(this,arguments);void pairThemePreviewSettings();};
