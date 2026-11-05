@@ -1299,3 +1299,11 @@ body.auth-gate #mobile-chat-toggle{
 .update-notice ul{margin:9px 0 0;padding-left:19px;font-size:13px;line-height:1.8}
 .update-notice li+li{margin-top:5px}
 @media(max-width:380px){body.mobile-game:not(.top-open) .tb-mini .tb-pips{display:none}body.mobile-game:not(.top-open) .tb-mini{padding-left:7px;padding-right:7px}}
+
+/* Shared red/white count badges for releases and chat. */
+.count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#d83543;color:#fff;font-size:10px;font-weight:700;line-height:1;white-space:nowrap;box-sizing:border-box;vertical-align:middle;flex-shrink:0}
+.act-updates>.count-badge{position:absolute;right:-5px;top:-5px;box-shadow:0 0 0 2px var(--s0)}
+#mobile-chat-toggle,.chat-fold,.ctab{position:relative}
+#mobile-chat-toggle>.count-badge{margin-left:7px}
+.chat-fold>.count-badge{position:absolute;right:2px;top:3px}
+.ctab>.count-badge{margin-left:4px}

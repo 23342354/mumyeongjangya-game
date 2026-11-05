@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:'20261105-unread-counts',date:'2026-11-05',title:'업데이트·채팅 읽지 않은 개수 표시',items:['업데이트 안내 아이콘에 읽지 않은 공지 수를 빨간 숫자 배지로 표시합니다.','채팅 열기 버튼과 각 채널에도 읽지 않은 메시지 수를 표시합니다.','채팅은 해당 채널을 열고 최신 메시지까지 확인하면 읽음 처리됩니다. 본인이 보낸 메시지는 개수에 포함하지 않습니다.']},
  {id:'20261105-auction-pair-wallet-fix',date:'2026-11-05',title:'떠돌이 상인 공동 지갑 차감 수정',items:['서버에서 차감된 경매 보증금이 공동 지갑 동기화 중 다시 지출로 반영될 수 있는 경로를 수정했습니다.','응답이 끊긴 경매 요청은 같은 요청 번호로 재확인하도록 변경했습니다.','운영진이 경매 서버 패치를 적용하면 파트너가 최고 입찰자인 물건에 같은 공동 지갑으로 다시 입찰할 수 없습니다.']},
  {id:'20261105-update-notices',date:'2026-11-05',title:'업데이트 안내가 생겼습니다',items:['상단 두루마리 아이콘에서 최근 변경 사항을 확인할 수 있습니다.','새 안내가 올라오면 아이콘에 점이 표시됩니다. 안내를 열면 확인 표시가 사라집니다.']},
  {id:'20261105-material-exploration',date:'2026-11-05',title:'물약 재료를 모으는 재료 탐사',items:['공방·생활 → 재료 탐사에서 조제 재료 9종의 산지를 선택할 수 있습니다.','1·3·6·12시간 탐사하며 매시간 재료가 누적됩니다. 오프라인 중에도 선택한 시간까지 모입니다.','완료된 시간만큼 중간 수령할 수 있으며, 수업·의뢰와 병행할 수 있습니다.']},
@@ -559,7 +560,13 @@ function updateNoticeStorageKey(){
  let actor='local';try{actor=(typeof ACCT!=='undefined'&&ACCT?.id)||S?.sb?.id||'local';}catch(_){}
  return 'mmjy:update-notice-seen:'+actor;
 }
-function updateNoticeUnread(){try{return !!UPDATE_NOTICES.length&&localStorage.getItem(updateNoticeStorageKey())!==UPDATE_NOTICES[0].id;}catch(_){return false;}}
+function updateNoticeUnreadCount(){
+ try{const seen=localStorage.getItem(updateNoticeStorageKey()),index=UPDATE_NOTICES.findIndex(n=>n.id===seen);return index<0?UPDATE_NOTICES.length:index;}catch(_){return 0;}
+}
+function updateNoticeUnread(){return updateNoticeUnreadCount()>0;}
+function unreadCountHTML(count,extra=''){
+ return count>0?`<span class="count-badge ${extra}" aria-label="읽지 않음 ${count}개">${count>99?'99+':count}</span>`:'';
+}
 function openUpdateNotices(){
  if(UPDATE_NOTICES.length)try{localStorage.setItem(updateNoticeStorageKey(),UPDATE_NOTICES[0].id);}catch(_){}
  modal('업데이트 안내',`<div class="tiny muted" style="margin-bottom:12px">최근 변경 사항부터 표시합니다.</div><div class="update-notice-list">${UPDATE_NOTICES.map(n=>`<article class="update-notice"><div class="spread"><b>${esc(n.title)}</b><time class="tiny muted" datetime="${esc(n.date)}">${esc(n.date)}</time></div><ul>${n.items.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></article>`).join('')||'<p>등록된 안내가 없습니다.</p>'}</div>`);
@@ -854,7 +861,7 @@ function renderTop(){
     </div>
     ${topBrief()}
     <div class="top-actions">
-      <button type="button" class="btn sm ghost act-updates" onclick="openUpdateNotices()" title="업데이트 안내" aria-label="업데이트 안내${updateNoticeUnread()?' · 새 소식 있음':''}">${ic("scroll",15)}${updateNoticeUnread()?'<span class="update-notice-dot" aria-hidden="true"></span>':''}</button>
+      <button type="button" class="btn sm ghost act-updates" onclick="openUpdateNotices()" title="업데이트 안내" aria-label="업데이트 안내${updateNoticeUnread()?' · 새 소식 있음':''}">${ic("scroll",15)}${unreadCountHTML(updateNoticeUnreadCount(),'update-unread-count')}</button>
       <button class="btn sm ghost act-me" onclick="openMe()" title="내 정보">${ic("user",15)}</button>
       <button class="btn sm ghost act-theme" onclick="toggleTheme()" title="${THEME==="light"?"어두운 테마로":"밝은 테마로"}">${ic(THEME==="light"?"moonDark":"lens",15)}</button>
       <button class="btn sm ghost act-settings" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
@@ -1001,6 +1008,7 @@ function toggleMobileChat(){
   b.textContent=MOBILE_CHAT_OPEN?"채팅 접기 ▾":"채팅 열기 ▴";
   b.setAttribute("aria-expanded",String(MOBILE_CHAT_OPEN));
   if(MOBILE_CHAT_OPEN) renderChat(true);
+  chatUnreadRefresh();
 }
 function toggleNav(id){
  const g=NAVDEF.find(x=>x.id===id);if(!g?.sub)return;
@@ -1053,6 +1061,44 @@ function chatLayout(){
 }
 /* 대화 칸 접기 — 넓은 화면에서 대화가 비어 있을 때 본문에 자리를 돌려줍니다.
    선택은 이 브라우저에 남습니다. 좁은 화면에서는 쓰이지 않습니다. */
+const CHAT_READ_CACHE={key:null,seen:new Set()};
+function chatReadState(){
+ const key=updateNoticeStorageKey()+':chat';
+ if(CHAT_READ_CACHE.key!==key){let values=[];try{values=JSON.parse(localStorage.getItem(key)||'[]');}catch(_){}
+  CHAT_READ_CACHE.key=key;CHAT_READ_CACHE.seen=new Set(Array.isArray(values)?values.map(String):[]);
+ }
+ return CHAT_READ_CACHE;
+}
+function chatUnreadCandidates(tab){
+ if(!S?.msgs)return [];
+ const previous=S.chatTab;
+ try{return S.msgs.filter(m=>{
+  if(m.sid===undefined||m.sid===null||m.mine||m.pending||m.failed||!CHATTABS.includes(m.tab)||(tab&&m.tab!==tab))return false;
+  S.chatTab=m.tab;return chatVisible(m);
+ });}finally{S.chatTab=previous;}
+}
+function chatUnreadCount(tab){const state=chatReadState();return chatUnreadCandidates(tab).filter(m=>!state.seen.has(String(m.sid))).length;}
+function chatCanMarkRead(){
+ if(document.visibilityState==='hidden')return false;
+ if(window.matchMedia('(max-width:780px)').matches&&!MOBILE_CHAT_OPEN)return false;
+ if(!window.matchMedia('(max-width:780px)').matches&&chatFolded())return false;
+ const log=document.getElementById('chatlog');if(!log||log.getClientRects().length===0)return false;
+ const bounds=log.getBoundingClientRect();if(bounds.bottom<=0||bounds.top>=window.innerHeight)return false;
+ return log.scrollHeight-log.clientHeight-log.scrollTop<48;
+}
+function chatUnreadRefresh(){
+ const state=chatReadState();
+ if(chatCanMarkRead()){
+  let changed=false;for(const m of chatUnreadCandidates(S.chatTab).filter(m=>!['RP','오너'].includes(S.chatFilter)||chatModeOf(m.mode)===S.chatFilter)){if(m.sid!==undefined&&m.sid!==null&&!state.seen.has(String(m.sid))){state.seen.add(String(m.sid));changed=true;}}
+  if(changed){const values=[...state.seen].slice(-1500);state.seen=new Set(values);try{localStorage.setItem(state.key,JSON.stringify(values));}catch(_){}}
+ }
+ const count=chatUnreadCount();
+ for(const selector of ['#mobile-chat-toggle','.chat-fold']){
+  const button=document.querySelector(selector);if(!button)continue;
+  button.querySelector('.chat-unread-count')?.remove();if(count)button.insertAdjacentHTML('beforeend',unreadCountHTML(count,'chat-unread-count'));
+ }
+ document.querySelectorAll('[data-chat-tab]').forEach(button=>{button.querySelector('.chat-unread-count')?.remove();const n=chatUnreadCount(button.dataset.chatTab);if(n)button.insertAdjacentHTML('beforeend',unreadCountHTML(n,'chat-unread-count'));});
+}
 const CHATFOLDKEY="mmjy.chatFold";
 function chatFolded(){ try{ return localStorage.getItem(CHATFOLDKEY)==="1"; }catch(e){ return false; } }
 function applyChatFold(){
@@ -1064,6 +1110,7 @@ function applyChatFold(){
 function toggleChat(){
   try{ localStorage.setItem(CHATFOLDKEY, chatFolded()?"0":"1"); }catch(e){}
   applyChatFold();
+  renderChat();
 }
 function renderChat(bottom=false){
   const host=$("#chatcol"); if(!host) return;
@@ -1091,7 +1138,7 @@ function renderChat(bottom=false){
   </section>`;
   if(!host._chatFoldReady){ host._chatFoldReady=true; applyChatFold(); }
   const update=(id,html)=>{ const el=document.getElementById(id); if(el._chatHTML!==html){el.innerHTML=html;el._chatHTML=html;} };
-  update("chattabs",CHATTABS.map(t=>`<button class="ctab ${S.chatTab===t?"on":""}" aria-pressed="${S.chatTab===t}" onclick="setChatTab('${t}')">${t}</button>`).join(""));
+  update("chattabs",CHATTABS.map(t=>`<button class="ctab ${S.chatTab===t?"on":""}" data-chat-tab="${esc(t)}" aria-pressed="${S.chatTab===t}" onclick="setChatTab('${t}')">${t}</button>`).join(""));
   update("chatfilters",["모두","RP","오너"].map(t=>`<button class="${S.chatFilter===t?"on":""}" aria-pressed="${S.chatFilter===t}" onclick="setChatFilter('${t}')">${t}</button>`).join(""));
   update("chatmodes",["RP","오너"].map(t=>`<button class="${S.chatMode===t?"on":""}" aria-pressed="${S.chatMode===t}" onclick="setChatMode('${t}')">${t}</button>`).join(""));
   $("#chatscope").textContent=S.chatTab==="계통"?S.line+" 학생끼리":S.chatTab==="이웃"?homeOf(S.hall).n:S.chatTab==="페어"?"페어끼리":S.chatTab==="1:1"?(S.dmWith?.name||"상대 선택"):"전원 · 교직원 NPC는 RP에만 등장";
@@ -1112,6 +1159,8 @@ function renderChat(bottom=false){
   }
   if(follow) log.scrollTop=log.scrollHeight;
   host._chatView=view; host._chatMessages=list;
+  if(!log._unreadReady){log._unreadReady=true;log.addEventListener('scroll',chatUnreadRefresh,{passive:true});}
+  chatUnreadRefresh();
 }
 function setChatTab(t){ if(!CHATTABS.includes(t)) return; S.chatTab=t; renderChat(); save(); }
 function setChatFilter(m){

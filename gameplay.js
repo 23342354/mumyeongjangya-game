@@ -4380,6 +4380,7 @@ function chatRows(rows, silent=true, advanceCursor=true){
   if(S.msgs.length>400) S.msgs=S.msgs.slice(-400);
   if(sound && typeof notifySound==="function") notifySound(sound);
   if(changed) save();
+  if(typeof chatUnreadRefresh==='function')chatUnreadRefresh();
   return added;
 }
 function chatPull(first){
