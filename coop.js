@@ -1098,12 +1098,12 @@ function ledgerSince(rows,from){
  for(const r of rows){ if(r.t<from)continue; if(r.a>0)inc+=r.a; else out-=r.a; }
  return {inc,out};
 }
-function ledgerDayKey(t){const d=new Date(t);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
+function ledgerDayKey(t){return new Date(t).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});}
 function ledgerDayName(t){
- const d=new Date(t),today=new Date(),y=new Date(today.getTime()-86400000);
- if(ledgerDayKey(t)===ledgerDayKey(today.getTime()))return '오늘';
- if(ledgerDayKey(t)===ledgerDayKey(y.getTime()))return '어제';
- return `${d.getMonth()+1}월 ${d.getDate()}일`;
+ const today=Date.now();
+ if(ledgerDayKey(t)===ledgerDayKey(today))return '오늘';
+ if(ledgerDayKey(t)===ledgerDayKey(today-86400000))return '어제';
+ return new Date(t).toLocaleDateString('ko-KR',{month:'long',day:'numeric',timeZone:'Asia/Seoul'});
 }
 function ledgerName(r){
  return `<b style="color:${esc(r.color)}">${esc(r.who)}</b>`;
@@ -1118,39 +1118,43 @@ function ledgerSum(a,kind){
  const col=!a?'var(--dim)':kind==='in'?'var(--ok)':'var(--red)';
  return `<b style="color:${col};white-space:nowrap">${nf(Math.abs(a))}</b>`;
 }
+const LEDGER_VIEW={period:'all',type:'all',who:'all'};
+function ledgerFilter(key,value){
+ const allowed={period:['all','today','week'],type:['all','in','out'],who:['all','me','peer']};
+ if(!allowed[key]?.includes(value))return;
+ LEDGER_VIEW[key]=value;renderMain();
+}
+function ledgerPeriodStart(period){
+ if(period==='today')return Math.floor((Date.now()+9*3600000)/86400000)*86400000-9*3600000;
+ return period==='week'?Date.now()-7*86400000:0;
+}
+function ledgerVisibleRows(rows,includeType=true){
+ const from=ledgerPeriodStart(LEDGER_VIEW.period);
+ return rows.filter(r=>r.t>=from&&(LEDGER_VIEW.who==='all'||(LEDGER_VIEW.who==='me'?r.me:!r.me))&&(!includeType||LEDGER_VIEW.type==='all'||(LEDGER_VIEW.type==='in'?r.a>0:r.a<0)));
+}
 if(typeof VIEWS!=='undefined')VIEWS.ledger=()=>{
- const rows=LEDGER_API.rows(),peer=window.PAIR_PLAY&&PAIR_PLAY.snapshot&&PAIR_PLAY.snapshot.peer;
- const paired=!!peer,peerRows=rows.some(r=>!r.me);
- const midnight=new Date();midnight.setHours(0,0,0,0);
- const day=ledgerSince(rows,midnight.getTime());
- const week=ledgerSince(rows,Date.now()-7*86400000);
- const wallet=`<div class="card pad"><div class="spread">
-   <div><div class="sect-t" style="margin:0">${paired?'공동 지갑':'지금 가진 륜'}</div>
-     <div class="tiny muted">${paired?'두 사람이 함께 쓰는 잔고입니다':'혼자 쓰는 잔고입니다'}</div></div>
-   <div style="font-size:23px;font-weight:600;color:var(--gold)">${ic("coin",16)} ${nf(Number(S.rin)||0)}</div>
- </div></div>`;
- const sums=`<div class="card pad" style="margin-top:14px"><div class="sect-t">드나든 금액</div>
-   <div class="spread" style="padding:6px 0"><span>오늘</span>
-     <span class="tiny muted">들어온 ${ledgerSum(day.inc,'in')} · 나간 ${ledgerSum(day.out,'out')}</span></div>
-   <div class="spread" style="padding:6px 0"><span>최근 7일</span>
-     <span class="tiny muted">들어온 ${ledgerSum(week.inc,'in')} · 나간 ${ledgerSum(week.out,'out')}</span></div></div>`;
- let list='',lastDay='';
- for(const r of rows){
-  const d=ledgerDayName(r.t);
-  if(d!==lastDay){lastDay=d;list+=`<div class="sect-t" style="margin:18px 0 6px">${esc(d)}</div>`;}
-  const time=new Date(r.t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-  list+=`<div class="card pad" style="margin-bottom:8px"><div class="spread">
-    <div><div>${ledgerName(r)} <span class="muted">·</span> ${esc(r.k)}</div>
-      <div class="tiny muted">${esc(time)}</div></div>
-    ${ledgerAmount(r.a)}</div></div>`;
- }
- if(!rows.length)list=`<div class="card pad" style="margin-top:14px">아직 적힌 기록이 없습니다. 무언가 사거나 벌면 여기에 한 줄씩 쌓입니다.</div>`;
- const note=!paired
-   ? `<div class="card pad tiny muted" style="margin-top:14px">페어를 맺으면 두 사람의 기록이 한 목록에 함께 표시됩니다.</div>`
-   : peerRows ? ''
-   : `<div class="card pad tiny muted" style="margin-top:14px">파트너의 기록이 아직 보이지 않습니다. 운영진이 <b>supabase/ledger-peer.sql</b>을 Supabase SQL Editor에서 한 번 실행하면 함께 표시됩니다.</div>`;
- return head('륜이 드나든 자리','용돈 기입장',rows.length?`${rows.length}줄`:'')
-   +wallet+sums+list+note;
+ const rows=LEDGER_API.rows(),peer=window.PAIR_PLAY?.snapshot?.peer,paired=!!peer;
+ if(!paired)LEDGER_VIEW.who='all';
+ const base=ledgerVisibleRows(rows,false),shown=ledgerVisibleRows(rows),totals=ledgerSince(base,0),net=totals.inc-totals.out;
+ const periodName={all:'보관된 기록',today:'오늘',week:'최근 7일'}[LEDGER_VIEW.period];
+ const buttons=(key,options)=>options.map(([value,label])=>`<button class="btn sm ${LEDGER_VIEW[key]===value?'pri':''}" aria-pressed="${LEDGER_VIEW[key]===value}" onclick="ledgerFilter('${key}','${value}')">${label}</button>`).join('');
+ let days='',group=[];
+ const flush=()=>{
+  if(!group.length)return;
+  const sum=ledgerSince(group,0);
+  days+=`<section class="ledger-day"><header class="ledger-day-header"><h3>${esc(ledgerDayName(group[0].t))}</h3><span>수입 ${ledgerSum(sum.inc,'in')} <span aria-hidden="true">/</span> 지출 ${ledgerSum(sum.out,'out')}</span></header><div class="card ledger-entries">${group.map(r=>`<div class="ledger-entry"><span class="ledger-direction ${r.a>=0?'income':'expense'}" aria-label="${r.a>=0?'수입':'지출'}">${r.a>=0?'↙':'↗'}</span><div class="ledger-entry-info"><b>${esc(r.k)}</b><div class="ledger-entry-meta">${ledgerName(r)}<span>·</span><time datetime="${new Date(r.t).toISOString()}">${new Date(r.t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Seoul'})}</time></div></div><div class="ledger-entry-amount">${ledgerAmount(r.a)}<small>륜</small></div></div>`).join('')}</div></section>`;
+ };
+ for(const r of shown){if(group.length&&ledgerDayKey(group[0].t)!==ledgerDayKey(r.t)){flush();group=[];}group.push(r);}flush();
+ return head('수입과 지출을 한눈에','용돈 기입장',`${shown.length}건`)+`<div class="ledger-page">
+ <section class="card pad ledger-wallet"><div><div class="ledger-eyebrow">${paired?'함께 쓰는 공동 지갑':'나의 지갑'}</div><div class="ledger-wallet-value">${ic('coin',22)} ${nf(Number(S.rin)||0)}<small>륜</small></div><p>${paired?'두 사람의 기록을 함께 살펴보세요.':'들어오고 나간 륜을 차근차근 살펴보세요.'}</p></div><span class="ledger-wallet-mark" aria-hidden="true">${ic('coin',48)}</span></section>
+ <section class="card pad ledger-toolbar" aria-label="기입장 필터"><div class="ledger-filter-row"><span>기간</span><div class="row">${buttons('period',[['all','전체'],['today','오늘'],['week','최근 7일']])}</div></div><div class="ledger-filter-row"><span>내역</span><div class="row">${buttons('type',[['all','전체'],['in','수입'],['out','지출']])}</div></div>${paired?`<div class="ledger-filter-row"><span>사용자</span><div class="row">${buttons('who',[['all','함께'],['me','나'],['peer','파트너']])}</div></div>`:''}</section>
+ <div class="ledger-summary-heading"><b>${periodName} 요약</b><span>선택한 기간·사용자 기준</span></div>
+ <section class="ledger-summary" aria-label="수입 지출 요약"><div class="card pad"><span>들어온 륜</span><strong class="ledger-income">${nf(totals.inc)}</strong><small>수입</small></div><div class="card pad"><span>나간 륜</span><strong class="ledger-expense">${nf(totals.out)}</strong><small>지출</small></div><div class="card pad"><span>순변동</span><strong>${ledgerAmount(net)}</strong><small>수입 − 지출</small></div></section>
+ <p class="ledger-scope-note">요약은 현재 보관된 기록 기준이며 전체 거래 합계와 다를 수 있습니다.</p>
+ <div class="ledger-summary-heading"><b>거래 내역</b><span>${shown.length}건 · 최근 순</span></div>
+ ${days||`<div class="card pad ledger-empty"><b>${rows.length?'조건에 맞는 기록이 없습니다':'아직 기록이 없습니다'}</b><p>${rows.length?'기간이나 내역 필터를 바꾸어 확인해 보세요.':'륜을 벌거나 사용하면 여기에 내역이 쌓입니다.'}</p></div>`}
+ ${paired&&!rows.some(r=>!r.me)?'<p class="ledger-scope-note">파트너의 기록을 아직 불러오지 못했습니다.</p>':!paired?'<p class="ledger-scope-note">페어를 맺으면 두 사람의 내역을 함께 볼 수 있습니다.</p>':''}
+ </div>`;
 };
 
 /* 광장·페어 묶음에 기입장을 넣습니다. */
