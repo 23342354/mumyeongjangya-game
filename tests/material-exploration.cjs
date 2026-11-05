@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');let clock=1000000,saves=0;
+const src=fs.readFileSync('community.js','utf8'),coop=fs.readFileSync('coop.js','utf8');
+const c={S:{course:1,ing:{}},ING:[{k:'홍월초',n:'홍월초',w:'뒷골목'},{k:'심연정',n:'심연 결정',w:'심연'}],Math,Date:{now:()=>clock},rnd:(a,b)=>a,toast(){},save(){saves++;},renderMain(){},renderTop(){}};vm.createContext(c);vm.runInContext(src.slice(src.indexOf('const EXPLORATION_ROUTES='),src.indexOf('VIEWS.explore=function')),c);
+c.explorationStart('abyss',1);assert.equal(c.S.exploration.run,null);c.explorationStart('moon',2);assert.equal(c.S.exploration.run,null);c.explorationStart('moon',3);assert.equal(c.S.exploration.run.hours,3);const started=JSON.stringify(c.S.exploration.run);c.explorationStart('seal',1);assert.equal(JSON.stringify(c.S.exploration.run),started);
+clock+=3599999;c.explorationClaim();assert.equal(c.S.ing.홍월초,undefined);clock++;c.explorationClaim();assert.equal(c.S.ing.홍월초,16);assert.equal(c.S.exploration.run.claimed,1);c.explorationClaim();assert.equal(c.S.ing.홍월초,16);
+// Simulated persisted reload/offline period: reward rolls remain fixed and cap at selected hours.
+c.S=JSON.parse(JSON.stringify(c.S));clock+=24*3600000;c.explorationClaim();assert.equal(c.S.ing.홍월초,48);assert.equal(c.S.exploration.run,null);assert.equal(c.S.exploration.history.length,2);c.explorationClaim();assert.equal(c.S.ing.홍월초,48);
+c.S.course=5;c.explorationStart('abyss',12);clock+=12*3600000;c.explorationClaim();assert.equal(c.S.ing.심연정,24);assert.equal(c.S.exploration.run,null);assert.ok(saves>=5);
+assert.match(coop,/'crestSeq','exploration','outing'/);assert.match(coop,/const actions=\['explorationStart','explorationClaim'/);assert.match(src,/id:'explore',n:'재료 탐사'/);
+console.log('PASS: route/course/duration validation, single active route, hourly accrual, partial claim, offline persistence, duration cap, no duplicate claim, advanced ingredients and shared-wallet personal-state integration');

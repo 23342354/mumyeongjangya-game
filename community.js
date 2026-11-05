@@ -4224,3 +4224,64 @@ resolveAttack=function(A,D,log,opts){
  if(rate>0&&dealt>0&&A.hp>0){const heal=Math.min(A.max-A.hp,Math.max(1,Math.round(dealt*rate)));if(heal>0){A.hp+=heal;log.push(`<span class="s">${esc(A.n)} · 봉혼 생명력 흡수 +${nf(heal)}</span>`);}}
  return result;
 };
+
+/* Timed gathering expeditions for alchemy ingredients. */
+const EXPLORATION_ROUTES=[
+ {id:'seal',key:'먼지',req:1,min:18,max:24,desc:'봉인고의 출입 허가 구간을 돌며 봉인 흔적에 남은 먼지를 모읍니다.'},
+ {id:'moon',key:'홍월초',req:1,min:16,max:22,desc:'제2구역 뒷골목의 그늘진 틈에서 조제에 쓸 홍월초를 채집합니다.'},
+ {id:'workshop',key:'톱니',req:1,min:14,max:20,desc:'제3구역 폐공방에서 파손된 의체 부품을 분류해 쓸 만한 톱니를 회수합니다.'},
+ {id:'tunnel',key:'집광편',req:2,min:10,max:16,desc:'제4구역 폐터널에 남은 집광 장치의 파편을 수거합니다.'},
+ {id:'ash',key:'잿불씨',req:2,min:14,max:20,desc:'제6구역 판자촌의 식어 가는 화로에서 조제용 잿불 씨를 골라 담습니다.'},
+ {id:'sea',key:'인광',req:3,min:10,max:16,desc:'제7구역 검은 바다의 물가를 따라 인광이 남은 해조를 건져 올립니다.'},
+ {id:'ruins',key:'먹잉크',req:3,min:8,max:12,desc:'속삭이는 폐허의 흔적을 따라 먹그림자 잉크를 채취합니다.'},
+ {id:'bell',key:'종모래',req:4,min:8,max:12,desc:'석탑 종루의 틈에 쌓인 모래를 체로 걸러 조제에 쓸 입자만 남깁니다.'},
+ {id:'abyss',key:'심연정',req:5,min:2,max:4,desc:'심연의 가장자리를 탐색해 균열에 맺힌 결정을 신중하게 회수합니다.'}
+];
+function explorationEnsure(){
+ if(!S.exploration||typeof S.exploration!=='object')S.exploration={run:null,history:[]};
+ if(!Array.isArray(S.exploration.history))S.exploration.history=[];
+ if(!S.ing||typeof S.ing!=='object')S.ing={};return S.exploration;
+}
+function explorationProgress(run,now=Date.now()){
+ if(!run)return {hours:0,available:0,done:false,remaining:0};
+ const hours=Math.min(run.hours,Math.max(0,Math.floor((now-run.startedAt)/3600000)));
+ return {hours,available:Math.max(0,hours-run.claimed),done:hours>=run.hours,remaining:Math.max(0,run.startedAt+run.hours*3600000-now)};
+}
+function explorationRewards(run,through){
+ const total={};for(let i=run.claimed;i<Math.min(through,run.hours);i++)for(const [key,value]of Object.entries(run.rewards[i]||{}))total[key]=(total[key]||0)+value;
+ return total;
+}
+function explorationRewardText(rewards){return Object.entries(rewards).map(([key,n])=>`${ING.find(i=>i.k===key)?.n||key} ${n}개`).join(' · ')||'아직 모은 재료가 없습니다';}
+function explorationStart(id,hours){
+ const state=explorationEnsure(),route=EXPLORATION_ROUTES.find(r=>r.id===id);
+ if(state.run){toast('진행 중인 탐사의 재료를 모두 수령한 뒤 출발해 주세요.');return;}
+ if(!route||![1,3,6,12].includes(hours)||S.course<route.req){toast('탐사 지역과 시간을 확인해 주세요.','bad');return;}
+ // Rewards are fixed at departure so refreshing or retrying cannot reroll them.
+ const rewards=Array.from({length:hours},()=>({[route.key]:rnd(route.min,route.max)}));
+ state.run={route:id,hours,startedAt:Date.now(),claimed:0,rewards};
+ save();renderMain();toast(`${ING.find(i=>i.k===route.key).w} · ${hours}시간 탐사를 시작했습니다.`,'good');
+}
+function explorationClaim(){
+ const state=explorationEnsure(),run=state.run;if(!run)return;
+ const progress=explorationProgress(run);if(progress.available<1){toast('완료된 탐사 1시간분부터 수령할 수 있습니다.');return;}
+ const rewards=explorationRewards(run,progress.hours);
+ for(const [key,n]of Object.entries(rewards))S.ing[key]=(Number(S.ing[key])||0)+n;
+ run.claimed=progress.hours;
+ state.history.unshift({at:Date.now(),route:run.route,hours:progress.available,rewards});state.history=state.history.slice(0,20);
+ if(progress.done)state.run=null;
+ save();renderTop();renderMain();toast('탐사 재료 수령 · '+explorationRewardText(rewards),'good');
+}
+VIEWS.explore=function(){
+ const state=explorationEnsure(),run=state.run,p=explorationProgress(run),route=run&&EXPLORATION_ROUTES.find(r=>r.id===run.route),stock=ING.map(i=>`<span class="buffchip">${i.e} ${esc(i.n)} ${nf(S.ing[i.k]||0)}</span>`).join('');
+ return head('물약 조제를 위한 정기 채집',ic('map')+' 재료 탐사','매 1시간 재료 누적')+`
+ <div class="card pad" style="margin-bottom:12px"><div class="spread"><b>탐사 안내</b><button class="btn sm" onclick="go('alche')">연금 공방</button></div><div class="tiny muted" style="margin-top:8px">지역과 1·3·6·12시간 중 하나를 선택하세요. 탐사 중에는 의뢰·수업 등 다른 활동을 할 수 있습니다. 접속하지 않아도 선택한 시간까지 재료가 쌓이며, 완료된 1시간분마다 수령할 수 있습니다. 실패·입장 비용은 없습니다. 한 번에 한 지역만 탐사합니다.</div></div>
+ ${run?`<div class="card pad" style="margin-bottom:12px"><div class="spread"><b>${esc(ING.find(i=>i.k===route?.key)?.w||'재료 탐사')}</b><span class="tag">${p.done?'탐사 완료':hhmm(p.remaining/60000)+' 남음'}</span></div><div class="tiny muted" style="margin:8px 0">전체 ${run.hours}시간 · 완료 ${p.hours}시간 · 수령 ${run.claimed}시간 · 미수령 ${p.available}시간</div><div class="bar"><i style="width:${Math.min(100,Math.max(0,(Date.now()-run.startedAt)/(run.hours*3600000)*100))}%"></i></div><div style="margin-top:10px;color:var(--jade)">${esc(explorationRewardText(explorationRewards(run,p.hours)))}</div><button class="btn pri" style="margin-top:10px" ${p.available?'':'disabled'} onclick="explorationClaim()">${p.done?'탐사 완료 · 재료 수령':'누적 재료 수령'}</button></div>`:''}
+ <div class="grid g3">${EXPLORATION_ROUTES.map(r=>{const item=ING.find(i=>i.k===r.key),locked=S.course<r.req;return `<article class="card pad"><div class="spread"><b>${item.e} ${esc(item.n)}</b><span class="tag">${r.req}과정부터</span></div><div class="tiny muted" style="margin:7px 0">${esc(item.w)}</div><div class="tiny muted" style="min-height:48px">${esc(r.desc)}</div><div style="color:var(--jade);margin:9px 0">1시간마다 ${r.min}~${r.max}개</div><div class="row" style="gap:5px;flex-wrap:wrap">${[1,3,6,12].map(h=>`<button class="btn sm" ${run||locked?'disabled':''} onclick="explorationStart('${r.id}',${h})">${h}시간</button>`).join('')}</div></article>`;}).join('')}</div>
+ <div class="card pad" style="margin-top:12px"><div class="sect-t">조제 재료 보관함</div><div class="farm-discovery">${stock}</div></div>
+ <div class="card pad" style="margin-top:12px"><div class="sect-t">최근 수령 기록</div>${state.history.map(h=>`<div class="tiny" style="padding:7px 0;border-bottom:1px solid var(--line)">${esc(boardDate(h.at))} · ${h.hours}시간분 · ${esc(explorationRewardText(h.rewards))}</div>`).join('')||'<div class="tiny muted">아직 수령 기록이 없습니다.</div>'}</div>`;
+};
+(()=>{const group=NAVDEF.find(g=>g.id==='craft');if(group&&!group.sub.some(s=>s.id==='explore'))group.sub.splice(1,0,{id:'explore',n:'재료 탐사'});})();
+const _alchemyExplorationView=VIEWS.alche;
+VIEWS.alche=function(){return `<div class="card pad" style="margin-bottom:12px"><div class="spread"><span>조제 재료가 부족하다면?</span><button class="btn sm pri" onclick="go('explore')">재료 탐사 보내기</button></div></div>`+_alchemyExplorationView();};
+const _explorationStep=step;
+step=function(minutes){const result=_explorationStep.apply(this,arguments);if(VIEW==='explore')renderMain(true);return result;};
