@@ -1421,3 +1421,9 @@ body.auth-gate #mobile-chat-toggle{
 .gear-compare-table th:first-child{text-align:left;white-space:normal;min-width:70px}
 .gear-compare-table thead{background:var(--s1)}
 @media(max-width:760px){.gear-workspace{grid-template-columns:minmax(0,1fr);gap:12px}.gear-inspect-panel{position:static}.gear-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.gear-equipped-detail:empty{display:none}
+.gear-equipped-detail .gear-inspect-panel{position:static;margin-bottom:14px}
+.gear-equipped-detail .gain{color:var(--jade)}
+.gear-equipped-detail .loss{color:var(--red)}
+.gear-mini-card>.gear-mini-required{color:var(--red);font-size:11px;margin-top:auto;padding-top:4px;font-weight:600}

@@ -11,5 +11,9 @@ c.gearInspect(2);let html=c.gearInspectHTML();assert.ok(html.includes('基本')=
 c.gearInspectToggle('zero',true);c.gearInspectToggle('compare',true);html=c.gearInspectHTML();assert.ok(html.includes('각인 0 기준'));assert.ok(html.includes('같은 부위 법구 비교'));assert.ok(html.includes('생명력'));assert.ok(html.includes('공격력'));assert.ok(html.includes('%p'));
 c.S.gear.robe=null;assert.equal(c.gearComparisonData(candidate,true).current,null);assert.ok(c.gearInspectHTML().includes('착용한 법구가 없습니다'));
 const legacy={...candidate,statFormulaVersion:undefined};assert.equal(c.gearUnenhanced(legacy).estimated,true);assert.equal(c.gearUnenhanced(item(3,0)).estimated,false);
+c.S.gear.robe=equipped;c.gearInspect(1);
+assert.ok(c.gearInspectHTML('equipped').includes('착용 중'));assert.ok(!c.gearInspectHTML('bag').includes('선택한 법구 상세'));
+c.gearInspect(2);assert.equal(c.gearInspectHTML('equipped'),'');assert.ok(c.gearInspectHTML('bag').includes('선택한 법구 상세'));
+c.S.lvl=59;assert.ok(c.gearMiniCard(candidate).includes('gear-mini-required\">Lv. 60 필요'));c.S.lvl=60;assert.ok(!c.gearMiniCard(candidate).includes('gear-mini-required'));
 c.S.bag=[];assert.ok(c.gearInspectHTML().includes('법구 살펴보기'),'deleted/sold selection returns placeholder');assert.ok(renders>=3);
 console.log('PASS: both items normalized to +0, unchanged saved gear, base/extra sections, option table and percentage points, empty slot, legacy estimate, stale selection');
