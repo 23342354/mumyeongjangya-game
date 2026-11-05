@@ -5208,15 +5208,16 @@ function chatRows(rows, silent=true, advanceCursor=true){
     const isNPC=String(r.from_id||"").startsWith("mmjy-npc:");
     const d=new Date(r.created_at||Date.now());
     const h=d.getHours(), mm=String(d.getMinutes()).padStart(2,"0");
-    const fields={sid:r.id, from_id:r.from_id, _clubVerified:r.tab==="모임"&&r._clubVerified===true, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
+    const fields={sid:r.id, clientRequestId:r.client_request_id||undefined, from_id:r.from_id, _clubVerified:r.tab==="모임"&&r._clubVerified===true, tab:r.tab, scope:r.scope||"", who:r.who, body:r.body,
       npc:isNPC, mine:own, c:r.color||"var(--violetL)", title:r.title||"",
       mode:chatModeOf(r.mode), ts:d.getTime(), time:`${h%12===0?12:h%12}:${mm}`, pending:false, failed:false};
     /* 메시지를 보낸 직후 임시 로컬 행과 서버에 확정된 행을 결합합니다.
        같은 대사를 연속해서 보냈을 때도 각 메시지마다 하나씩만 결합됩니다. */
     const optimistic=own ? S.msgs.find(m=>m.mine===true && !m.sid &&
+       (r.client_request_id ? m.clientRequestId===r.client_request_id :
        m.tab===r.tab && String(m.scope||"")===String(r.scope||"") &&
        m.body===r.body && chatModeOf(m.mode)===chatModeOf(r.mode) &&
-       Math.abs(Number(m.ts||0)-when)<120000) : null;
+       Math.abs(Number(m.ts||0)-when)<120000)) : null;
     if(optimistic){ Object.assign(optimistic,fields); changed=true; }
     else { S.msgs.push(fields); added++; changed=true;
       if(!own && !silent && typeof incomingSoundKind==="function") sound=incomingSoundKind(r)||sound;
@@ -5282,12 +5283,101 @@ function chatTick(){
 }
 document.addEventListener("visibilitychange",()=>{ chatTick(); if(!document.hidden) chatPull(); });
 
-/* 내가 보낸 말을 서버로 */
+/* Persist sends until the server confirms them. The same request ID is reused on retries. */
+const CHAT_DELIVERY_BUSY=new Set();
+function chatDeliveryKey(){return 'mmjy-chat-outbox:'+String(S.sb.id);}
+function chatRequestId(){return 'chat-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));}
+function chatOutboxRead(){try{const rows=JSON.parse(localStorage.getItem(chatDeliveryKey())||'[]');return Array.isArray(rows)?rows:[];}catch{return [];}}
+function chatOutboxPut(m){
+ const rows=chatOutboxRead().filter(x=>x.clientRequestId!==m.clientRequestId);rows.push({...m,pending:false});
+ try{localStorage.setItem(chatDeliveryKey(),JSON.stringify(rows));return true;}catch{toast('전송 대기 기록을 보관하지 못했습니다. 입력 원문을 복사해 보관해 주세요.','bad');return false;}
+}
+function chatOutboxRemove(id){try{localStorage.setItem(chatDeliveryKey(),JSON.stringify(chatOutboxRead().filter(x=>x.clientRequestId!==id)));}catch{}}
+function chatDeliveryError(e){
+ const code=String(e?.code||'');
+ if(code==='PGRST204'||code==='42703')return '채팅 서버 업데이트가 필요합니다. 운영진에게 알려 주세요.';
+ if(e?.status===401||e?.status===403||code==='42501')return '로그인 또는 채널 권한을 확인해 주세요.';
+ if(e?.status===429)return '요청이 많아 전송이 지연되고 있습니다. 잠시 후 다시 보내 주세요.';
+ if(e?.name==='AbortError'||e?.name==='TypeError'||!e?.status||e.status>=500)return '연결이 불안정합니다. 내용은 보관되어 있습니다.';
+ return '서버가 전송을 거부했습니다. 내용은 보관되어 있습니다.';
+}
+async function chatPushConfirmed(m){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000),baseURL=S.sb.url,headers=sbHead();
+ try{
+  const row={tab:m.tab,scope:m.scope||'',from_id:S.sb.id,who:m.who,body:m.body,color:m.c,title:m.title||'',mode:chatModeOf(m.mode),client_request_id:m.clientRequestId};
+  const response=await fetch(baseURL+'/rest/v1/messages?on_conflict=client_request_id',{method:'POST',signal:controller.signal,headers:{...headers,'Content-Type':'application/json',Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify([row])});
+  const text=await response.text();let data;try{data=text?JSON.parse(text):[];}catch{data=null;}
+  if(!response.ok){const error=new Error('채팅 요청 실패');error.status=response.status;error.code=data?.code;throw error;}
+  if(Array.isArray(data)&&data.length)return data;
+  // An earlier attempt may have committed and lost its reply. Read its original receipt.
+  const query='messages?client_request_id=eq.'+encodeURIComponent(m.clientRequestId)+'&from_id=eq.'+encodeURIComponent(row.from_id)+'&select=*';
+  const receipt=await fetch(baseURL+'/rest/v1/'+query,{headers,signal:controller.signal});
+  const rows=await receipt.json();
+  if(!receipt.ok||!Array.isArray(rows)||!rows.length){const error=new Error('전송 결과 확인 지연');error.status=receipt.status>=400?receipt.status:503;throw error;}
+  return rows;
+ }finally{clearTimeout(timer);}
+}
+async function chatDeliver(m){
+ if(!sbOn()||CHAT_DELIVERY_BUSY.has(m.clientRequestId))return;
+ const state=S,account=String(S.sb.id);CHAT_DELIVERY_BUSY.add(m.clientRequestId);
+ m.pending=true;m.failed=false;m.deliveryError='';save();renderChat();
+ try{
+  let rows;
+  for(let attempt=0;attempt<3;attempt++){
+   try{rows=await chatPushConfirmed(m);break;}
+   catch(e){
+    if(S!==state||String(S.sb.id)!==account)return;
+    const transient=!e.status||e.status===408||e.status===429||e.status>=500;
+    if(!transient||attempt===2)throw e;
+    await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+   }
+  }
+  if(S!==state||String(S.sb.id)!==account)return;
+  chatRows(rows,true,false);
+  const actual=S.msgs.find(x=>String(x.sid)===String(rows[0].id));
+  if(actual&&actual!==m){const index=S.msgs.indexOf(m);if(index>=0)S.msgs.splice(index,1);}
+  m.pending=false;m.failed=false;chatOutboxRemove(m.clientRequestId);renderChat();save();
+ }catch(e){
+  if(S!==state||String(S.sb.id)!==account)return;
+  if(m.sid){m.pending=false;m.failed=false;chatOutboxRemove(m.clientRequestId);renderChat();save();return;}
+  m.pending=false;m.failed=true;m.deliveryError=chatDeliveryError(e);chatOutboxPut(m);
+  toast('채팅 전송을 완료하지 못했습니다. '+m.deliveryError,'bad');renderChat();save();
+ }finally{CHAT_DELIVERY_BUSY.delete(m.clientRequestId);}
+}
+function chatRestoreFailedDraft(ts){
+ const m=S.msgs.find(x=>x.failed&&Number(x.ts)===Number(ts)),input=document.getElementById('chatinput');
+ if(!m||!input)return;
+ if(input.value.trim()){toast('입력 중인 글을 먼저 보내거나 복사해 보관해 주세요.','bad');return;}
+ const text=document.createElement('div');text.innerHTML=m.body||'';
+ text.querySelectorAll('br').forEach(br=>br.replaceWith('\n'));
+ input.value=m.raw||text.textContent||'';input.focus();
+}
+function retryChat(id){
+ const m=S.msgs.find(x=>x.clientRequestId===id)||chatOutboxRead().find(x=>x.clientRequestId===id);
+ if(!m)return;
+ if(!S.msgs.includes(m))S.msgs.push(m);
+ return chatDeliver(m);
+}
+function chatResumeDelivery(){
+ if(!sbOn())return;
+ const jobs=[];
+ for(const saved of chatOutboxRead()){
+  const existing=S.msgs.find(m=>m.clientRequestId===saved.clientRequestId);
+  if(existing?.sid){chatOutboxRemove(saved.clientRequestId);continue;}
+  const m=existing||{...saved,pending:false,failed:true};if(!existing)S.msgs.push(m);
+  jobs.push(chatDeliver(m));
+ }
+ return Promise.all(jobs);
+}
+window.addEventListener('online',chatResumeDelivery);
+const _chatDeliveryBoot=boot;
+boot=function(){const result=_chatDeliveryBoot.apply(this,arguments);chatResumeDelivery();return result;};
+
+/* 내가 보낸 말은 전송 확인 전까지 원문과 요청 번호를 보관합니다. */
 const _sendChatSb = sendChat;
 sendChat = function(){
-  const i=document.getElementById("chatinput");
-  const raw=i ? i.value.trim() : "";
-  if(!raw) return;
+ const i=document.getElementById('chatinput'),raw=i?i.value.trim():'';
+ if(!raw)return;
   if(sbOn() && S.chatTab==="1:1" && !S.dmWith){
     toast("먼저 대화할 사람을 고르세요.","bad"); return;
   }
@@ -5295,35 +5385,13 @@ sendChat = function(){
     toast("페어 정보를 불러오는 중입니다. 잠시 후 다시 보내 주세요.","bad");
     pairFetch(true); return;
   }
-  const tab=S.chatTab, state=S;
-  const mine=_sendChatSb();
-  if(mine && sbOn()){
-    mine.pending=true;
-    chatPush(tab,mine.body,mine.mode,mine.scope)
-      .then(rows=>{
-        if(S!==state) return;
-        if(rows&&rows.length){
-          chatRows(rows,true,false);
-          /* 폴링이 먼저 동일한 서버 글을 받았을 경우에도 임시 행을 남기지 않습니다. */
-          const row=rows[0];
-          if(mine && !mine.sid){
-            const actual=S.msgs.find(m=>String(m.sid)===String(row.id));
-            if(actual && actual!==mine){
-              const at=S.msgs.indexOf(mine); if(at>=0) S.msgs.splice(at,1);
-            }
-          }
-        }
-        if(mine){mine.pending=false;mine.failed=false;}
-        renderChat(); save();
-      })
-      .catch(e=>{
-        if(S!==state) return;
-        if(mine){mine.pending=false;mine.failed=true;}
-        toast("채팅이 서버에 저장되지 않았습니다. 연결 상태를 확인해 주세요.","bad");
-        renderChat(); save();
-      });
-  }
-  return mine;
+ const mine=_sendChatSb();
+ if(mine&&sbOn()){
+  mine.clientRequestId=chatRequestId();mine.raw=raw;
+  if(!chatOutboxPut(mine)){i.value=raw;mine.failed=true;mine.pending=false;renderChat();return mine;}
+  chatDeliver(mine);
+ }
+ return mine;
 };
 /* NPC 발언은 브라우저가 생성하지 않습니다. 서버에 한 번만 기록되어 모두에게 전달됩니다. */
 npcChat=function(){ return null; };
