@@ -1622,12 +1622,27 @@ function crestUnequip(){
  ensureCrests();S.crest=null;save();renderTop();renderNav();renderMain();toast('휘장을 해제했습니다.');
 }
 function crestEffectText(item){return `${OPTS.find(o=>o.k===item.key)?.n||item.key} +${item.v}%`;}
+let CREST_LIST_OPEN=false;
+function crestListToggle(open){CREST_LIST_OPEN=!!open;}
 function crestPanel(){
  ensureCrests();
  return `<section class="card pad" style="margin:12px 0" aria-label="휘장 착용 및 보유 목록"><div class="spread"><b>휘장 착용칸 · 1개</b><span class="tag">보유 ${S.crests.length}개</span></div>
  <div class="sub" style="margin-top:10px"><div class="spread" style="gap:8px"><div><b>${S.crest?esc(S.crest.n):'착용한 휘장이 없습니다'}</b>${S.crest?`<div class="tiny" style="color:var(--jade)">${esc(crestEffectText(S.crest))}</div>`:''}</div>${S.crest?'<button class="btn sm" onclick="crestUnequip()">해제</button>':''}</div></div>
  <div class="tiny muted" style="margin:9px 0">휘장은 영구 보관됩니다. 착용한 1개의 효과만 적용되며 중첩되지 않습니다. 새 구매는 현재 착용을 바꾸지 않습니다.</div>
- <div class="sect-t">보유 휘장 목록 (${S.crests.length})</div><div class="grid g2" style="margin-top:8px">${S.crests.map(c=>`<div class="sub"><div class="spread" style="gap:8px"><div><b>${esc(c.n)}</b><div class="tiny" style="color:var(--jade)">${esc(crestEffectText(c))}</div></div><button class="btn sm ${S.crest?.id===c.id?'':'pri'}" ${S.crest?.id===c.id?'disabled':''} onclick="crestEquip(${Number(c.id)})">${S.crest?.id===c.id?'착용 중':'착용'}</button></div></div>`).join('')||'<div class="tiny muted">휘장 원석을 구매하면 이곳에 보관됩니다.</div>'}</div></section>`;
+ <details ${CREST_LIST_OPEN?'open':''} ontoggle="crestListToggle(this.open)"><summary class="sect-t" style="cursor:pointer">보유 휘장 목록 (${S.crests.length}) · 펼치기/접기</summary><div class="grid g2" style="margin-top:8px">${S.crests.map(c=>`<div class="sub"><div class="spread" style="gap:8px"><div><b>${esc(c.n)}</b><div class="tiny" style="color:var(--jade)">${esc(crestEffectText(c))}</div></div><button class="btn sm ${S.crest?.id===c.id?'':'pri'}" ${S.crest?.id===c.id?'disabled':''} onclick="crestEquip(${Number(c.id)})">${S.crest?.id===c.id?'착용 중':'착용'}</button></div></div>`).join('')||'<div class="tiny muted">휘장 원석을 구매하면 이곳에 보관됩니다.</div>'}</div></details></section>`;
+}
+const GEAR_BROWSE={slot:'all',page:0};
+function gearBrowseRows(){
+ const rows=S.bag.filter(it=>GEAR_BROWSE.slot==='all'||it.slot===GEAR_BROWSE.slot).slice().sort((a,b)=>gearScore(b)-gearScore(a)||Number(a.id)-Number(b.id));
+ const pages=Math.max(1,Math.ceil(rows.length/24));GEAR_BROWSE.page=Math.max(0,Math.min(pages-1,GEAR_BROWSE.page));
+ return {rows,pages,items:rows.slice(GEAR_BROWSE.page*24,(GEAR_BROWSE.page+1)*24)};
+}
+function gearBrowseSlot(slot){if(slot!=='all'&&!SLOTS.some(s=>s.k===slot))return;GEAR_BROWSE.slot=slot;GEAR_BROWSE.page=0;renderMain();}
+function gearBrowsePage(page){GEAR_BROWSE.page=Math.max(0,Math.floor(Number(page)||0));renderMain();document.getElementById('gear-bag-browser')?.scrollIntoView({block:'start'});}
+function gearBrowseHTML(){
+ const {rows,pages,items}=gearBrowseRows();
+ const pager=`<div class="spread" style="gap:8px;margin:12px 0"><button class="btn sm" ${GEAR_BROWSE.page===0?'disabled':''} onclick="gearBrowsePage(${GEAR_BROWSE.page-1})">이전</button><span class="tiny muted">${GEAR_BROWSE.page+1} / ${pages} 페이지 · ${rows.length}개${rows.length?' · '+(GEAR_BROWSE.page*24+1)+'–'+Math.min(rows.length,(GEAR_BROWSE.page+1)*24):''}</span><button class="btn sm" ${GEAR_BROWSE.page>=pages-1?'disabled':''} onclick="gearBrowsePage(${GEAR_BROWSE.page+1})">다음</button></div>`;
+ return `<div id="gear-bag-browser" style="scroll-margin-top:120px"><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px" aria-label="법구 착용 부위 필터">${[{k:'all',n:'전체'},...SLOTS].map(sl=>`<button class="btn sm ${GEAR_BROWSE.slot===sl.k?'pri':''}" aria-pressed="${GEAR_BROWSE.slot===sl.k}" onclick="gearBrowseSlot('${sl.k}')">${sl.n} (${sl.k==='all'?S.bag.length:S.bag.filter(it=>it.slot===sl.k).length})</button>`).join('')}</div>${pager}${items.length?`<div class="grid g3">${items.map(it=>gearCard(it)).join('')}</div>`:`<div class="tiny muted">${S.bag.length?'이 부위에 보유한 법구가 없습니다.':'바랑이 비어 있습니다. 의뢰와 탑에서 법구가 나옵니다.'}</div>`}${pages>1?pager:''}</div>`;
 }
 VIEWS.gear=()=>{
   const best=(slot)=>{
@@ -1682,8 +1697,7 @@ VIEWS.gear=()=>{
       ${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('dis',${g})">${GRADES[g].n} 이하 분해</button>`).join("")}
     </div>
     <hr class="hr">
-    ${S.bag.length?`<div class="grid g3">${[...S.bag].sort((a,b)=>gearScore(b)-gearScore(a)).slice(0,24).map(it=>gearCard(it)).join("")}</div>`
-      :`<div class="tiny muted">바랑이 비어 있습니다. 의뢰와 탑에서 법구가 나옵니다.</div>`}
+    ${gearBrowseHTML()}
   </div>`;
 };
 function equipBest(){
