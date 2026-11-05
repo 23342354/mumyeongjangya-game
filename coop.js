@@ -951,7 +951,7 @@ VIEWS.merchant=()=>{
        const need=Number(l.bid_amount)>0?Number(l.bid_amount)+step:Number(l.start_price);
        const can=!mine&&Number(S.rin)>=need&&!LIVE_AUCTION.busy;
        return `<article class="card pad auction-lot"><div class="spread"><span class="tag j">${auctionTierName(l.tier,l.level_band)} 경매</span><span class="tiny muted">${Number(l.bid_count||0)}회 입찰</span></div>
-        <h3 style="color:${G.c};margin:10px 0 4px">${esc(l.item_name)}</h3>
+        <h3 style="color:${G.c};margin:10px 0 4px">${esc(l.item_name)}</h3>${item.merchantElite?'<span class="tag g">상인 특선 · 고수치 옵션</span>':''}
         <div class="tiny muted">${GRADES[item.grade]?.n||"희귀"} · Lv ${Number(item.lv||1)} · ${SLOTS.find(x=>x.k===item.slot)?.n||"법구"} · 귀속</div>
         <div class="tiny muted">전투력 ${nf(gearScore(item))} ${gearUpgradeHTML(item)}</div>
         <div class="tiny" style="color:var(--jade);margin:8px 0;min-height:42px">${gearLine(item)}</div>

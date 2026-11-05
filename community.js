@@ -4013,7 +4013,7 @@ function reforgeCost(it){
 function reforgeOpen(id){
  const it=reforgeItem(id);if(!it||!it.opts?.length){toast('재련할 추가 옵션이 없습니다.');return;}
  const c=reforgeCost(it),locks=it.reforgeLocks||[],all=c.locks>=it.opts.length;
- modal('재련 · '+it.name,`<div class="tiny muted" style="line-height:1.8">잠그지 않은 추가 옵션의 종류와 수치가 무작위로 바뀝니다. 이전보다 낮아질 수도 있으며 되돌릴 수 없습니다.<br>등급·레벨·각인·기본 능력치는 유지됩니다. 잠금은 장비에 저장되며 해제할 때까지 유지됩니다. 잠금 1개마다 재련 비용이 2.5배가 됩니다.</div>
+ modal('재련 · '+it.name,`<div class="tiny muted" style="line-height:1.8">잠그지 않은 추가 옵션의 종류와 수치가 무작위로 바뀝니다. 이전보다 낮아질 수도 있으며 되돌릴 수 없습니다.<br>등급·레벨·각인·기본 능력치는 유지됩니다. 잠금은 장비에 저장되며 해제할 때까지 유지됩니다. 잠금 1개마다 재련 비용이 2.5배가 됩니다.${it.merchantElite?" 상인 특선은 재련 시에도 일반 장비보다 높은 옵션 범위를 사용합니다.":""}</div>
  <div class="sect-t" style="margin-top:12px">현재 옵션 · 잠금 ${c.locks}개</div>
  ${it.opts.map((o,i)=>`<div class="spread" style="padding:7px 0;gap:8px"><span>${esc(o.n)} +${o.v}% ${locks.includes(i)?'<span class="tag">잠금</span>':''}</span><button class="btn sm" onclick="reforgeLock(${it.id},${i})">${locks.includes(i)?'잠금 해제':'잠금'}</button></div>`).join('')}
  <div class="tiny muted" style="margin-top:12px">보유 부적 가루 ${nf(S.mat.부적가루||0)} · 륜 ${nf(S.rin)}</div>
@@ -4029,7 +4029,7 @@ function reforgeApply(id){
  if(!(S.mat.부적가루>=c.dust)||S.rin<c.rin){toast('부적 가루 또는 륜이 부족합니다.','bad');return;}
  const locked=new Set(it.reforgeLocks||[]),used=new Set(it.opts.filter((o,i)=>locked.has(i)).map(o=>o.k));
  const pool=OPTS.filter(o=>!used.has(o.k));
- const next=it.opts.map((o,i)=>{if(locked.has(i))return {...o};if(!pool.length)return {...o};const at=Math.floor(Math.random()*pool.length),option=pool.splice(at,1)[0];return {k:option.k,n:option.n,v:+(rnd(option.v[0]*10,option.v[1]*10)/10*(1+it.grade*.12)).toFixed(1)};});
+ const next=it.opts.map((o,i)=>{if(locked.has(i))return {...o};if(!pool.length)return {...o};const at=Math.floor(Math.random()*pool.length),option=pool.splice(at,1)[0];return {k:option.k,n:option.n,v:it.merchantElite?+(rnd(Math.ceil(option.v[1]*1.1*10),Math.ceil(option.v[1]*1.6*10))/10*(1+it.grade*.12)).toFixed(1):+(rnd(option.v[0]*10,option.v[1]*10)/10*(1+it.grade*.12)).toFixed(1)};});
  S.mat.부적가루-=c.dust;S.rin-=c.rin;it.opts=next;
  save();renderTop();renderNav();renderMain();reforgeOpen(id);toast('재련했습니다. 새 옵션을 확인해 주세요.','good');
 }

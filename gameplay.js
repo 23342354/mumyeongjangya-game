@@ -770,7 +770,7 @@ function gearCard(it,where){
   return `<div class="sub" style="border-color:${equipped?G.c:"var(--line)"}">
     <div class="spread"><div>
       <b style="color:${G.c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
-      ${it.isNew?'<span class="tag r">NEW</span>':""}
+      ${it.isNew?'<span class="tag r">NEW</span>':""}${it.merchantElite?'<span class="tag g">상인 특선</span>':""}
       <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} · Lv ${it.lv} · ${G.n}${can?"":` · <span style="color:var(--red)">착용 불가 (Lv ${it.lv} 필요)</span>`}</div>
     </div><div style="text-align:right"><div class="tiny muted">전투력</div>
       <b style="color:var(--gold)">${nf(gearScore(it))}</b> ${gearUpgradeHTML(it)}</div></div>
