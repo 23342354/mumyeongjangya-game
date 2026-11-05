@@ -1319,8 +1319,8 @@ body.auth-gate #mobile-chat-toggle{
 }
 
 /* Operator-only pair skin preview. Preserve character colors and semantic alerts. */
-:root[data-pair-theme="preview"] body::before{filter:grayscale(.9);opacity:.25}
-:root[data-pair-theme="preview"] body::after{background:radial-gradient(ellipse at 0% 18%,color-mix(in srgb,var(--pair-raw-a) 26%,transparent),transparent 65%),radial-gradient(ellipse at 100% 70%,color-mix(in srgb,var(--pair-raw-b) 26%,transparent),transparent 65%),linear-gradient(115deg,color-mix(in srgb,var(--pair-raw-a) 9%,var(--s0)),color-mix(in srgb,var(--pair-raw-b) 9%,var(--s0)))}
+:root[data-pair-theme="preview"] body::before{background-image:var(--pair-theme-image,url("bg.webp"));background-position:center top;background-size:cover;filter:saturate(.7);opacity:.52;pointer-events:none}
+:root[data-pair-theme="preview"] body::after{background:radial-gradient(ellipse at 0% 18%,color-mix(in srgb,var(--pair-raw-a) 26%,transparent),transparent 65%),radial-gradient(ellipse at 100% 70%,color-mix(in srgb,var(--pair-raw-b) 26%,transparent),transparent 65%),linear-gradient(180deg,color-mix(in srgb,var(--s0) 40%,transparent),color-mix(in srgb,var(--s0) 75%,transparent) 320px,var(--s0) 760px)}
 :root[data-pair-theme="preview"] #topbar{background:linear-gradient(105deg,color-mix(in srgb,var(--pair-raw-a) 16%,var(--s0)),color-mix(in srgb,var(--pair-raw-b) 16%,var(--s0)))}
 :root[data-pair-theme="preview"] #main .card,
 :root[data-pair-theme="preview"] .modal,
