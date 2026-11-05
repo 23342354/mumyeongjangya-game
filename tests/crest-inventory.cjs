@@ -1,0 +1,11 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync('gameplay.js','utf8'),coop=fs.readFileSync('coop.js','utf8');
+const c={S:{crest:{n:'기존 휘장',key:'atkP',v:5}},OPTS:[{k:'atkP',n:'공격력'}],esc:String,save(){},renderTop(){},renderNav(){},renderMain(){},toast(){}};vm.createContext(c);
+vm.runInContext(src.slice(src.indexOf('function ensureCrests('),src.indexOf('VIEWS.gear=()=>')),c);
+c.ensureCrests();assert.equal(c.S.crests.length,1);assert.equal(c.S.crest.id,1);c.ensureCrests();assert.equal(c.S.crests.length,1);
+const add=src.slice(src.indexOf('  if(g.crest){ ensureCrests();'),src.indexOf('  toast(msg.join',src.indexOf('  if(g.crest){ ensureCrests();')));
+c.g={crest:1};c.msg=[];c.PREFIX=['새'];c.pick=a=>a[0];c.rnd=()=>90;vm.runInContext(add,c);assert.equal(c.S.crests.length,2);assert.equal(c.S.crest.id,1);assert.equal(c.S.crests[1].v,9);
+c.crestEquip(2);assert.equal(c.S.crest.id,2);assert.equal(c.S.crest.v,9);assert.equal(c.S.crests.length,2);c.crestEquip(99);assert.equal(c.S.crest.id,2);c.crestUnequip();assert.equal(c.S.crest,null);c.ensureCrests();assert.equal(c.S.crest,null);assert.equal(c.S.crests.length,2);c.crestEquip(1);assert.equal(c.S.crest.v,5);
+assert.match(c.crestPanel(),/보유 휘장 목록/);assert.match(coop,/'crest','crests','crestSeq'/);assert.match(coop,/const actions=\['crestEquip','crestUnequip'/);
+c.S={crest:null};c.ensureCrests();vm.runInContext(add,c);assert.equal(c.S.crest.id,1);assert.equal(c.S.crests.length,1);
+console.log('PASS: legacy crest migration is idempotent, purchases retain all crests and current equipment, first auto-equip, switch/unequip/invalid ID, inventory UI and pair personal persistence');

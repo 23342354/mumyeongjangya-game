@@ -804,6 +804,31 @@ function gearCard(it,where){
            <button class="btn sm ghost" onclick="listMine(${it.id})">중개소에 내놓기</button>`}
     </div></div>`;
 }
+/* Crests are permanent collectibles; only the equipped crest grants its effect. */
+function ensureCrests(){
+ if(!Array.isArray(S.crests))S.crests=[];
+ S.crestSeq=Math.max(Number(S.crestSeq)||0,...S.crests.map(c=>Number(c.id)||0));
+ if(S.crest){
+  let owned=S.crests.find(c=>c.id===S.crest.id&&c.n===S.crest.n&&c.key===S.crest.key&&c.v===S.crest.v);
+  if(!owned){owned={...S.crest,id:++S.crestSeq};S.crests.push(owned);}
+  S.crest=owned;
+ }
+}
+function crestEquip(id){
+ ensureCrests();const item=S.crests.find(c=>c.id===id);if(!item)return;
+ S.crest=item;save();renderTop();renderNav();renderMain();toast('휘장을 착용했습니다.','good');
+}
+function crestUnequip(){
+ ensureCrests();S.crest=null;save();renderTop();renderNav();renderMain();toast('휘장을 해제했습니다.');
+}
+function crestEffectText(item){return `${OPTS.find(o=>o.k===item.key)?.n||item.key} +${item.v}%`;}
+function crestPanel(){
+ ensureCrests();
+ return `<section class="card pad" style="margin:12px 0" aria-label="휘장 착용 및 보유 목록"><div class="spread"><b>휘장 착용칸 · 1개</b><span class="tag">보유 ${S.crests.length}개</span></div>
+ <div class="sub" style="margin-top:10px"><div class="spread" style="gap:8px"><div><b>${S.crest?esc(S.crest.n):'착용한 휘장이 없습니다'}</b>${S.crest?`<div class="tiny" style="color:var(--jade)">${esc(crestEffectText(S.crest))}</div>`:''}</div>${S.crest?'<button class="btn sm" onclick="crestUnequip()">해제</button>':''}</div></div>
+ <div class="tiny muted" style="margin:9px 0">휘장은 영구 보관됩니다. 착용한 1개의 효과만 적용되며 중첩되지 않습니다. 새 구매는 현재 착용을 바꾸지 않습니다.</div>
+ <div class="sect-t">보유 휘장 목록 (${S.crests.length})</div><div class="grid g2" style="margin-top:8px">${S.crests.map(c=>`<div class="sub"><div class="spread" style="gap:8px"><div><b>${esc(c.n)}</b><div class="tiny" style="color:var(--jade)">${esc(crestEffectText(c))}</div></div><button class="btn sm ${S.crest?.id===c.id?'':'pri'}" ${S.crest?.id===c.id?'disabled':''} onclick="crestEquip(${Number(c.id)})">${S.crest?.id===c.id?'착용 중':'착용'}</button></div></div>`).join('')||'<div class="tiny muted">휘장 원석을 구매하면 이곳에 보관됩니다.</div>'}</div></section>`;
+}
 VIEWS.gear=()=>{
   const best=(slot)=>{
     const cands=S.bag.filter(b=>b.slot===slot && gearCanEquip(b));
@@ -811,6 +836,7 @@ VIEWS.gear=()=>{
     return cands.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
   };
   return head("법의 · 관 · 부적 · 경문",ic("beads")+" 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+  ${crestPanel()}
   <div class="gear-slot-scroll" aria-label="법의·관·부적·경문 법구 장비 목록">
   <div class="gear-slot-grid">
     ${SLOTS.map(sl=>{
@@ -1759,7 +1785,7 @@ const MART=[
  {id:"m9", n:"바랑 확장",    d:"바랑 칸 +5",                    cost:{lotus:20},   give:{bag:5},     lim:99, per:"ever"},
  {id:"m10",n:"망각의 차",    d:"분배한 능력치 포인트를 되돌립니다", cost:{lotus:5},   give:{forget:1},  lim:99, per:"day"},
  {id:"m11",n:"연금 재료 상자",d:"재료 무작위 12개",              cost:{lotus:8},    give:{mats:12},   lim:3,  per:"day"},
- {id:"m12",n:"휘장 원석",    d:"무작위 보석이 박힌 사무전 휘장 1개", cost:{lotus:30}, give:{crest:1},  lim:99, per:"ever", req:3},
+ {id:"m12",n:"휘장 원석",    d:"무작위 효과의 영구 휘장 1개 · 법구에서 1개만 선택 착용", cost:{lotus:30}, give:{crest:1},  lim:99, per:"ever", req:3},
 ];
 
 /* ═══════════ 상태 보강 3 ═══════════ */
@@ -1779,6 +1805,7 @@ function ensureV3(){
   d("auc",{phase:"idle",left:0,next:0,lots:[],hist:[],slot:0});
   d("mart",{});
   d("crest",null);
+  ensureCrests();
   d("run",null);
   if(!S.auc.lots.length && S.auc.phase==="idle") S.auc.next=aucNextIn();
 }
@@ -2553,8 +2580,9 @@ function martBuy(id){
   if(g.forget){ STATS.forEach(s=>{ S.pts+=S.alloc[s.k]; S.alloc[s.k]=0; }); msg.push("분배 포인트 환원"); }
   if(g.mats){ for(let i=0;i<g.mats;i++){ const k=pick(["약초","어물","열매","뿌리","꽃"]); S.mat[k]++; } msg.push("재료 12개"); }
   if(g.gear){ const it=mkGear(S.lvl+rnd(3,7), rnd(1,3)); S.bag.push(it); msg.push(`${GRADES[it.grade].n} 법구 「${it.name}」`); }
-  if(g.crest){ const o=pick(OPTS); S.crest={n:`${pick(PREFIX)} 휘장`, key:o.k, v:+(rnd(30,90)/10).toFixed(1)};
-    msg.push(`휘장 · ${o.n} +${S.crest.v}%`); }
+  if(g.crest){ ensureCrests();const o=pick(OPTS),item={id:++S.crestSeq,n:`${pick(PREFIX)} 휘장`,key:o.k,v:+(rnd(30,90)/10).toFixed(1)};
+    S.crests.push(item);if(S.crests.length===1&&!S.crest)S.crest=item;
+    msg.push(`휘장 보관 · ${o.n} +${item.v}% · 법구에서 착용 선택`); }
   toast(msg.join(" · "),"good");
   achCheck(); renderTop(); renderNav(); renderMain(); save();
 }
