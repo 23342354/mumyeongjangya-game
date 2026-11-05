@@ -1592,7 +1592,7 @@ function gearCard(it,where){
     </div><div class="gear-card-score"><div class="tiny muted">전투력</div>
       <b>${nf(gearScore(it))}</b></div></div>
     ${upgrade?`<div class="gear-card-comparison"><span class="gear-card-comparison-label">현재 착용 대비</span>${upgrade}</div>`:''}
-    <div class="tiny" style="margin:6px 0 8px;color:var(--jade)">${gearLine(it)}</div>
+    ${gearOptionsHTML(it)}
     <div class="row">
       ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
       ${equipped
@@ -1632,6 +1632,70 @@ function crestPanel(){
  <div class="tiny muted" style="margin:9px 0">휘장은 영구 보관됩니다. 착용한 1개의 효과만 적용되며 중첩되지 않습니다. 새 구매는 현재 착용을 바꾸지 않습니다.</div>
  <details ${CREST_LIST_OPEN?'open':''} ontoggle="crestListToggle(this.open)"><summary class="sect-t" style="cursor:pointer">보유 휘장 목록 (${S.crests.length}) · 펼치기/접기</summary><div class="grid g2" style="margin-top:8px">${S.crests.map(c=>`<div class="sub"><div class="spread" style="gap:8px"><div><b>${esc(c.n)}</b><div class="tiny" style="color:var(--jade)">${esc(crestEffectText(c))}</div></div><button class="btn sm ${S.crest?.id===c.id?'':'pri'}" ${S.crest?.id===c.id?'disabled':''} onclick="crestEquip(${Number(c.id)})">${S.crest?.id===c.id?'착용 중':'착용'}</button></div></div>`).join('')||'<div class="tiny muted">휘장 원석을 구매하면 이곳에 보관됩니다.</div>'}</div></details></section>`;
 }
+/* 법구 살펴보기: 비교 설정은 화면에만 적용합니다. */
+const GEAR_INSPECT={id:null,zero:false,compare:false};
+function gearInspectItem(){return [...Object.values(S.gear),...S.bag].find(it=>it&&String(it.id)===String(GEAR_INSPECT.id))||null;}
+function gearInspect(id){GEAR_INSPECT.id=id;renderMain();}
+function gearInspectToggle(key,value){if(['zero','compare'].includes(key))GEAR_INSPECT[key]=!!value;renderMain();}
+function gearUnenhanced(it){
+ if(!it)return {item:null,estimated:false};
+ const enh=Math.max(0,Math.floor(Number(it.enh)||0));
+ let value=it.main.v;
+ for(let n=0;n<enh;n++)value=Math.max(1,Math.round((value-1)/1.05));
+ const generated=Math.max(1,Math.round((0.8+it.lv*.085)*GRADES[it.grade].m));
+ let check=generated;for(let n=0;n<enh;n++)check=Math.round(check*1.05+1);
+ const known=it.statFormulaVersion===2&&check===it.main.v;
+ if(known)value=generated;
+ return {item:{...it,enh:0,main:{...it.main,v:value},opts:it.opts.map(o=>({...o}))},estimated:enh>0&&!known};
+}
+function gearComparisonData(it,zero=false){
+ const current=S.gear[it.slot]||null;
+ const candidate=zero?gearUnenhanced(it):{item:it,estimated:false};
+ const equipped=zero?gearUnenhanced(current):{item:current,estimated:false};
+ return {candidate:candidate.item,current:equipped.item,delta:gearScore(candidate.item)-(equipped.item?gearScore(equipped.item):0),estimated:candidate.estimated||equipped.estimated};
+}
+function gearOptionRows(it){
+ if(!it)return [];
+ return [{key:'main:'+it.main.st,name:STATS.find(s=>s.k===it.main.st)?.n||it.main.st,value:it.main.v,percent:false},...it.opts.map(o=>({key:'opt:'+o.k,name:o.n,value:o.v,percent:true}))];
+}
+function gearOptionsHTML(it){
+ const main=gearOptionRows(it)[0];
+ return `<section class="gear-option-section"><h4>기본 옵션</h4><div class="gear-option-row"><span>${esc(main.name)}</span><b>+${nf(main.value)}</b></div></section><hr class="gear-option-divider"><section class="gear-option-section"><h4>추가 옵션</h4>${it.opts.length?it.opts.map(o=>`<div class="gear-option-row"><span>${esc(o.n)}</span><span>+${o.v}%</span></div>`).join(''):'<div class="tiny muted">추가 옵션이 없습니다.</div>'}</section>`;
+}
+function gearComparisonTable(data){
+ const mine=gearOptionRows(data.candidate),other=gearOptionRows(data.current),keys=[...new Set([...mine,...other].map(o=>o.key))];
+ const value=(row)=>row?`+${row.percent?row.value:nf(row.value)}${row.percent?'%':''}`:'—';
+ return `<div class="gear-compare-table-wrap"><table class="gear-compare-table"><caption>같은 부위 법구 비교${GEAR_INSPECT.zero?' · 각인 0 기준':''}</caption><thead><tr><th scope="col">옵션</th><th scope="col">선택한 법구</th><th scope="col">현재 착용</th><th scope="col">차이</th></tr></thead><tbody>${keys.map(key=>{const a=mine.find(o=>o.key===key),b=other.find(o=>o.key===key),row=a||b,diff=(a?.value||0)-(b?.value||0);return `<tr><th scope="row">${esc(row.name)}${key.startsWith('main:')?' · 기본':''}</th><td>${value(a)}</td><td>${value(b)}</td><td class="${diff>0?'gain':diff<0?'loss':''}">${diff?`${diff>0?'+':''}${Number(diff.toFixed(2)).toLocaleString('ko-KR')}${row.percent?'%p':''}`:'—'}</td></tr>`;}).join('')}</tbody></table></div>`;
+}
+function gearInspectHTML(){
+ const it=gearInspectItem();
+ if(!it)return `<section class="card pad gear-inspect-panel"><div class="sect-t">법구 살펴보기</div><p class="tiny muted">위의 착용 법구나 오른쪽 바랑에서 법구를 선택해 주세요. 기본·추가 옵션과 현재 착용 법구의 차이를 확인할 수 있습니다.</p></section>`;
+ const current=S.gear[it.slot],equipped=current===it,can=gearCanEquip(it),G=GRADES[it.grade],data=gearComparisonData(it,GEAR_INSPECT.zero);
+ const signed=n=>`${n>0?'+':''}${n.toLocaleString('ko-KR')}`;
+ return `<section class="card pad gear-inspect-panel" aria-label="선택한 법구 상세">
+ <div class="spread"><span class="tiny muted">${G.n} · ${SLOTS.find(s=>s.k===it.slot)?.n} · Lv ${it.lv}${equipped?' · 착용 중':''}</span><button class="btn sm ghost" onclick="gearInspect(null)">닫기</button></div>
+ <h3 style="color:${G.c}">${esc(it.name)}${it.enh?` +${it.enh}`:''}</h3>
+ <div class="gear-option-row"><span>전투력</span><b>${nf(gearScore(it))}</b></div>
+ ${gearOptionsHTML(it)}
+ <hr class="gear-option-divider">
+ <div class="gear-compare-controls"><label><input type="checkbox" ${GEAR_INSPECT.zero?'checked':''} onchange="gearInspectToggle('zero',this.checked)"> 각인 제외 (두 법구 모두 +0)</label><label><input type="checkbox" ${GEAR_INSPECT.compare?'checked':''} onchange="gearInspectToggle('compare',this.checked)"> 장비 비교</label></div>
+ <div class="gear-comparison-summary"><span>${GEAR_INSPECT.zero?'각인 0 기준':'현재 착용 대비'} 전투력 차이${data.estimated?' (추정)':''}</span><b class="${data.delta>0?'gain':data.delta<0?'loss':''}">${signed(data.delta)}</b></div>
+ ${!current?'<div class="tiny muted">현재 이 부위에 착용한 법구가 없습니다.</div>':''}
+ ${data.estimated?'<div class="tiny muted">기본 수치 기록이 없는 기존 법구는 각인 공식을 역산한 추정값으로 비교합니다.</div>':''}
+ ${GEAR_INSPECT.compare?gearComparisonTable(data):''}
+ <hr class="gear-option-divider">
+ ${!can?`<p class="tiny" style="color:var(--red)">Lv ${it.lv}부터 착용할 수 있습니다.</p>`:''}
+ <div class="gear-detail-actions">
+ ${equipped?`<button class="btn sm pri" onclick="enhance('${it.slot}')">각인 +${it.enh+1}</button><button class="btn sm" ${S.sari<3?'disabled':''} onclick="enhance('${it.slot}',true)">보호 각인 · 사리 3</button><button class="btn sm" onclick="unequip('${it.slot}')">해제</button>`:`<button class="btn sm pri" ${can?'':'disabled'} onclick="equip(${it.id})">${can?'장착':`Lv ${it.lv} 필요`}</button><button class="btn sm" onclick="sellGear(${it.id})">판매</button><button class="btn sm" onclick="dismantle(${it.id})">분해</button><button class="btn sm ghost" onclick="listMine(${it.id})">중개소에 내놓기</button>`}
+ ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:''}</div>
+ ${equipped?`<p class="tiny muted">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust}<br>보호 각인은 사리 3개를 추가로 사용하며 반드시 성공합니다.</p>`:''}
+ </section>`;
+}
+function gearMiniCard(it){
+ const chosen=String(GEAR_INSPECT.id)===String(it.id),up=gearComparisonData(it,GEAR_INSPECT.zero).delta>0;
+ return `<button type="button" class="gear-mini-card ${chosen?'selected':''}" style="--gear-grade:${GRADES[it.grade].c}" aria-pressed="${chosen}" onclick="gearInspect(${it.id})"><b>${esc(it.name)}${it.enh?` +${it.enh}`:''}${up?' <span class="gain" aria-label="전투력 상승">▲</span>':''}</b><span>${SLOTS.find(s=>s.k===it.slot)?.n} · Lv ${it.lv}${it.isNew?' · NEW':''}</span></button>`;
+}
+
 const GEAR_BROWSE={slot:'all',page:0};
 function gearBrowseRows(){
  const rows=S.bag.filter(it=>GEAR_BROWSE.slot==='all'||it.slot===GEAR_BROWSE.slot).slice().sort((a,b)=>gearScore(b)-gearScore(a)||Number(a.id)-Number(b.id));
@@ -1640,66 +1704,25 @@ function gearBrowseRows(){
 }
 function gearBrowseSlot(slot){if(slot!=='all'&&!SLOTS.some(s=>s.k===slot))return;GEAR_BROWSE.slot=slot;GEAR_BROWSE.page=0;renderMain();}
 function gearBrowsePage(page){GEAR_BROWSE.page=Math.max(0,Math.floor(Number(page)||0));renderMain();document.getElementById('gear-bag-browser')?.scrollIntoView({block:'start'});}
-function gearBrowseHTML(){
+function gearBrowseHTML(compact=false){
  const {rows,pages,items}=gearBrowseRows();
  const pager=`<div class="spread" style="gap:8px;margin:12px 0"><button class="btn sm" ${GEAR_BROWSE.page===0?'disabled':''} onclick="gearBrowsePage(${GEAR_BROWSE.page-1})">이전</button><span class="tiny muted">${GEAR_BROWSE.page+1} / ${pages} 페이지 · ${rows.length}개${rows.length?' · '+(GEAR_BROWSE.page*24+1)+'–'+Math.min(rows.length,(GEAR_BROWSE.page+1)*24):''}</span><button class="btn sm" ${GEAR_BROWSE.page>=pages-1?'disabled':''} onclick="gearBrowsePage(${GEAR_BROWSE.page+1})">다음</button></div>`;
- return `<div id="gear-bag-browser" style="scroll-margin-top:120px"><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px" aria-label="법구 착용 부위 필터">${[{k:'all',n:'전체'},...SLOTS].map(sl=>`<button class="btn sm ${GEAR_BROWSE.slot===sl.k?'pri':''}" aria-pressed="${GEAR_BROWSE.slot===sl.k}" onclick="gearBrowseSlot('${sl.k}')">${sl.n} (${sl.k==='all'?S.bag.length:S.bag.filter(it=>it.slot===sl.k).length})</button>`).join('')}</div>${pager}${items.length?`<div class="grid g3">${items.map(it=>gearCard(it)).join('')}</div>`:`<div class="tiny muted">${S.bag.length?'이 부위에 보유한 법구가 없습니다.':'바랑이 비어 있습니다. 의뢰와 탑에서 법구가 나옵니다.'}</div>`}${pages>1?pager:''}</div>`;
+ return `<div id="gear-bag-browser" style="scroll-margin-top:120px"><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px" aria-label="법구 착용 부위 필터">${[{k:'all',n:'전체'},...SLOTS].map(sl=>`<button class="btn sm ${GEAR_BROWSE.slot===sl.k?'pri':''}" aria-pressed="${GEAR_BROWSE.slot===sl.k}" onclick="gearBrowseSlot('${sl.k}')">${sl.n} (${sl.k==='all'?S.bag.length:S.bag.filter(it=>it.slot===sl.k).length})</button>`).join('')}</div>${pager}${items.length?`<div class="${compact?'gear-mini-grid':'grid g3'}">${items.map(it=>compact?gearMiniCard(it):gearCard(it)).join('')}</div>`:`<div class="tiny muted">${S.bag.length?'이 부위에 보유한 법구가 없습니다.':'바랑이 비어 있습니다. 의뢰와 탑에서 법구가 나옵니다.'}</div>`}${pages>1?pager:''}</div>`;
 }
 VIEWS.gear=()=>{
-  const best=(slot)=>{
-    const cands=S.bag.filter(b=>b.slot===slot && gearCanEquip(b));
-    if(!cands.length) return null;
-    return cands.reduce((a,b)=>gearScore(b)>gearScore(a)?b:a);
-  };
-  return head("법의 · 관 · 부적 · 경문",ic("beads")+" 법구", `전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
-  ${crestPanel()}
-  <div class="gear-slot-scroll" aria-label="법의·관·부적·경문 법구 장비 목록">
-  <div class="gear-slot-grid">
-    ${SLOTS.map(sl=>{
-      const it=S.gear[sl.k]; const b=best(sl.k);
-      const up=b&&(!it||gearScore(b)>gearScore(it));
-      if(!it) return `<div class="sub gear-slot-card" style="border-style:dashed">
-        <div class="tiny muted">${sl.e} ${sl.n}</div>
-        <div class="tiny muted">비어 있습니다</div><div></div><div></div>
-        <div class="gear-slot-actions">${b?`<button class="btn sm pri" onclick="equip(${b.id})">가장 좋은 것 장착</button>`:`<span class="tiny muted">바랑에도 없습니다</span>`}</div><div></div></div>`;
-      return `<div class="sub gear-slot-card" style="border-color:${GRADES[it.grade].c}">
-        <div class="spread"><span class="tiny muted">${sl.e} ${sl.n}</span>${gradeTag(it.grade)}</div>
-        <b style="color:${GRADES[it.grade].c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
-        <div class="tiny muted">Lv ${it.lv} · 전투력 ${nf(gearScore(it))}</div>
-        <div class="tiny" style="color:var(--jade);margin:5px 0 8px">${gearLine(it)}</div>
-        <div class="gear-slot-actions">
-          <button class="btn sm pri" onclick="enhance('${sl.k}')">각인 +${it.enh+1}</button>
-          <button class="btn sm" ${S.sari<3?"disabled":""} onclick="enhance('${sl.k}',true)" title="사리 3을 더 내면 실패하지 않습니다">보호 각인</button>
-          <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
-          ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
-          ${up?`<button class="btn sm" style="color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>${gearUpgradeHTML(b)}`:""}
-        </div>
-        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
-      </div>`;
-    }).join("")}
-  </div>
-  </div>
-
-  <div class="card pad" style="margin-bottom:14px">
-    <div class="row">
-      <button class="btn sm" onclick="equipBest()">가장 좋은 법구 장착</button>
-      <button class="btn sm" onclick="unequipAll()">전체 해제</button>
-      <span class="tiny muted" style="margin-left:auto">부적 <b style="color:var(--gold)">${nf(S.mat.가루)}</b> · 사리 ${nf(S.sari)} · 각인은 실패해도 단계가 떨어지지 않으며, 법구를 바꾸면 <b>이전 각인의 70%가 새 법구로 옮겨 새겨집니다</b></span>
-    </div>
-  </div>
-
-  <div class="card pad">
-    <div class="spread"><div class="sect-t" style="margin:0">바랑 ${S.bag.length} / ${bagCapacity()}</div>
-      <div class="row">
-        <span class="tiny muted">일괄</span>
-        ${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('sell',${g})">${GRADES[g].n} 이하 판매</button>`).join("")}
-      </div></div>
-    <div class="row" style="margin:8px 0">
-      ${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('dis',${g})">${GRADES[g].n} 이하 분해</button>`).join("")}
-    </div>
-    <hr class="hr">
-    ${gearBrowseHTML()}
-  </div>`;
+ return head('법의 · 관 · 부적 · 경문',ic('beads')+' 법구',`전투력 <b style="color:var(--gold)">${nf(power())}</b>`)+`
+ <div class="gear-slot-scroll" aria-label="착용 법구 목록"><div class="gear-slot-grid">
+ ${SLOTS.map(sl=>{const it=S.gear[sl.k];return `<div class="sub gear-equipped-summary"><div class="tiny muted">${sl.e} ${sl.n}</div>${it?gearMiniCard(it):'<span class="tiny muted">비어 있습니다</span>'}</div>`;}).join('')}
+ </div></div>
+ <div class="row" style="margin-bottom:14px"><button class="btn sm" onclick="equipBest()">가장 좋은 법구 장착</button><button class="btn sm" onclick="unequipAll()">전체 해제</button><span class="tiny muted">부적 ${nf(S.mat.가루)} · 사리 ${nf(S.sari)}</span></div>
+ <p class="tiny muted">법구를 바꾸면 이전 각인의 70%가 새 법구로 옮겨 새겨집니다. 비교는 이월 전 수치를 기준으로 합니다.</p>
+ ${crestPanel()}
+ <div class="gear-workspace">${gearInspectHTML()}<section class="card pad gear-inventory-panel">
+ <div class="spread"><div class="sect-t">바랑 ${S.bag.length} / ${bagCapacity()}</div></div>
+ ${gearBrowseHTML(true)}
+ <hr class="hr"><div class="tiny muted">일괄 판매</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('sell',${g})">${GRADES[g].n} 이하 판매</button>`).join('')}</div>
+ <div class="tiny muted">일괄 분해</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('dis',${g})">${GRADES[g].n} 이하 분해</button>`).join('')}</div>
+ </section></div>`;
 };
 function equipBest(){
   SLOTS.forEach(sl=>{
