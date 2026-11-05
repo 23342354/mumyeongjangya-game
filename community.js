@@ -4331,7 +4331,7 @@ function pairTrialThemePalette(a,b,dark){
  '--glass0':alpha(pairThemeRGB(surface(.94)),.82),'--glass1':alpha(pairThemeRGB(surface(.90)),.92),'--glassTop':alpha(pairThemeRGB(surface(.94)),.97),'--glassTop2':alpha(pairThemeRGB(surface(.88)),.98),
  '--cardA':alpha(pairThemeRGB(surface(.86)),.94),'--cardB':alpha(pairThemeRGB(surface(.92)),.97),'--subBg':alpha(pairThemeRGB(surface(.82)),.93),'--resBg':alpha(pairThemeRGB(surface(.86)),.94),
  '--scrim1':alpha(pairThemeRGB(surface(.93)),dark?.82:.78),'--scrim2':alpha(pairThemeRGB(surface(.91)),dark?.9:.85),'--scrim3':alpha(pairThemeRGB(surface(.97)),.96),'--wash1':alpha(rgbA,dark?.24:.16),'--wash2':alpha(rgbB,dark?.22:.16),
- '--pair-theme-a':pairThemeHex(primary),'--pair-theme-b':pairThemeHex(secondary),'--pair-raw-a':a,'--pair-raw-b':b});
+ '--violet':pairThemeHex(secondary),'--violetL':pairThemeHex(primary),'--pink':pairThemeHex(secondary),'--pinkD':pairThemeHex(secondary),'--lift':'0 10px 24px -18px '+alpha(pairThemeRGB(surface(.97)),.55),'--pair-theme-a':pairThemeHex(primary),'--pair-theme-b':pairThemeHex(secondary),'--pair-raw-a':a,'--pair-raw-b':b});
  return palette;
 }
 const PAIR_THEME_PREVIEW={actor:null,authorized:false,pairId:null,request:0};
