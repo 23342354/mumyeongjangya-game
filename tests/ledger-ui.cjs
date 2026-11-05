@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');const src=fs.readFileSync('coop.js','utf8'),now=Date.parse('2026-11-06T00:10:00+09:00');
+const entries=[{t:now-1000,a:10000,k:'의뢰 <보상>',who:'나',me:true,color:'red'},{t:now-2000,a:-3000,k:'재련',who:'파트너',me:false,color:'blue'},{t:now-3600000,a:-1000,k:'상점',who:'나',me:true,color:'red'}];
+const original=JSON.stringify(entries),c={Date:class extends Date{static now(){return now;}},S:{rin:22000},PAIR_PLAY:{snapshot:{peer:{name:'파트너'}}},LEDGER_API:{rows:()=>entries},VIEWS:{},head:()=>'',ic:()=>'',nf:String,esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),renderMain(){}};c.window=c;vm.createContext(c);
+vm.runInContext(src.slice(src.indexOf('function ledgerSince('),src.indexOf('/* 광장·페어 묶음에 기입장을 넣습니다. */')),c);
+let html=c.VIEWS.ledger();assert.ok(html.includes('공동 지갑'));assert.ok(html.includes('22000'));assert.ok(html.includes('오늘'));assert.ok(html.includes('어제'));assert.ok(html.includes('의뢰 &lt;보상&gt;'));assert.ok(!html.includes('의뢰 <보상>'));
+c.ledgerFilter('period','today');assert.equal(c.ledgerVisibleRows(entries).length,2,'Korea midnight excludes prior day');assert.equal(c.ledgerDayKey(now),'2026-11-06');
+c.ledgerFilter('type','in');assert.equal(c.ledgerVisibleRows(entries).length,1);assert.equal(c.ledgerVisibleRows(entries,false).length,2,'summary includes both directions');
+c.ledgerFilter('who','peer');assert.equal(c.ledgerVisibleRows(entries).length,0);assert.ok(c.VIEWS.ledger().includes('조건에 맞는 기록이 없습니다'));
+c.ledgerFilter('type','out');assert.equal(c.ledgerVisibleRows(entries).length,1);
+c.PAIR_PLAY.snapshot.peer=null;assert.ok(c.VIEWS.ledger().includes('나의 지갑'));assert.equal(c.ledgerVisibleRows(entries).length,1,'solo clears invisible peer filter');
+c.LEDGER_API.rows=()=>[];assert.ok(c.VIEWS.ledger().includes('아직 기록이 없습니다'));
+assert.equal(JSON.stringify(entries),original,'UI filters never mutate ledger entries');
+console.log('PASS: ledger summary, KST day groups, period/direction/person filters, independent summary scope, escaped text, empty states and read-only rows');
