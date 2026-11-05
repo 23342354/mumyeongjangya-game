@@ -4724,9 +4724,11 @@ function pairSeen(r){
 function pairHomeHTML(){
   const P=pairEnsure();
   if(!sbOn() || !P.mine) return "";
+  const sharedPair=SOCIAL.pairs.find(p=>String(p.id)===String(P.mine.id));
+  const homeTitle=(sharedPair?.pair_name?.trim()||"페어")+"의 거처";
   const r=pairRow();
   if(!r) return `<div class="card pad" style="margin-bottom:14px">
-    <div class="sect-t">페어의 거처</div>
+    <div class="sect-t">${esc(homeTitle)}</div>
     <div class="tiny muted">아직 명부에 올라오지 않았습니다. 상대가 한 번 접속하면 보입니다.</div></div>`;
   const h=homeOf(r.hall), dorm=(r.hall==="dorm");
   const top=dorm?4:5, st=clamp(r.home_stage||0,0,top);
@@ -4736,7 +4738,7 @@ function pairHomeHTML(){
   const sharedPaid=!dorm && shared>nowMin();
   const activeFac=dorm||(!late&&due>nowMin())?fac:0;
   return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
-    <div class="spread"><div class="sect-t" style="margin:0">${esc(r.name||"페어")}의 거처</div>${pairSeen(r)}</div>
+    <div class="spread"><div class="sect-t" style="margin:0">${esc(homeTitle)}</div>${pairSeen(r)}</div>
     <div class="spread" style="margin-top:4px">
       <div>${pairTitle(r)} <span class="tiny muted">· ${esc(h.n)} ${esc(h.h)}</span>
         <div class="tiny muted">${dorm?"방 꾸미기":"집 짓기"} ${st} / ${top} 단계
