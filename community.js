@@ -457,7 +457,10 @@ if(typeof pairBtn==="function"){
         const otherId = String(row.from_id)===String(r.id) ? row.to_id : row.from_id;
         const other = socialName(otherId);
         const nm = row.pair_name ? `「${esc(row.pair_name)}」 ` : "";
-        return `<span class="tag g">페어 · ${nm}${esc(other)}</span>`;
+        const peer=(S.sb.roster||[]).find(x=>String(x.id)===String(otherId))||(SOCIAL.students||[]).find(x=>String(x.id)===String(otherId));
+        const first=rosterThemeColor(String(r.id)===String(S.sb.id)?S.color:r.color);
+        const second=rosterThemeColor(String(otherId)===String(S.sb.id)?S.color:peer?.color);
+        return `<span class="tag roster-pair-tag" style="--pair-color-a:${first};--pair-color-b:${second}"><span>페어 · ${nm}${esc(other)}</span></span>`;
       }
     }
     return _pairBtn8(r);

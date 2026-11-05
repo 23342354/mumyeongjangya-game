@@ -3962,7 +3962,7 @@ VIEWS.roster=()=>{
             <div class="tiny muted">${hall?hall.n:""} · ${r.course}과정 · Lv ${r.lvl} · ${esc(r.line||"")}</div>
           </div>
         </div>
-        ${r.intro?`<div class="tiny muted roster-intro">${esc(r.intro)}</div>`:""}
+        <div class="tiny muted roster-intro">${esc(r.intro||"")}</div>
         <div class="roster-power"><span class="tiny muted">전투력</span><b style="color:var(--gold)">${nf(r.power)}</b></div>
         <div class="tiny muted roster-progress">석탑 ${r.tower}층 · 결계 ${r.guard}층 · 의뢰 ${r.quest}단계 · 업적 ${r.ach}</div>
         <div class="tiny muted" style="color:var(--s6)">${ago(r.updated_at)}</div>

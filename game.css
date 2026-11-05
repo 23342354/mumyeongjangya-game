@@ -1249,3 +1249,11 @@ body.auth-gate #mobile-chat-toggle{
 @media(max-width:900px){.pair-housing-row.three-cards{grid-template-columns:repeat(3,minmax(220px,1fr));overflow-x:auto;align-items:stretch}}
 
 .pair-housing-row>.card:only-child{grid-column:1/-1}
+
+/* Keep roster cards and pair labels aligned across biographies of varying lengths. */
+.roster-grid{grid-auto-rows:1fr;align-items:stretch}
+.roster-card{height:100%;box-sizing:border-box}
+.roster-intro{min-height:2.9em}
+.roster-card>.roster-pair-tag{margin-top:auto}
+.roster-pair-tag{display:block;border-color:var(--line2);padding:4px 7px;background:linear-gradient(100deg,color-mix(in srgb,var(--pair-color-a) 12%,transparent),color-mix(in srgb,var(--pair-color-b) 12%,transparent))}
+.roster-pair-tag>span{background:linear-gradient(100deg,var(--pair-color-a),var(--pair-color-b));background-clip:text;-webkit-background-clip:text;color:transparent;font-weight:600}
