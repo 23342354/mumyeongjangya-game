@@ -12,6 +12,10 @@ try{
  await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='';MMJY_CONFIG.supabaseKey='';S=newState();S.made=true;S.name='검증';S.t=nowMin();S.dayStamp=cal().day;boot();sbOn=()=>true;pairEnsure=()=>({mine:{id:1}});SOCIAL.pairs=[{id:1,pair_name:'오즈란위'}];pairRow=()=>({name:'란위안',hall:'w6',home_stage:3,updated_at:new Date().toISOString()});pairSharedHome=()=>({hall:'w6',stage:3,mine:true});pairRentDue=()=>0;S.hall='w6';document.querySelector('#main').innerHTML=VIEWS.hallv();});
  assert.ok((await page.locator('.pair-housing-row').innerText()).includes('오즈란위의 거처'));
  assert.equal(await page.locator('.pair-housing-row>.card').count(),3);
+ await page.evaluate(()=>{VIEW='pairhub';renderNav();});
+ assert.equal(await page.locator('#mobile-subnav button.on').innerText(),'오즈란위');
+ assert.ok((await page.locator('#navcol').innerText()).includes('오즈란위'));
+ assert.equal(await page.evaluate(()=>{SOCIAL.pairs[0].pair_name='';return navItemLabel({id:'pairhub',n:'우리 페어'});}),'우리 페어');
  for(const width of [1721,390]){await page.setViewportSize({width,height:900});const boxes=await page.locator('.pair-housing-row>.card').evaluateAll(els=>els.map(el=>{const b=el.getBoundingClientRect();return {y:b.y,h:b.height,x:b.x};}));assert.ok(boxes.every(b=>Math.abs(b.y-boxes[0].y)<1&&Math.abs(b.h-boxes[0].h)<1),'three cards share top and height');assert.ok(boxes[2].x>boxes[1].x);}
  console.log('PASS: shared pair name title, three aligned equal-height housing cards on desktop and mobile');
 }finally{await browser.close();}

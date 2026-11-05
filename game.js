@@ -900,6 +900,12 @@ const NAVDEF=[
 function effectiveStatsHTML(){
   return STATS.map(s=>`<div class="mini-stat" data-eff-stat="${s.k}" title="분배·거주지·법구를 반영한 현재 능력치"><span>${esc(s.n)}</span><b>${effStat(s.k)}</b></div>`).join("");
 }
+function navItemLabel(item){
+  if(item.id!=="pairhub")return esc(item.n);
+  const mine=typeof pairEnsure==="function"?pairEnsure().mine:null;
+  const shared=typeof SOCIAL!=="undefined"&&mine?SOCIAL.pairs.find(p=>String(p.id)===String(mine.id)):null;
+  return esc(shared?.pair_name?.trim()||item.n);
+}
 function renderNav(){
   // 1초 주기 갱신에도 안내도 내부 스크롤 위치를 보존합니다.
   const navHost=document.getElementById("navcol");
@@ -914,7 +920,7 @@ function renderNav(){
       <div class="nav-h ${g.sub.some(s=>s.id===VIEW)?"on":""}" onclick="toggleNav('${g.id}')">
         <span class="navic">${g.ic}</span>${g.n}<span class="ar">${ic(open?"chevD":"chevR",12)}</span></div>
       <div class="nav-sub ${open?"open":""}">
-        ${g.sub.map(s=>`<div class="nav-i ${VIEW===s.id?"on":""}" onclick="go('${s.id}')">${s.n}${s.bd?`<span class="bd">${s.bd}</span>`:""}</div>`).join("")}
+        ${g.sub.map(s=>`<div class="nav-i ${VIEW===s.id?"on":""}" onclick="go('${s.id}')">${navItemLabel(s)}${s.bd?`<span class="bd">${s.bd}</span>`:""}</div>`).join("")}
       </div></div>`;
   }).join("");
 
@@ -959,7 +965,7 @@ function renderMobileNav(){
     const g=NAVDEF.find(x=>x.id===id); if(!g) return "";
     return `<button class="${group===g?"on":""}" aria-current="${group===g?"page":"false"}" onclick="mobileGroup('${id}')">${g.ic}<span>${MOBILE_GROUP_NAMES[id]}</span></button>`;
   }).join("");
-  sub.innerHTML=(group?.sub||[]).map(s=>`<button class="${s.id===VIEW?"on":""}" aria-current="${s.id===VIEW?"page":"false"}" onclick="go('${s.id}')">${s.n}</button>`).join("");
+  sub.innerHTML=(group?.sub||[]).map(s=>`<button class="${s.id===VIEW?"on":""}" aria-current="${s.id===VIEW?"page":"false"}" onclick="go('${s.id}')">${navItemLabel(s)}</button>`).join("");
   const selected=sub.querySelector(".on"); if(selected) sub.scrollLeft=Math.max(0,selected.offsetLeft-sub.clientWidth/2+selected.clientWidth/2);
 }
 function mobileGroup(id){
