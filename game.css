@@ -1374,3 +1374,16 @@ body.auth-gate #mobile-chat-toggle{
 :root[data-pair-backdrop="on"] body::after{background:linear-gradient(110deg,color-mix(in srgb,var(--pair-raw-a) 10%,transparent),color-mix(in srgb,var(--pair-raw-b) 10%,transparent)),linear-gradient(180deg,color-mix(in srgb,var(--s0) 48%,transparent),color-mix(in srgb,var(--s0) 72%,transparent))}
 :root[data-pair-backdrop="on"] #chatcol .chat-panel{background:linear-gradient(125deg,color-mix(in srgb,var(--s1) 83%,transparent),color-mix(in srgb,var(--s1) 70%,transparent)) padding-box,linear-gradient(125deg,var(--accEdge),color-mix(in srgb,var(--pair-theme-b) 42%,transparent)) border-box;backdrop-filter:blur(8px)}
 :root[data-pair-backdrop="on"] #chatcol .chat-compose{background:color-mix(in srgb,var(--s1) 60%,transparent)}
+
+/* Gear comparison: full-width row keeps the exact delta out of the narrow score column. */
+.gear-card{min-width:0}
+.gear-card-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.gear-card-info{min-width:0;overflow-wrap:anywhere}
+.gear-card-score{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gear-card-score>b{color:var(--gold);font-size:15px}
+.gear-card-comparison{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px 12px;margin-top:9px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--s1)}
+.gear-card-comparison-label{font-size:11px;color:var(--dim);white-space:nowrap}
+.gear-upgrade{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 8px;max-width:100%;vertical-align:middle;font-size:11px;line-height:1.5}
+.gear-upgrade-value{color:var(--jade);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gear-upgrade-level{color:var(--red);font-size:10px;white-space:nowrap}
+.gear-card-comparison .gear-upgrade{justify-content:flex-end}
