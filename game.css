@@ -1257,3 +1257,9 @@ body.auth-gate #mobile-chat-toggle{
 .roster-card>.roster-pair-tag{margin-top:auto}
 .roster-pair-tag{display:block;border-color:var(--line2);padding:4px 7px;background:linear-gradient(100deg,color-mix(in srgb,var(--pair-color-a) 12%,transparent),color-mix(in srgb,var(--pair-color-b) 12%,transparent))}
 .roster-pair-tag>span{background:linear-gradient(100deg,var(--pair-color-a),var(--pair-color-b));background-clip:text;-webkit-background-clip:text;color:transparent;font-weight:600}
+
+.pair-settings-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;margin-bottom:14px}
+.pair-settings-row>.card{min-width:0;height:100%;box-sizing:border-box;margin-bottom:0!important;padding:12px}
+.pair-settings-row .inp{width:100%;min-width:0}
+.pair-settings-row .spread{flex-wrap:wrap;gap:7px}
+@media(max-width:900px){.pair-settings-row{grid-template-columns:repeat(3,minmax(240px,1fr));overflow-x:auto}}

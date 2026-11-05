@@ -700,6 +700,7 @@ VIEWS.pairhub=()=>{
   return head("둘만의 자리","페어",
       shared&&shared.pair_name?esc(shared.pair_name):"페어명과 동거한 거처를 함께 관리합니다")
     + socialStatus()
+    + '<div class="pair-settings-row">'
     + (typeof pairHTML==="function"?pairHTML():"")
     + (p?`<div class="card pad" style="margin-bottom:14px">
         <label>페어명 (함께 사용하는 이름)</label>
@@ -711,6 +712,7 @@ VIEWS.pairhub=()=>{
       :`<div class="card pad" style="margin-bottom:14px">
         <div class="tiny muted" style="margin-bottom:8px">아직 페어가 없습니다. 명부에서 신청해 보세요.</div>
         <button class="btn sm" onclick="go('roster')">학생 명부</button></div>`)
+    + '</div>'
     + pairHousingHTML()
     + (typeof pairRunHTML==="function"?pairRunHTML():"");
 };
@@ -1468,13 +1470,15 @@ VIEWS.pairhub = () => {
   const P=pairEnsure();
   let h=_pairhub8();
   if(!sbOn() || !P.mine) return h;
-  const i=h.indexOf('<div class="card pad"');
-  const head2=pairHeadHTML()+`<div class="card pad" style="margin-bottom:14px">
+  const box=document.createElement("div");box.innerHTML=h;
+  const row=box.querySelector('.pair-settings-row');
+  const record=`<div class="card pad pair-record-card">
     <div class="spread"><div class="sect-t" style="margin:0">둘의 기록</div>
       <button class="btn sm" onclick="go('pairboard')">열기</button></div>
     <div class="tiny muted" style="margin-top:4px">페어 두 사람만 보는 자리입니다. 짧게 남기고 서로 이어 쓸 수 있습니다.</div>
   </div>`;
-  return i<0 ? head2+h : h.slice(0,i)+head2+h.slice(i);
+  if(row){row.insertAdjacentHTML('beforeend',record);row.insertAdjacentHTML('beforebegin',pairHeadHTML());}
+  return box.innerHTML;
 };
 
 /* 페어 화면·게시판에 들어갈 때 받아 옵니다 */
