@@ -1,4 +1,4 @@
--- 떠돌이 상인 특선: 같은 등급 파밍 대비 기본 능력치 1.6/1.8/2배 + 고수치 옵션 3/4/5줄.
+-- 떠돌이 상인 특선: 같은 등급 파밍 대비 기본 능력치 3/3.6/4.2배 + 각인 8/10/12 + 전투 특화 옵션 3/4/5줄.
 -- 이 파일 전체를 Supabase SQL Editor에서 실행하세요. 기존 매물과 입찰은 보존하며 새 회차부터 적용됩니다.
 -- 기존 공용 경매가 설치된 운영 Supabase SQL Editor에서 전체를 한 번 실행합니다.
 -- 기존 입찰/보증금/낙찰/수령 기록은 보존합니다. 재실행할 수 있습니다.
@@ -47,12 +47,12 @@ begin
    v_slot:=v_slots[v_idx];v_stat:=v_stats[v_idx];
    v_name:=(array['낡은 수레의','홍월 유랑단의','잊힌 골목의'])[v_tier]||' '||v_names[v_idx];
    v_reward:=jsonb_build_object(
-      'slot',v_slot,'name',v_name,'grade',v_grade,'lv',v_level,'enh',0,'merchantElite',true,'auctionQualityVersion',2,
-      'main',jsonb_build_object('st',v_stat,'v',greatest(1,round((0.8+v_level*0.085)*(array[1.85,2.50,3.40])[v_tier]*(array[1.6,1.8,2.0])[v_tier]))),
+      'slot',v_slot,'name',v_name,'grade',v_grade,'lv',v_level,'enh',(array[8,10,12])[v_tier],'merchantElite',true,'auctionQualityVersion',3,
+      'main',jsonb_build_object('st',v_stat,'v',greatest(1,round((0.8+v_level*0.085)*(array[1.85,2.50,3.40])[v_tier]*(array[3.0,3.6,4.2])[v_tier]))),
       'opts',case v_tier
-        when 1 then jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',14.0),jsonb_build_object('k','hpP','n','생명력','v',18.0),jsonb_build_object('k','crit','n','치명타 확률','v',7.0))
-        when 2 then jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',18.0),jsonb_build_object('k','defP','n','방어력','v',16.0),jsonb_build_object('k','crit','n','치명타 확률','v',8.0),jsonb_build_object('k','critD','n','치명타 피해','v',30.0))
-        else jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',24.0),jsonb_build_object('k','hpP','n','생명력','v',32.0),jsonb_build_object('k','crit','n','치명타 확률','v',10.0),jsonb_build_object('k','critD','n','치명타 피해','v',40.0),jsonb_build_object('k','loot','n','전리품 확률','v',18.0)) end
+        when 1 then jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',22.0),jsonb_build_object('k','hpP','n','생명력','v',28.0),jsonb_build_object('k','crit','n','치명타 확률','v',10.0))
+        when 2 then jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',30.0),jsonb_build_object('k','defP','n','방어력','v',26.0),jsonb_build_object('k','crit','n','치명타 확률','v',12.0),jsonb_build_object('k','critD','n','치명타 피해','v',42.0))
+        else jsonb_build_array(jsonb_build_object('k','atkP','n','공격력','v',40.0),jsonb_build_object('k','hpP','n','생명력','v',48.0),jsonb_build_object('k','crit','n','치명타 확률','v',14.0),jsonb_build_object('k','critD','n','치명타 피해','v',56.0),jsonb_build_object('k','spd','n','공격 속도','v',24.0)) end
    );
    insert into public.wandering_auction_lots(
       session_at,level_band,tier,item_name,item_data,start_price,ends_at

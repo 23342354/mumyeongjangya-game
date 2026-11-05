@@ -9,6 +9,7 @@ const ctx={console,Math,Number,Map,Set,window:{PAIR_PLAY:{ready:false}},S:{arena
 vm.createContext(ctx);vm.runInContext(roster+math+battle+wrapper,ctx);
 const read=x=>vm.runInContext(x,ctx);
 assert.equal(read('arenaRoster(1).length'),15);assert.equal(read('arenaRoster(2).length'),15);
+assert.equal(read('arenaRoster(3).length'),15);assert.notEqual(read('arenaEntry(1,2).n'),read('arenaEntry(1,3).n'));assert.match(read('arenaEntry(15,3).n'),/돌아오는 길/);
 assert.notEqual(read('arenaEntry(1,1).n'),read('arenaEntry(1,2).n'));
 assert.match(read('arenaEntry(15,2).n'),/염라/);assert.match(read('arenaEntry(14,2).n'),/항아·삼장/);
 assert.match(read('arenaEntry(13,1).n'),/여와의 시험 장치/);assert.match(read('arenaEntry(13,1).line'),/직접 싸우는 건 못/);
@@ -17,7 +18,8 @@ let previous={hp:0,dps:0};for(let season=1;season<=4;season++)for(let round=1;ro
 const solo=ctx.arenaFoe(3,2);ctx.window.PAIR_PLAY.ready=true;const pair=ctx.arenaFoe(3,2);assert.ok(Math.abs(pair.hp/solo.hp-1.7)<.001);ctx.window.PAIR_PLAY.ready=false;
 for(let i=0;i<15;i++)ctx.arenaGo('kill');assert.equal(ctx.S.arena.season,2);assert.equal(ctx.S.arena.round,1);assert.equal(ctx.S.arena.best,15);assert.equal(ctx.S.sari,10);assert.equal(ctx.S.lotus,45);assert.equal(ctx.S.war.mine,375,'championship victory counts its final war contribution');assert.match(modalBody,/2회 연무제가 열립니다/);assert.match(modalBody,/항아 교관/);
 const sari=ctx.S.sari;ctx.arenaGo('kill');assert.equal(ctx.S.sari,sari,'next event opener does not repeat completion prize');assert.equal(ctx.S.arena.round,2);assert.match(modalBody,/개조 의체 괴한 · 강화형/);
-ctx.S.arena={round:15,season:2,best:15};ctx.arenaGo('hold');assert.equal(ctx.S.arena.season,3);assert.match(modalBody,/염라/);assert.match(modalBody,/홍홍홍/);
+ctx.S.arena={round:15,season:2,best:15};ctx.arenaGo('hold');assert.equal(ctx.S.arena.season,3);assert.match(modalBody,/염라/);assert.match(modalBody,/홍홍홍/);assert.match(modalBody,/연속 기동/);
+ctx.S.arena={round:15,season:3,best:15};ctx.arenaGo('kill');assert.equal(ctx.S.arena.season,4);assert.equal(ctx.S.arena.round,1);assert.match(modalBody,/돌아오는 길/);
 model={dps:1,hp:1,def:0,heal:1};ctx.S.arena={round:9,season:2,best:15};ctx.arenaGo('kill');assert.equal(ctx.S.arena.round,9);assert.match(modalBody,/내려놓아야 할 때/);assert.match(modalBody,/패배/);
 const before=ctx.S.sari;ctx.S.arena.round=16;ctx.arenaGo('kill');assert.equal(ctx.S.arena.round,1);assert.equal(ctx.S.arena.season,3);assert.equal(ctx.S.sari,before,'legacy completed save advances without paying prizes twice');assert.ok(saved>0);
 console.log('PASS: canonical NPC voice/device opponent, distinct second roster, increasing difficulty across events, unchanged pair scaling, 1→2 and 2→3 transition, single completion rewards, final contribution and failure/legacy behavior');

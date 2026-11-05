@@ -4029,7 +4029,7 @@ function reforgeApply(id){
  if(!(S.mat.부적가루>=c.dust)||S.rin<c.rin){toast('부적 가루 또는 륜이 부족합니다.','bad');return;}
  const locked=new Set(it.reforgeLocks||[]),used=new Set(it.opts.filter((o,i)=>locked.has(i)).map(o=>o.k));
  const pool=OPTS.filter(o=>!used.has(o.k));
- const next=it.opts.map((o,i)=>{if(locked.has(i))return {...o};if(!pool.length)return {...o};const at=Math.floor(Math.random()*pool.length),option=pool.splice(at,1)[0];return {k:option.k,n:option.n,v:it.merchantElite?+(rnd(Math.ceil(option.v[1]*1.1*10),Math.ceil(option.v[1]*1.6*10))/10*(1+it.grade*.12)).toFixed(1):+(rnd(option.v[0]*10,option.v[1]*10)/10*(1+it.grade*.12)).toFixed(1)};});
+ const next=it.opts.map((o,i)=>{if(locked.has(i))return {...o};if(!pool.length)return {...o};const at=Math.floor(Math.random()*pool.length),option=pool.splice(at,1)[0];return {k:option.k,n:option.n,v:it.merchantElite?+(rnd(Math.ceil(option.v[1]*(it.auctionQualityVersion>=3?2.1:1.1)*10),Math.ceil(option.v[1]*(it.auctionQualityVersion>=3?3.2:1.6)*10))/10*(1+it.grade*.12)).toFixed(1):+(rnd(option.v[0]*10,option.v[1]*10)/10*(1+it.grade*.12)).toFixed(1)};});
  S.mat.부적가루-=c.dust;S.rin-=c.rin;it.opts=next;
  save();renderTop();renderNav();renderMain();reforgeOpen(id);toast('재련했습니다. 새 옵션을 확인해 주세요.','good');
 }
