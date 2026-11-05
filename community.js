@@ -2100,26 +2100,25 @@ pickCrop=function(i){
 if(!ALERTCATS.some(x=>x.k==="farm"))ALERTCATS.splice(2,0,{k:"farm",n:"텃밭"});
 ALERTVIEW.farm="farm";
 ALERTRULE.unshift([/^\[(텃밭|약초밭|교배|변이)/,"farm"]);
-/* Each new entry improves the quality chance by 0.2 percentage points. Every five
-   species in a particular book grant a permanent +1 to its corresponding stat. */
+/* Each new entry grants +0.4 percentage points quality; every three entries grant +2 stats. */
 const DEX_REWARD_GROUPS={mon:"atk",plant:"def",fish:"agi",dish:"men",title:"res"};
 function dexTotal9(){return !S?.dex?0:Object.keys(DEX_REWARD_GROUPS).reduce((a,k)=>a+(S.dex[k]?.length||0),0);}
-function dexRewardStat9(k){if(!S?.dex)return 0;return Object.entries(DEX_REWARD_GROUPS).reduce((a,[kind,stat])=>a+(stat===k?Math.floor((S.dex[kind]?.length||0)/5):0),0);}
+function dexRewardStat9(k){if(!S?.dex)return 0;return Object.entries(DEX_REWARD_GROUPS).reduce((a,[kind,stat])=>a+(stat===k?Math.floor((S.dex[kind]?.length||0)/3)*2:0),0);}
 const _extraStatGarden9=extraStat;
 extraStat=function(k){return _extraStatGarden9(k)+dexRewardStat9(k);};
 const _modGarden9=mod;
-mod=function(k){return _modGarden9(k)+(k==="quality"?dexTotal9()*.002:0);};
+mod=function(k){return _modGarden9(k)+(k==="quality"?dexTotal9()*.004:0);};
 const _dexAddGarden9=dexAdd;
 dexAdd=function(kind,name){
  if(!S?.dex||!S.dex[kind])return;
  const was=S.dex[kind].includes(name),count=S.dex[kind].length;
  _dexAddGarden9(kind,name);
  if(!was&&S.dex[kind].includes(name)){
-  const st=DEX_REWARD_GROUPS[kind];const bonus=st&&Math.floor((count+1)/5)>Math.floor(count/5);
+  const st=DEX_REWARD_GROUPS[kind];const bonus=st&&Math.floor((count+1)/3)>Math.floor(count/3);
   if(bonus){
-   toast(`도감 ${kind} ${count+1}종 · ${({atk:'공격',def:'방어',agi:'민첩',men:'정신력',res:'공명'})[st]} 영구 +1`,"good");
-   if(typeof alertPush==="function")alertPush("etc",`[도감] 「${name}」 등록으로 영구 능력치 +1을 획득했습니다.`,"record");
-  } else toast(`도감 보너스 · 법구 품질 확률 +0.2%p`,"good");
+   toast(`도감 ${kind} ${count+1}종 · ${({atk:'공격',def:'방어',agi:'민첩',men:'정신력',res:'공명'})[st]} 영구 +2`,"good");
+   if(typeof alertPush==="function")alertPush("etc",`[도감] 「${name}」 등록으로 영구 능력치 +2를 획득했습니다.`,"record");
+  } else toast(`도감 보너스 · 법구 품질 확률 +0.4%p`,"good");
   save();
  }
 };
@@ -2128,9 +2127,9 @@ VIEWS.record=()=>{
  let html=_viewRecordGarden9();
  const stats=[['악인','공격','mon'],['식물','방어','plant'],['낚시','민첩','fish'],['요리','정신력','dish'],['칭호','공명','title']];
  const reward=`<div class="card pad" style="margin-bottom:12px"><div class="sect-t">도감 수집 영구 보너스</div>
- <div class="tiny muted">새로운 항목 1개마다 법구 고품질 출현 확률 <b>+0.2%p</b>. 각 도감에서 5종마다 해당 능력치가 영구히 1 증가합니다.</div>
- <div class="farm-discovery">${stats.map(([name,stat,k])=>`<span class="buffchip">${name} ${S.dex[k].length}종 · ${stat} +${Math.floor(S.dex[k].length/5)}</span>`).join('')}</div>
- <b class="tiny" style="color:var(--jade)">현재 도감 법구 품질 보너스 +${(dexTotal9()*.002*100).toFixed(1)}%p</b></div>`;
+ <div class="tiny muted">새로운 항목 1개마다 법구 고품질 출현 확률 <b>+0.4%p</b>. 각 도감에서 3종마다 해당 능력치가 영구히 2 증가합니다. 기존 수집분에도 소급 적용됩니다.</div>
+ <div class="farm-discovery">${stats.map(([name,stat,k])=>`<span class="buffchip">${name} ${S.dex[k].length}종 · ${stat} +${Math.floor(S.dex[k].length/3)*2}</span>`).join('')}</div>
+ <b class="tiny" style="color:var(--jade)">현재 도감 법구 품질 보너스 +${(dexTotal9()*.004*100).toFixed(1)}%p</b></div>`;
  return html.replace('<div class="tabs"',reward+'<div class="tabs"');
 };
 // The opened/closed state belongs only to this reader on this browser, not to shared RP posts.
@@ -2249,7 +2248,7 @@ function yowaDexTotal(){
 }
 function yowaDexRewardStat(k){
   ensureV10();
-  return Object.entries(YOWA_DEX_REWARD_GROUPS).reduce((a,[kind,stat])=>a+(stat===k?Math.floor((S.dex[kind]?.length||0)/5):0),0);
+  return Object.entries(YOWA_DEX_REWARD_GROUPS).reduce((a,[kind,stat])=>a+(stat===k?Math.floor((S.dex[kind]?.length||0)/3)*2:0),0);
 }
 const _dexScore10=dexScore;
 dexScore=function(){ ensureV10(); return _dexScore10()+((S.dex.plush?.length||0)*5)+((S.dex.doll?.length||0)*5); };
@@ -2270,10 +2269,10 @@ dexAdd=function(kind,name){
     const bonus=Math.floor((before+1)/5)>Math.floor(before/5);
     if(bonus){
       const stName={atk:'공격',def:'방어',agi:'민첩',men:'정신력',res:'공명'}[st]||st;
-      toast(`도감 ${kind==='plush'?'말랑이':'영혼 인형'} ${before+1}종 · ${stName} 영구 +1`,"good");
+      toast(`도감 ${kind==='plush'?'말랑이':'영혼 인형'} ${before+1}종 · ${stName} 영구 +2`,"good");
       if(typeof alertPush==="function") alertPush("etc",`[도감] 「${name}」 등록으로 ${stName} 영구 +1을 획득했습니다.`,"record");
     }else{
-      toast("도감 보너스 · 법구 품질 확률 +0.2%p","good");
+      toast("도감 보너스 · 법구 품질 확률 +0.4%p","good");
     }
     if(typeof achCheck==="function") achCheck();
     save();
@@ -2477,8 +2476,8 @@ VIEWS.record=()=>{
 
   const rewardStats=[["악인","공격","mon"],["식물","방어","plant"],["낚시","민첩","fish"],["만두","정신력","dish"],["말랑이","민첩","plush"],["영혼 인형","공명","doll"],["칭호","공명","title"]];
   const reward=`<div class="card pad" style="margin-bottom:12px"><div class="sect-t">도감 수집 영구 보너스</div>
-  <div class="tiny muted">새로운 항목 1개마다 법구 고품질 출현 확률 <b>+0.2%p</b>. 각 도감에서 5종마다 해당 능력치가 영구히 1 증가합니다.</div>
-  <div class="farm-discovery">${rewardStats.map(([name,stat,k])=>`<span class="buffchip">${name} ${S.dex[k].length}종 · ${stat} +${Math.floor(S.dex[k].length/5)}</span>`).join('')}</div>
+  <div class="tiny muted">새로운 항목 1개마다 법구 고품질 출현 확률 <b>+0.4%p</b>. 각 도감에서 3종마다 해당 능력치가 영구히 2 증가합니다. 기존 수집분에도 소급 적용됩니다.</div>
+  <div class="farm-discovery">${rewardStats.map(([name,stat,k])=>`<span class="buffchip">${name} ${S.dex[k].length}종 · ${stat} +${Math.floor(S.dex[k].length/3)*2}</span>`).join('')}</div>
   <b class="tiny" style="color:var(--jade)">현재 도감 법구 품질 보너스 +${((["mon","plant","fish","dish","plush","doll","title"].reduce((a,k)=>a+((S.dex[k]||[]).length),0))*.002*100).toFixed(1)}%p</b></div>`;
 
   return head("업적 · 도감 · 통계",ic("scroll")+" 기록실", `업적 ${S.ach.length} / ${ACH.length}`)+`
@@ -4101,3 +4100,77 @@ async function rosterPairHeader(studentId){
   const target=document.getElementById('roster-header-preview');if(request===ROSTER_HEADER_REQUEST&&target)target.textContent='페어 헤더를 불러오지 못했습니다. 연결 또는 조회 권한을 확인한 뒤 다시 눌러 주세요.';
  }
 }
+/* 0차 공개 프로필을 바탕으로 만든 나들이 사건. 대사·사건은 게임용 창작입니다. */
+const OUTING_PROFILE_STORIES=[];
+function addOutingStory(w,id,title,people,text,action,good,st,item,bonus){
+ OUTING_PROFILE_STORIES.push({w,id:'visit-'+id,title,people,text,choices:[{t:action,st,dc:12,g:good,b:'생각만큼 매끄럽지는 않았다. 일행은 잠시 멈춰 방법을 바꾸었고, 서두르지 않고 일을 마무리했다.'},{t:'곁에서 지켜보며 이야기를 기록한다',st:null,g:'급히 결론을 내리는 대신 끝까지 이야기를 들었다. '+good}],item:{id:'keepsake-'+id,w,n:item,e:ic('lantern'),lore:people+' · '+title+'에서 남긴 기억. '+good,bonus}});
+}
+addOutingStory(1,'kanon-route','두 갈래의 퇴로','요시미네 카논','요시미네 카논은 약속 장소에 일찍 도착해 대로와 뒷길을 번갈아 살핀다. 「만일의 경우를 생각해 두는 편이 좋잖아요.」 지도에는 이미 두 갈래의 퇴로가 반듯하게 표시되어 있다.','사람이 몰리는 길목을 함께 확인한다','주요 길목의 혼잡 시간을 적어 넣었다. 완벽한 준비는 혼자 모든 것을 해내는 것만을 뜻하지 않았다.','agi','두 갈래 약도',{stats:{agi:2},mods:{crit:.01}});
+addOutingStory(1,'kanon-rain','비 오기 전의 처마','요시미네 카논','비를 예고하는 전광판 아래에서 카논이 머리카락 끝을 정돈한다. 태연한 얼굴과 달리 걸음은 자꾸 지붕 있는 쪽으로 향한다. 카논은 젖지 않는 길을 찾는다며 당신도 처마 아래로 부른다.','상점 사이의 비 가림길을 찾는다','우산을 펴기 전에 긴 처마를 찾아냈다. 카논은 고맙다는 말과 함께 옷자락의 물방울부터 털어 준다.','res','접어 둔 우산끈',{stats:{res:2},mods:{defP:.015}});
+addOutingStory(1,'renya-ledger','숫자는 실물로','야나기 렌야','환전소의 륜 계수기가 멈췄다. 야나기 렌야는 불평 대신 동전을 크기별로 늘어놓는다. 「숫자가 맞아야 마음이 놓이죠.」 직원이 수고비 이야기를 꺼내자 손끝이 조금 빨라진다.','흩어진 륜을 함께 분류한다','누락된 동전을 찾아 정확히 합계를 맞췄다. 렌야는 수고비와 원금을 따로 챙긴 뒤, 확인용 종이를 한 장 남겼다.','men','검산 완료 쪽지',{stats:{men:2},mods:{gold:.02}});
+addOutingStory(1,'woohye-menu','메뉴판 앞의 용기','심우해','데슐랭 식당 앞에서 심우해가 휴대 단말과 입간판을 번갈아 본다. 검색해 둔 가게는 맞지만 문고리에 손이 닿지는 않는다. 「그, 그냥 메뉴만 봐도 되지 않을까요…?」','직원에게 메뉴 설명을 부탁한다','우해는 가장 궁금했던 요리를 조심스럽게 물었다. 직접 먹지 않아도 오늘 알아낸 맛의 이야기는 오래 남았다.','men','설명 적힌 메뉴 카드',{stats:{men:2},mods:{exp:.015}});
+addOutingStory(1,'asagi-map','분명 이 길이었는데','카미오카 아사기 · 이누이 타다시','카미오카 아사기는 자신 있게 골목을 가리키고, 타다시는 같은 간판을 세 번째 보고 멈춘다. 「죄송하지만, 저희는 같은 곳을 돌고 있는 것 같습니다.」 아사기는 웃으며 지도를 뒤집어 본다.','표지판과 지도를 대조한다','아사기의 지도가 반대로 접혀 있었다. 타다시는 경로를 다시 적고, 아사기는 그 종이를 이번에는 제대로 들었다.','res','바르게 접은 안내도',{stats:{res:2},mods:{study:.015}});
+addOutingStory(2,'kien-ticket','무대 밖의 표 한 장','킨','아발론의 매표대 앞에서 킨이 공연표와 안내지를 가지런히 맞춘다. 바람에 날아간 표를 주워 주자 무뚝뚝한 목소리가 돌아온다. 「고맙다. 그거 밟히면 다시 세야 하거든.」','대기 줄이 엉키지 않게 안내한다','줄이 차분히 정리되었다. 킨은 잘 접힌 안내지 한 장을 건네며 공연 시간은 놓치지 말라고 덧붙였다.','def','아발론 접이식 안내지',{stats:{def:2},mods:{hpP:.015}});
+addOutingStory(2,'kien-sweets','딸기 향의 포장지','킨','노점의 딸기 도넛을 살피던 킨이 기름이 지나치게 밴 포장지를 골라낸다. 귀찮다는 표정인데도 작은 동물의 발길이 닿는 바닥부터 정리한다. 먹을 것과 쓰레기를 두는 자리는 달라야 한다는 듯하다.','길가의 포장지를 함께 치운다','노점 앞이 깨끗해졌다. 킨은 남은 도넛을 반으로 나누고, 빈 포장지만큼은 꼭 쓰레기통에 넣으라고 말한다.','def','딸기빛 봉합 스티커',{stats:{def:2},mods:{heal:.015}});
+addOutingStory(2,'lucellia-rumor','출처부터 묻는 노래','르셀리아 페이지 · 킨','거리의 공연이 끝나자 누군가 가수에 관한 소문을 떠든다. 르셀리아는 말을 다 듣고 출처를 묻는다. 킨은 팔짱을 낀 채 기다린다. 한 사람을 설명하는 말이 그 사람보다 빨리 달려가고 있었다.','직접 본 일과 들은 말을 구분한다','소문에서 확인 가능한 것만 따로 남겼다. 르셀리아의 수첩에는 남을 깎아내리는 결론 대신 다음에 물어볼 질문이 적혔다.','res','출처를 적은 음표',{stats:{res:2},mods:{quality:.01}});
+addOutingStory(2,'saku-plant','이름표가 뒤바뀐 화분','유키시로 사쿠','임시 식물 장터에서 사쿠가 두 화분을 오래 들여다본다. 잎과 이름표가 맞지 않는다. 잘못 붙은 것 같다고 말하기까지 조금 망설였지만, 결국 상인에게 차분히 설명한다.','잎의 모양을 도감과 대조한다','사쿠의 말이 맞았다. 이름표를 바로잡은 상인은 남는 종이표를 주었고, 사쿠는 식물 이름을 반듯하게 적었다.','def','반듯한 식물 이름표',{stats:{def:2},mods:{quality:.01}});
+addOutingStory(2,'shinjyu-stage','부채가 닫히는 순간','히카와 신쥬','거리의 작은 무대에서 신쥬가 접은 부채 하나로 사람들의 시선을 모은다. 진지한 도입 끝에 엉뚱한 말이 튀어나와 웃음이 번진다. 익숙한 예법과 장난기가 같은 손끝에 얹혀 있다.','관객의 반응에 맞춰 박자를 맞춘다','이야기는 웃음이 잦아들 때까지 이어졌다. 신쥬는 무대에서 내려오며 작은 종이 부채를 접어 주었다.','res','접힌 이야기 부채',{stats:{res:2},mods:{critD:.02}});
+addOutingStory(3,'renya-parts','값을 아는 부품','야나기 렌야','폐부품 상인이 겉이 번듯한 장치를 비싸게 부른다. 렌야는 안쪽 나사와 연결부부터 살핀다. 「새것이라는 말과 쓸 수 있다는 말은 다르니까요.」 흥미가 생겼는지 평소보다 질문이 많다.','작동 시험에 필요한 연결선을 찾는다','전원이 들어오자 꺼져 있던 표시등 하나가 켜졌다. 쓸 수 있는 부분과 없는 부분이 분명해져 가격도 다시 정해졌다.','atk','시험을 마친 연결핀',{stats:{atk:2},mods:{quality:.01}});
+addOutingStory(3,'tadashi-device','설명서의 작은 글씨','이누이 타다시','감응 장비 앞에서 타다시가 설명서를 끝까지 읽고 있다. 시연 버튼은 누르면 된다고 쓰였지만, 아래에는 긴 주의 사항이 더 있다. 「시험해 보기 전에 확인하는 편이 안전합니다.」','비상 정지 장치 위치를 확인한다','작동 중 작은 이상음이 났지만 정지 장치를 찾느라 당황하지 않았다. 타다시는 확인한 항목 옆에 작게 표시했다.','def','점검 완료 표식',{stats:{def:2},mods:{defP:.015}});
+addOutingStory(3,'asagi-keyboard','건반과 조작판','카미오카 아사기','아사기가 소리 나는 조작판 앞에서 피아노 건반을 누르듯 손을 움직인다. 그때마다 엉뚱한 안내 방송이 나온다. 잘 다루는 듯한 자세와 실제 조작 결과 사이에는 꽤 큰 차이가 있다.','상인의 설명을 듣고 조작 순서를 적는다','방송은 가까스로 정상으로 돌아왔다. 아사기는 다음에는 연주할 수 있는 건반을 찾자며 멋쩍게 웃었다.','men','번호를 적은 조작 카드',{stats:{men:2},mods:{know:.02}});
+addOutingStory(3,'shinjyu-echo','녹음된 목소리','히카와 신쥬 · 유키시로 사쿠','폐쇄 점포에서 사람 목소리가 반복된다. 신쥬가 호기심에 가까이 다가가자 사쿠가 소매를 잡는다. 소리는 전자 목탁의 녹음과 겹쳐 들려, 누군가인지 기계인지 아직 분명하지 않다.','전원을 확인한 뒤 문밖에서 소리를 듣는다','낡은 재생 장치의 녹음이었다. 무서운 상상과 확인된 사실을 나누어 적자, 점포는 다시 조용한 가게가 되었다.','men','기록된 목탁 박자',{stats:{men:2},mods:{snGuard:.02}});
+addOutingStory(3,'network-warning','무료 연결의 대가','제3구역 감응망','통신이 끊긴 틈에 무료 접속창이 떠오른다. 이용 약관에는 위치와 의체 기록을 넘긴다는 문장이 아주 작게 적혀 있다. 주변 사람들은 연결 버튼을 누르기 전에 화면을 서로 보여 준다.','수집 정보 항목을 먼저 읽는다','접속을 취소하고 공식 통신 지점으로 돌아갔다. 편리함을 잠시 미룬 덕에 넘기지 않아도 될 정보를 지켰다.','res','차단된 접속 표식',{stats:{res:2},mods:{loot:.015}});
+addOutingStory(4,'light-meter','일륜 아래의 그림자','제4구역 일륜','인공 광원의 각도가 바뀌자 좁은 다리 위 그림자도 한꺼번에 움직인다. 정비원은 빛이 닿는 곳만 보고 걸으면 빈 발판을 놓친다고 경고한다. 발밑의 금속은 낮과 무관하게 차갑다.','난간과 발판의 연결부를 살핀다','안전한 통로를 확인해 뒤따르는 사람에게 알렸다. 빛의 세기보다 발을 디딜 곳을 아는 일이 먼저였다.','def','빛을 읽는 점검판',{stats:{def:2},mods:{hpP:.015}});
+addOutingStory(4,'lei-light','손으로 잡지 않는 빛','레이','전시용 집광판에 일륜의 빛이 번진다. 레이가 손을 뻗으려다 진열대 밖에서 멈춘다. 만질 수 없는 것을 한참 보던 그는 단맛 나는 먹을 것이 있는지 먼저 묻는다.','안전선 안쪽에서 반사광을 살펴본다','빛은 잡히지 않아도 비추는 방향은 볼 수 있었다. 레이는 반짝이는 종이 조각을 받아 눈앞에서 이리저리 돌렸다.','res','작은 반사 종이',{stats:{res:2},mods:{crit:.01}});
+addOutingStory(4,'kanon-timing','그림자가 겹치는 시각','요시미네 카논','카논은 점검 통로의 광원이 깜빡이는 간격을 잰다. 정확한 시간을 적으면서도 예고 없이 불이 꺼지면 눈썹이 조금 올라간다. 「예상과 다른 부분부터 다시 확인하죠.」','점멸 간격을 함께 센다','불규칙해 보이던 빛에 일정한 순서가 있었다. 다음 사람이 지나갈 때에는 어두워질 시점을 미리 알려 줄 수 있었다.','agi','광원 점멸 기록지',{stats:{agi:2},mods:{spd:.015}});
+addOutingStory(4,'youwarm','뜨겁지 않은 열','코우케이 요우 자매','정비 구역의 온열 설비 앞에서 동생 요우가 한 발 물러선다. 언니 요우는 서둘러 다가가지 않고 손을 내민 채 기다린다. 따뜻함과 두려움이 늘 같은 속도로 찾아오는 것은 아니다.','멀찍이서 설비의 안전 표시를 확인한다','급히 익숙해지라고 재촉하는 사람은 없었다. 둘은 안전한 거리에서 몸을 녹인 뒤, 손을 놓지 않고 걸음을 옮겼다.','men','온기를 기억한 천 조각',{stats:{men:2},mods:{heal:.015}});
+addOutingStory(4,'route-light','돌아오는 표지등','제4구역 정비 통로','정비 때문에 통로 하나가 닫혔다. 출구를 찾던 사람들 앞에서 안내등이 배터리를 다해 깜빡인다. 지도에 없는 지하로 내려가는 지름길과, 조금 긴 지상 우회로가 남았다.','표지판을 따라 지상 우회로로 걷는다','시간은 더 걸렸지만 누구도 길을 잃지 않았다. 임시 안내표를 세워 뒤에 올 사람에게도 우회로를 남겼다.','agi','우회로 표지 조각',{stats:{agi:2},mods:{exp:.015}});
+addOutingStory(5,'seogyeol-path','재미있는 길의 끝','윤세결 · 심우해','새로운 골목을 발견한 윤세결의 발이 빨라진다. 우해는 위험해 보인다고 중얼거리면서도 뒤처지지 않으려 따라간다. 세결은 모퉁이 앞에서는 먼저 멈춰 안쪽을 살핀다.','출구를 확인한 뒤 함께 골목을 지난다','호기심과 조심성이 같은 길 위에 놓였다. 우해는 무사히 큰길로 나오고 나서야 어깨의 힘을 풀었다.','agi','확인한 골목 약도',{stats:{agi:2},mods:{loot:.015}});
+addOutingStory(5,'seogyeol-dog','낯익은 산책줄','윤세결','의뢰를 기다리는 사람 옆에 개 한 마리가 앉아 있다. 윤세결은 주인의 허락을 받고 산책줄을 쥔다. 서류 앞에서 보이던 지루한 얼굴과 달리 걸음에 제법 생기가 돈다.','주인이 알려 준 산책길을 함께 걷는다','개는 익숙한 길을 따라 느긋하게 걸었다. 돌아왔을 때 주인은 깨끗한 물과 감사의 인사를 준비해 두었다.','def','산책길 매듭끈',{stats:{def:2},mods:{rest:.02}});
+addOutingStory(5,'tadashi-contract','농담도 계약도 한 번 더','이누이 타다시 · 카미오카 아사기','용병 중개소 주인이 농담으로 두 배의 수고를 요구한다. 타다시는 정말 계약이 바뀐 것인지 조항을 다시 읽는다. 아사기가 웃으면서도 실제로 맡는 일은 어디까지인지 따로 묻는다.','계약서의 작업 범위를 정리한다','가벼운 농담과 정식 의뢰를 구분했다. 타다시는 설명을 듣고 고개를 끄덕인 뒤 마지막 줄까지 확인했다.','atk','범위를 적은 계약 쪽지',{stats:{atk:2},mods:{boss:.02}});
+addOutingStory(5,'bounty-board','덧붙여진 한 줄','제5구역 의뢰 게시판','같은 이름의 수배서가 두 장 붙어 있다. 하나는 생포, 다른 하나는 토벌이다. 얼굴만 보고 의뢰를 고른다면 지나쳤을 한 줄에 현장의 대응이 전부 달라진다.','접수처에서 최신 의뢰를 확인한다','오래된 수배서를 걷어 내고 수정된 조건을 확인했다. 싸움을 잘하는 것만큼 싸우기 전에 읽는 일도 중요했다.','atk','정정된 의뢰 봉인',{stats:{atk:2},mods:{atkP:.02}});
+addOutingStory(5,'quiet-bell','출발 전에 남기는 시간','제5구역 출정 불단','출동을 앞둔 사람들이 불단 앞에 차례로 선다. 향을 놓는 손과 장비를 점검하는 손이 분주하다. 소원을 묻는 사람은 없지만 무사히 돌아오자는 말은 서로 빠뜨리지 않는다.','통로를 비워 두고 장비 끈을 확인한다','매듭을 다시 조인 사람 하나가 먼저 웃었다. 큰 말 없이도 준비를 도울 수 있는 시간이 있었다.','res','무사 귀환 매듭',{stats:{res:2},mods:{defP:.015}});
+addOutingStory(6,'oz-meal','마지막 한 사람의 몫','오즈','시장 끝의 간이 식탁에서 오즈가 젓가락을 한 벌 더 놓는다. 아직 돌아오지 않은 사람의 음식이 덜 식도록 뚜껑도 덮어 둔다. 「조금 남겨 두면 되죠. 같이 먹으면 더 좋으니까요.」','남겨 둘 몫을 따로 담는다','늦게 온 사람에게도 따뜻한 식사가 돌아갔다. 오즈는 빈 접시를 모으며 오늘 누구도 끼니를 놓치지 않았는지 확인했다.','men','한 벌 더 놓은 젓가락집',{stats:{men:2},mods:{heal:.02}});
+addOutingStory(6,'lanyuan-flower','먹지 않는 선물','란위안','좌판의 종이꽃 앞에서 란위안이 걸음을 멈춘다. 손에 쥔 만두와 꽃을 번갈아 보더니 둘 중 무엇을 줄지 고민하는 표정이다. 잠시 뒤 그는 만두를 반으로 나눠 건넨다.','나눠 받은 만두를 천천히 먹는다','란위안은 종이꽃까지 손에 쥐여 주고 먼저 달려갔다. 말보다 앞서 건네진 호의를 주머니에 구겨 넣지 않도록 조심했다.','atk','만두 곁의 종이꽃',{stats:{atk:2},mods:{atkP:.02}});
+addOutingStory(6,'oz-pocket','손수건 아래의 동전','오즈','오즈가 손수건 아래에서 동전 하나를 감춘다. 어디로 갔는지 묻는 얼굴에는 장난기가 가득하다. 수법을 알아챈 아이가 웃자 그는 다음 재주가 있다며 주머니를 다시 뒤적인다.','손끝을 보고 동전의 행방을 맞힌다','맞혀도 틀려도 구경꾼의 웃음은 줄지 않았다. 오즈는 새 종이 폭죽을 꺼내고는 상인의 물건에 날리지 않을 곳부터 찾았다.','agi','손장난 동전 받침',{stats:{agi:2},mods:{crit:.01}});
+addOutingStory(6,'lanyuan-mask','돌아온 가면끈','란위안 · 오즈','북적이는 거리에서 란위안의 가면끈이 느슨해졌다. 오즈가 잠시 부르자 란위안은 달리다 말고 돌아온다. 매듭이 묶일 때까지 서 있으려니, 시선은 벌써 다음 골목을 쫓는다.','가면끈이 풀리지 않게 끝을 잡아 준다','매듭을 마치자 란위안이 손가락으로 한 번 눌러 확인했다. 함께 걷는 발걸음이 잠시 같은 속도가 되었다.','res','다시 묶은 가면 매듭',{stats:{res:2},mods:{hpP:.02}});
+addOutingStory(6,'saku-market','잃어버린 장보기 쪽지','유키시로 사쿠','장바구니를 든 사쿠가 상점마다 물건값을 차분히 묻는다. 바람에 쪽지가 날아가자 조금 당황하지만, 이미 산 물건을 꺼내 순서대로 확인한다. 반듯한 글씨로 쓴 빈칸이 몇 줄 남아 있다.','장바구니를 정리하며 목록을 되짚는다','빠뜨린 물건을 기억해 새 종이에 옮겼다. 사쿠는 당신 몫의 짐까지 들려다 고맙다는 말부터 작게 건넸다.','men','새로 적은 장보기 목록',{stats:{men:2},mods:{gold:.02}});
+addOutingStory(7,'lucellia-book','벌새 여관의 전언장','르셀리아 페이지','항구의 작은 여관에는 통신 대신 말을 남기는 전언장이 있다. 르셀리아는 누구에게 전할 말인지 먼저 확인한다. 비슷한 이름끼리 편지가 바뀌지 않도록 행간에도 작은 표시를 남긴다.','수신인과 날짜를 함께 대조한다','선원의 안부가 엉뚱한 배로 향하지 않게 되었다. 르셀리아는 남은 종이에 다음 방문자가 쓸 자리를 그어 두었다.','res','벌새 여관 전언지',{stats:{res:2},mods:{know:.02}});
+addOutingStory(7,'liuxuan-sardine','맛있는 쪽의 정어리','류쉬안 · 레이','정어리 샌드위치 가게 앞에서 류쉬안이 구운 정어리를 조심스럽게 받는다. 레이는 샌드위치도 조금은 좋다며 한입 베어 문다. 주인의 큰 손은 두 사람의 몫을 빠뜨리지 않는다.','접시와 꼬치를 나르는 일을 돕는다','가게 앞의 빈자리를 정리하자 따뜻한 정어리가 더 나왔다. 류쉬안은 고맙다는 말을 작게 하고는 남은 몫을 일행 쪽으로 밀었다.','men','정어리 가게 포장 도장',{stats:{men:2},mods:{hpP:.02}});
+addOutingStory(7,'lei-caramel','카라멜의 모서리','레이','레이가 카라멜 포장지를 한참 만지더니 반짝이는 쪽을 골라 보여 준다. 가장 좋아하는 맛을 발견한 사람은 설명도 명확하다. 정어리 샌드위치는 조금 좋아하지만 이건 아주 좋아한다고 한다.','카라멜을 나눠 먹고 포장지를 정리한다','손에 들러붙은 종이를 펴자 작은 무늬가 드러났다. 레이는 맛을 기억하는 물건이라며 빈 포장지까지 챙겼다.','res','카라멜빛 접지',{stats:{res:2},mods:{critD:.025}});
+addOutingStory(7,'yousister-stitch','불에 닿지 않는 바느질','코우케이 요우 자매','부두의 빨랫줄 아래에서 언니 요우가 터진 주머니를 꿰맨다. 동생은 도와주려다가 손을 거두고, 대신 실이 엉키지 않게 잡는다. 각자 잘할 수 있는 일이 조금씩 다르다.','바람에 날리는 옷자락을 잡아 준다','주머니는 다시 물건을 담을 수 있게 되었다. 언니는 작은 일이라 말했지만 오늘 누군가의 동전은 바다에 빠지지 않았다.','def','고쳐 단 주머니 단추',{stats:{def:2},mods:{quality:.01}});
+addOutingStory(7,'yousister-song','파도보다 작은 박수','코우케이 요우 자매','부두의 공연 연습에서 동생 요우의 목소리가 먼저 높아진다. 언니는 지나는 사람과 부딪히지 않도록 짐을 옮긴다. 늘 말썽만 있는 것은 아니라는 걸, 노래가 시작되자 주변도 알아챈다.','사람들이 잠시 들을 자리를 마련한다','짧은 노래가 끝나자 생각보다 많은 박수가 돌아왔다. 자매는 남은 짐을 함께 챙겨 익숙한 하숙집 방향으로 걸었다.','atk','파도 무늬 박수표',{stats:{atk:2},mods:{spd:.02}});
+function outingCollection(){
+ const seen=new Set();return (S.outing?.souv||[]).map(s=>{
+  const entry=OUTING_PROFILE_STORIES.find(e=>e.item.id===s.id)?.item;
+  const item=entry||{...s,id:s.id||`legacy-${s.w}-${s.n}`,lore:'기존 나들이에서 간직해 온 구역의 기억.',bonus:{stats:{res:2},mods:{quality:.005}}};
+  if(seen.has(item.id))return null;seen.add(item.id);return item;
+ }).filter(Boolean);
+}
+function outingBonusText(item){return [...Object.entries(item.bonus.stats||{}).map(([k,v])=>`${STATS.find(s=>s.k===k)?.n||k} +${v}`),...Object.entries(item.bonus.mods||{}).map(([k,v])=>`${OPTNAME(k)} +${+(v*100).toFixed(2)}${k==='quality'?'%p':'%'}`)].join(' · ');}
+const _outingPermanentStat=extraStat;extraStat=function(k){return _outingPermanentStat(k)+outingCollection().reduce((v,s)=>v+(s.bonus.stats?.[k]||0),0);};
+const _outingPermanentMod=mod;mod=function(k){return _outingPermanentMod(k)+outingCollection().reduce((v,s)=>v+(s.bonus.mods?.[k]||0),0);};
+const _profileStartOuting=startOuting;
+startOuting=function(wid){
+ const w=WARDS.find(w=>w.id===Number(wid));if(!w||S.course<w.req||S.pass<1||(S.outing.done[w.id]||0)>=3)return;
+ _profileStartOuting(w.id);if(OUTING){OUTING.storyIds=OUTING.storyIds||[];OUTING.version=2;}
+};
+souvenirsFor=function(w){const have=new Set(outingCollection().map(s=>s.id)),read=new Set(S.outing.read||[]);return OUTING_PROFILE_STORIES.filter(e=>e.w===w.id&&read.has(e.id)&&!have.has(e.item.id)).map(e=>e.item);};
+drawOuting=function(){
+ const O=OUTING;if(!O)return;const w=O.w;O.storyIds||=[];S.outing.read||=[];
+ if(O.step>=3){const items=O.souv?[]:souvenirsFor(w);modal(`${w.n} 나들이 · 돌아가는 길`,`<div class="tiny muted">여섯 걸음을 걸으며 세 가지 이야기를 겪었습니다. 통행패를 반납하고 사무전으로 돌아갑니다.</div><div class="card pad tiny">걸으면서 받은 몫 · 륜 +${nf(O.got.rin)} · 지식 +${nf(O.got.know)} · 경험치 +${nf(O.got.exp)} · 연등 +${O.got.lotus}</div><div class="sect-t" style="margin-top:12px">${O.souv?'기념품을 챙겼습니다':items.length?'기념품 하나를 골라 간직하세요':'이번에 고를 새 기념품이 없습니다'}</div><div class="tiny muted">경험한 이야기의 기념품만 고를 수 있습니다. 서로 다른 기념품의 영구 효과는 모두 합산됩니다.</div><div class="grid g2" style="gap:8px;margin-top:10px">${items.map((s,i)=>`<button class="btn" style="display:block;white-space:normal;text-align:left" onclick="takeSouv(${w.id},${i})"><b>${s.e} ${esc(s.n)}</b><div class="tiny" style="margin-top:5px">${esc(outingBonusText(s))}</div></button>`).join('')}</div><button class="btn pri" style="margin-top:12px" onclick="closeModal();renderMain();renderTop()">돌아간다</button>`,'wide');save();renderTop();renderNav();return;}
+ // Reopening an active scene keeps its choices and does not reroll the story.
+ if(!O.scene){const pool=OUTING_PROFILE_STORIES.filter(e=>e.w===w.id&&!O.storyIds.includes(e.id));const fresh=pool.filter(e=>!S.outing.read.includes(e.id));O.scene=pick(fresh.length?fresh:pool);}
+ const story=O.scene;if(!story)return;O.cs=story.choices;
+ modal(`${w.n} · ${O.step+1}번째 이야기`,`<div class="tiny" style="color:${w.c}">${esc(story.people)} · 구역의 만남</div><h3 style="margin:8px 0">${esc(story.title)}</h3><div style="line-height:1.9;margin-bottom:14px">${esc(story.text)}</div><div class="grid" style="gap:8px">${story.choices.map((c,i)=>`<button class="btn" style="text-align:left;white-space:normal" onclick="outChoose(${i})">${esc(c.t)}${c.st?` <span class="tiny muted">· ${STATS.find(s=>s.k===c.st).n} 판정</span>`:''}</button>`).join('')}</div><div class="tiny muted" style="margin-top:10px">걸음 ${O.step*2+1}–${O.step*2+2} / 6 · 새로운 이야기 우선</div>`,'wide');
+};
+const _profileOutChoose=outChoose;
+outChoose=function(i){const O=OUTING;if(!O||O.step>=3||!O.scene||!O.cs?.[i])return;const story=O.scene;_profileOutChoose(i);S.outing.read||=[];if(!S.outing.read.includes(story.id))S.outing.read.push(story.id);O.storyIds||=[];O.storyIds.push(story.id);O.scene=null;O.cs=null;save();};
+takeSouv=function(wid,index){
+ const O=OUTING,w=WARDS.find(w=>w.id===Number(wid));if(!O||!w||O.w.id!==w.id||O.step<3||O.souv||!Number.isInteger(index))return;
+ const item=souvenirsFor(w)[index];if(!item)return;
+ S.outing.souv.push({id:item.id,w:item.w,n:item.n,e:item.e});O.souv=item.id;
+ save();renderTop();renderNav();renderMain();drawOuting();toast(`${item.n} · 영구 효과: ${outingBonusText(item)}`,'good');
+};
+const _profileOutingView=VIEWS.outing;
+VIEWS.outing=function(){const collected=outingCollection(),read=new Set(S.outing.read||[]);return _profileOutingView()+`<div class="card pad" style="margin-top:14px"><div class="sect-t">구역 기념품 수집첩 · ${collected.length}종</div><div class="tiny muted">이야기 ${read.size}/${OUTING_PROFILE_STORIES.length}개 · 새 기념품은 한 번의 나들이에 하나씩 얻습니다. 같은 종류는 중복 획득·중복 적용되지 않습니다. 기존 기념품에도 공명 +2 · 품질 +0.5%p가 적용됩니다. 품질 효과는 기존 최대 확률 제한 안에서 작동하며 높은 등급을 보장하지 않습니다.</div>${WARDS.map(w=>`<details style="margin-top:12px" data-disclosure-key="outing-keepsakes-${w.id}"><summary style="cursor:pointer;color:${w.c}">${w.n} · ${collected.filter(s=>s.w===w.id).length}/${OUTING_PROFILE_STORIES.filter(e=>e.w===w.id).length}종</summary><div class="grid g2" style="gap:8px;margin-top:8px">${OUTING_PROFILE_STORIES.filter(e=>e.w===w.id).map(e=>{const owned=collected.some(s=>s.id===e.item.id);return `<div class="sub"><b>${owned?'✓ ':''}${esc(e.item.n)}</b><div class="tiny muted">${read.has(e.id)?'이야기 확인':`미경험 · ${esc(e.title)}`}</div><div class="tiny" style="color:var(--jade);margin-top:4px">${esc(outingBonusText(e.item))}</div><div class="tiny muted" style="margin-top:4px">${esc(e.item.lore)}</div></div>`;}).join('')}</div></details>`).join('')}${collected.filter(s=>s.id.startsWith('legacy-')).map(s=>`<div class="tiny muted" style="margin-top:6px">${esc(s.n)} · ${esc(outingBonusText(s))}</div>`).join('')}</div>`;};
