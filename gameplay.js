@@ -398,6 +398,12 @@ function gearScore(it){
   let p=it.main.v*900+it.enh*210*GRADES[it.grade].m;
   it.opts.forEach(o=>p+=o.v*95); return Math.round(p);
 }
+function gearUpgradeHTML(it){
+ if(!it?.main||!Array.isArray(it.opts)||!SLOTS.some(s=>s.k===it.slot))return '';
+ const current=S.gear[it.slot],delta=gearScore(it)-(current?gearScore(current):0);
+ if(!(delta>0))return '';
+ return `<span class="gear-upgrade tag g" title="같은 부위의 현재 장비와 비교 · 전투력 +${delta.toLocaleString('ko-KR')}">▲ +${delta.toLocaleString('ko-KR')}${gearCanEquip(it)?'':` · Lv ${it.lv} 필요`}</span>`;
+}
 function gearCanEquip(it){ return !!it && SLOTS.some(s=>s.k===it.slot) && (Number(it.lv)||1)<=S.lvl; }
 function equip(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
@@ -767,7 +773,7 @@ function gearCard(it,where){
       ${it.isNew?'<span class="tag r">NEW</span>':""}
       <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} · Lv ${it.lv} · ${G.n}${can?"":` · <span style="color:var(--red)">착용 불가 (Lv ${it.lv} 필요)</span>`}</div>
     </div><div style="text-align:right"><div class="tiny muted">전투력</div>
-      <b style="color:var(--gold)">${nf(gearScore(it))}</b></div></div>
+      <b style="color:var(--gold)">${nf(gearScore(it))}</b> ${gearUpgradeHTML(it)}</div></div>
     <div class="tiny" style="margin:6px 0 8px;color:var(--jade)">${gearLine(it)}</div>
     <div class="row">
       ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
@@ -807,7 +813,7 @@ VIEWS.gear=()=>{
           <button class="btn sm" ${S.sari<3?"disabled":""} onclick="enhance('${sl.k}',true)" title="사리 3을 더 내면 실패하지 않습니다">보호 각인</button>
           <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
           ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
-          ${up?`<button class="btn sm" style="color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
+          ${up?`<button class="btn sm" style="color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>${gearUpgradeHTML(b)}`:""}
         </div>
         <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
       </div>`;
@@ -1501,7 +1507,7 @@ VIEWS.market=()=>{
         const up=!cur||gearScore(it)>gearScore(cur);
         return `<tr>
           <td><b style="color:${G.c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
-            <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} Lv ${it.lv} · ${G.n}${up?' <span style="color:var(--jade)">▲ 전투력 상승</span>':""}</div></td>
+            <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} Lv ${it.lv} · ${G.n}${gearUpgradeHTML(it)}</div></td>
           <td class="tiny" style="color:var(--jade)">${gearLine(it)}</td>
           <td class="tiny muted">${m.seller}</td>
           <td style="text-align:right"><b>${nf(m.price)}</b></td>

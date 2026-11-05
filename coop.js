@@ -953,6 +953,7 @@ VIEWS.merchant=()=>{
        return `<article class="card pad auction-lot"><div class="spread"><span class="tag j">${auctionTierName(l.tier,l.level_band)} 경매</span><span class="tiny muted">${Number(l.bid_count||0)}회 입찰</span></div>
         <h3 style="color:${G.c};margin:10px 0 4px">${esc(l.item_name)}</h3>
         <div class="tiny muted">${GRADES[item.grade]?.n||"희귀"} · Lv ${Number(item.lv||1)} · ${SLOTS.find(x=>x.k===item.slot)?.n||"법구"} · 귀속</div>
+        <div class="tiny muted">전투력 ${nf(gearScore(item))} ${gearUpgradeHTML(item)}</div>
         <div class="tiny" style="color:var(--jade);margin:8px 0;min-height:42px">${gearLine(item)}</div>
         <div class="spread tiny" style="margin-bottom:5px"><span class="muted">현재 최고가</span><b style="color:var(--gold);font-size:18px">${nf(Number(l.bid_amount)||Number(l.start_price))}륜</b></div>
         <div class="spread tiny"><span class="muted">최고 입찰자</span><span>${mine?"나 (최고가)":esc(l.winner_name||"아직 없음")}</span></div>

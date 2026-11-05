@@ -3155,6 +3155,7 @@ function marketViewItem(m,isMine=false){
     </div><b style="color:var(--gold);white-space:nowrap">${nf(m.price)}륜</b></div>
    <b class="market-name" style="color:${grade?grade.c:"var(--tx)"}">${esc(m.item_name||"이름 없는 물건")}</b>
    <div class="tiny muted">${esc(m.seller_name||m.seller_id||"러너")} · ${nf(m.quantity||1)}개${gear?` · ${esc(slot?.n||"")} Lv ${Number(gear.lv)||1}${gear.enh?` · 각인 +${Number(gear.enh)}`:""}`:""}</div>
+   ${gear&&gear.main?`<div class="tiny muted">전투력 ${nf(gearScore(gear))} ${gearUpgradeHTML(gear)}</div>`:""}
    ${options}
    <div class="spread market-actions"><span class="tiny muted">${esc(String(m.created_at||"").slice(0,10))}</span>
      ${m.status&&m.status!=="active"?"":own?`<button class="btn sm" onclick="marketCancel(${Number(m.id)})">등록 취소</button>`:
