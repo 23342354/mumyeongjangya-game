@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const src=fs.readFileSync('coop.js','utf8'),c={CLIENT_KEYS:[]};vm.createContext(c);
+const src=fs.readFileSync('coop.js','utf8'),c={CLIENT_KEYS:[],clone:x=>JSON.parse(JSON.stringify(x))};vm.createContext(c);
 vm.runInContext(src.slice(src.indexOf('const LOCAL_TRANSIENT='),src.indexOf('function sharedPath(')),c);
 const before={marketRev:4,rin:500,sari:9,lesson:{left:30},gear:{robe:{enh:3}}};
 const after={marketRev:3,rin:490,sari:9,lesson:{left:20},gear:{robe:{enh:4}}};
