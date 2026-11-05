@@ -1227,3 +1227,18 @@ body.auth-gate #mobile-chat-toggle{
   #chatcol{position:fixed;top:var(--chat-top,112px);right:max(30px,calc((100vw - 1640px)/2 + 30px));width:300px;max-width:300px;height:calc(100dvh - var(--chat-top,112px) - 16px);min-height:0;max-height:none;z-index:50}
   body.chat-off #chatcol{width:34px;max-width:34px}
 }
+
+/* Compact effect groups and planting recipes. */
+.top-effect-group{position:relative;display:inline-flex}
+.top-effect-group>button{cursor:pointer;color:inherit;font:inherit}
+.top-effect-list{display:none;position:absolute;top:100%;left:0;width:320px;max-width:calc(100vw - 32px);max-height:50dvh;overflow:auto;padding:12px;background:var(--s1);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px #0005;z-index:100;color:var(--tx);line-height:1.6}
+.top-effect-group.is-open .top-effect-list{display:block}
+@media(hover:hover){.top-effect-group:hover .top-effect-list{display:block}}
+
+.top-effect-row{padding:8px 0;border-bottom:1px solid var(--line)}
+.top-effect-row .muted{text-align:right;font-size:11px}
+.seed-pick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:55dvh;overflow:auto}
+.seed-pick-card{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--s2);min-width:0}
+.seed-pick-card .spread{gap:5px;flex-wrap:wrap}.seed-eligible{border-color:var(--jadeD)}
+.seed-ready{color:var(--jadeD);font-weight:600}.seed-pick-actions{margin-top:8px;gap:5px;flex-wrap:wrap}
+@media(max-width:600px){.top-effect-group{position:static}.top-effect-list{left:12px;top:100%;width:calc(100vw - 24px);max-width:none}.seed-pick-card{padding:8px}.seed-pick-actions .btn{font-size:11px;padding:6px;white-space:normal}}

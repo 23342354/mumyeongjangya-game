@@ -49,7 +49,7 @@ const server=http.createServer((q,r)=>{
 
   /* 그리고 그 넷이 모두 상단 띠에 보여야 합니다 */
   renderTop();
-  const top=document.querySelector('#topbar').innerText;
+  const top=document.querySelector('#topbar').textContent;
   out.shown={
     식사:top.includes('연근산채 만두'), 디저트:top.includes('달빛대추 만두'),
     버프:top.includes('월병'), 물약:top.includes('맨드레이크 각성제'),

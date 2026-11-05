@@ -799,11 +799,25 @@ function offline(){
 /* ═══════════════════════════════════════════════════
    상단바 · 내비 · 채팅
    ═══════════════════════════════════════════════════ */
+let TOP_EFFECT_OPEN='';
+function toggleTopEffects(kind){TOP_EFFECT_OPEN=TOP_EFFECT_OPEN===kind?'':kind;renderTop();}
+function topEffectGroup(kind,label,rows){
+ if(!rows.length)return '';
+ return `<div class="top-effect-group ${TOP_EFFECT_OPEN===kind?'is-open':''}"><button class="buffchip" aria-expanded="${TOP_EFFECT_OPEN===kind}" aria-controls="effects-${kind}" onclick="toggleTopEffects('${kind}')">${label} ${rows.length}개 ▾</button>
+ <div class="top-effect-list" id="effects-${kind}" role="region" aria-label="${label} 목록"><b>${label} ${rows.length}개</b>${rows.map(b=>`<div class="top-effect-row"><div class="spread"><span>${esc(b.n)}</span><span>${hhmm(b.left)}</span></div><div class="muted">${esc(b.d||'')}</div></div>`).join('')}</div></div>`;
+}
 function renderTop(){
   const c=cal(), w=WEATHERS[S.weather];
-  const chipRow=S.buffs.filter(b=>!b.hide)
-    .concat(typeof mealChips==="function"?mealChips():[]);
-  const buffs=chipRow.map(b=>`<span class="buffchip"${b.d?` title="${esc(b.slot?b.slot+" · "+b.d:b.d)}"`:""}><span class="dot" style="background:${b.c||"var(--violet)"}"></span>${esc(b.n)} <span style="color:var(--s7)">${hhmm(b.left)}</span></span>`).join("");
+  const food=typeof mealChips==="function"?mealChips():[],potions=[],others=[];
+  for(const b of S.buffs.filter(b=>!b.hide&&b.left>0)){
+    const item=SHOP.find(p=>p.n===b.n&&p.type==='buff');
+    const potion=typeof POTIONS!=='undefined'?POTIONS.find(p=>p.id===b.pid||p.n===b.n):null;
+    const row={...b,d:potion?.d||item?.d||b.d||''};
+    if(potion||item?.tag==='물약')potions.push(row);
+    else if(item?.tag==='식사')food.push(row);
+    else others.push(row);
+  }
+  const buffs=others.map(b=>`<span class="buffchip"><span class="dot" style="background:${b.c||"var(--violet)"}"></span>${esc(b.n)} <span>${hhmm(b.left)}</span></span>`).join('')+topEffectGroup('food','음식 효과',food)+topEffectGroup('potion','물약 효과',potions);
   const bookChip=S.book?`<span class="buffchip"><span class="dot" style="background:var(--gold)"></span>「${BOOKS.find(b=>b.id===S.book.id).n}」 <span style="color:var(--s7)">${pairLiveTimer('book',S.book.left)}</span></span>`:"";
   $("#topbar").innerHTML=`
   <div class="tb1">
