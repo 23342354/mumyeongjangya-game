@@ -22,4 +22,18 @@ ctx.S.arena={round:15,season:2,best:15};ctx.arenaGo('hold');assert.equal(ctx.S.a
 ctx.S.arena={round:15,season:3,best:15};ctx.arenaGo('kill');assert.equal(ctx.S.arena.season,4);assert.equal(ctx.S.arena.round,1);assert.match(modalBody,/돌아오는 길/);
 model={dps:1,hp:1,def:0,heal:1};ctx.S.arena={round:9,season:2,best:15};ctx.arenaGo('kill');assert.equal(ctx.S.arena.round,9);assert.match(modalBody,/내려놓아야 할 때/);assert.match(modalBody,/패배/);
 const before=ctx.S.sari;ctx.S.arena.round=16;ctx.arenaGo('kill');assert.equal(ctx.S.arena.round,1);assert.equal(ctx.S.arena.season,3);assert.equal(ctx.S.sari,before,'legacy completed save advances without paying prizes twice');assert.ok(saved>0);
+assert.equal(read('ARENA_ROSTERS.length'),10);
+for(let season=4;season<=10;season++){
+ assert.equal(read(`arenaRoster(${season}).length`),15);
+ for(let round=1;round<=15;round++)for(const field of ['n','line','win','lose'])assert.ok(read(`arenaEntry(${round},${season}).${field}`).length>0,`complete script ${season}/${round}/${field}`);
+}
+assert.match(read('arenaEntry(15,10).n'),/마녀 여와/);assert.match(read('arenaEntry(15,10).line'),/비늘|검은 물결/);assert.match(read('arenaEntry(2,8).n'),/범아의 폭주 파장/);
+model={dps:1e80,hp:1e80,def:10000,heal:1};
+for(let season=4;season<=10;season++){
+ ctx.S.arena={round:1,season,best:15};const beforeSari=ctx.S.sari;
+ for(let round=1;round<=15;round++)ctx.arenaGo('kill');
+ assert.equal(ctx.S.sari,beforeSari+10,'exactly one championship prize');
+ assert.equal(ctx.S.arena.season,season<10?season+1:10);assert.equal(ctx.S.arena.round,season<10?1:16);
+}
+assert.match(modalBody,/마녀 여와/);assert.match(modalBody,/모든 연무제를 완주/);const finalSari=ctx.S.sari;ctx.arenaGo('kill');assert.equal(ctx.S.sari,finalSari);assert.equal(ctx.S.arena.season,10);assert.equal(ctx.S.arena.round,16);
 console.log('PASS: canonical NPC voice/device opponent, distinct second roster, increasing difficulty across events, unchanged pair scaling, 1→2 and 2→3 transition, single completion rewards, final contribution and failure/legacy behavior');
