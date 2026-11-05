@@ -3251,6 +3251,12 @@ function pvpRpc(name,args){
   if(!pvpAvailable())return Promise.reject(new Error('PvP는 공유 기록과 계정 로그인이 필요합니다.'));
   return sbSend('POST','rpc/'+name,{p_user:ACCT.id,p_token:ACCT.tok,...(args||{})});
 }
+async function pvpPrepareLife(){
+ const hp=Math.round(Number(C().hp));
+ if(!Number.isFinite(hp)||hp<1||hp>1000000000)throw Error('생명력 수치를 확인해 주세요.');
+ S.pvpLife={hp};save();
+ if(typeof acctPush!=='function'||await acctPush(true)===false)throw Error('생명력 기록을 저장하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.');
+}
 function pvpStats(){
   const st={};
   for(const k of ['atk','def','agi','men','res'])st[k]=Math.max(1,Math.min(80,Math.round(effStat(k)||1)));
@@ -3297,7 +3303,7 @@ function pvpSync(force){
 function pvpExecute(name,args,success){
   if(PVP.busy)return;
   PVP.busy=true;
-  pvpRpc(name,args).then(result=>{
+  return Promise.resolve().then(()=>['pvp_create','pvp_join'].includes(name)?pvpPrepareLife():null).then(()=>pvpRpc(name,args)).then(result=>{
     PVP.error='';if(typeof success==='function')success(result);
     return pvpRpc('pvp_view',{p_room:PVP.openId||null});
   }).then(data=>{
@@ -3360,13 +3366,13 @@ function pvpChatKey(event){
 function pvpName(r,id){return id===r.host_id?r.host_name:r.guest_name;}
 function pvpFighter(r,role){
   const host=role==='host',name=host?r.host_name:r.guest_name||'입장 대기';
-  const hp=host?r.host_hp:r.guest_hp;
+  const hp=host?r.host_hp:r.guest_hp,maxHp=Number(host?r.host_max_hp:r.guest_max_hp)||100,percent=Math.max(0,Math.min(100,hp/maxHp*100));
   const st=host?r.host_stats:r.guest_stats;
   const first=r.first_id===(host?r.host_id:r.guest_id);
   return `<div class="pvp-fighter ${String(ACCT.id)===(host?r.host_id:r.guest_id)?'myself':''}">
     <div class="spread"><div><b>${esc(name)}</b> ${r.first_id?`<span class="tag ${first?'j':''}">${first?'선공':'후공'}</span>`:''}</div>
-      <strong style="color:${hp<35?'var(--red)':'var(--jadeD)'}">${hp} / 100</strong></div>
-    <div class="bar hp" style="margin:7px 0"><i style="width:${Math.max(0,Math.min(100,hp))}%"></i></div>
+      <strong style="color:${percent<35?'var(--red)':'var(--jadeD)'}" title="${hp.toLocaleString('ko-KR')} / ${maxHp.toLocaleString('ko-KR')}">생명력 ${nf(hp)} / ${nf(maxHp)}</strong></div>
+    <div class="bar hp" style="margin:7px 0"><i style="width:${percent}%"></i></div>
     ${st?`<div class="tiny muted">공격 ${st.atk} · 방어 ${st.def} · 민첩 ${st.agi}</div>`:'<div class="tiny muted">상대방 입장 전입니다.</div>'}
   </div>`;
 }
@@ -3386,7 +3392,7 @@ function pvpActionPanel(r){
   if(r.status==='done'||r.status==='cancelled'){
     const name=r.winner_id?pvpName(r,r.winner_id):'무승부';
     return `<div class="pvp-result"><b>${r.winner_id?`${esc(name)} 승리`:'무승부'}</b>
-      <div class="tiny muted">${esc(r.finish_reason||'대련이 종료됐습니다.')} · 최종 체력 ${r.host_hp} : ${r.guest_hp}</div></div>`;
+      <div class="tiny muted">${esc(r.finish_reason||'대련이 종료됐습니다.')} · 최종 생명력 ${nf(r.host_hp)} : ${nf(r.guest_hp)}${r.rules_version===2?' · 남은 비율 '+(r.host_hp/r.host_max_hp*100).toFixed(1)+'% : '+(r.guest_hp/r.guest_max_hp*100).toFixed(1)+'%':''}</div></div>`;
   }
   if(r.status==='waiting')return `<div class="pvp-turn-wait">다른 학생이 입장하면 민첩 판정으로 선공을 정합니다.</div>`;
   return `<div class="pvp-turn-box">
@@ -3404,7 +3410,7 @@ function pvpBattleRoom(r){
   return `<div class="card pad" style="margin-bottom:14px">
     <div class="spread"><div class="sect-t" style="margin:0">${ic('swords',16)} 대련방 #${r.id}</div>
       <button class="btn sm ghost" onclick="pvpBack()">목록</button></div>
-    <div class="tiny muted" style="margin:8px 0">${r.status==='waiting'?'입장 대기':r.status==='active'?`제 ${r.round_no} / 3 라운드 · ${r.step} / 12 행동 완료`:'대련 종료'} · 임시 체력 100, 실제 체력에 영향 없음</div>
+    <div class="tiny muted" style="margin:8px 0">${r.status==='waiting'?'입장 대기':r.status==='active'?`제 ${r.round_no} / 3 라운드 · ${r.step} / 12 행동 완료`:'대련 종료'} · ${r.rules_version===2?'입장 시 개인 생명력 적용 · 콘텐츠 체력·이성 소모 없음':'기존 규칙 · 임시 체력 100'}</div>
     <div class="pvp-fighters">${pvpFighter(r,'host')}<span class="pvp-vs">VS</span>${pvpFighter(r,'guest')}</div>
     ${pvpActionPanel(r)}
     ${r.status==='waiting'||r.status==='active'?`<div class="row" style="margin-top:10px">
@@ -3446,7 +3452,8 @@ function pvpView(){
       <div class="tiny muted" style="line-height:1.9">
         ① 선공 공격 → 후공 <b>방어 또는 회피</b> → ② 후공 반격 → 선공 <b>방어 또는 회피</b>가 한 라운드입니다.<br>
         최대 <b>3라운드</b>를 진행하고, 3라운드 안에 상대를 쓰러뜨리면 즉시 종료합니다.
-        시간이 끝나면 <b>남은 임시 체력이 더 많은 사람 승리</b>, 같으면 무승부입니다.
+        서버 패치 적용 후 새 대련은 <b>입장 시 개인 생명력</b>을 최대 HP로 사용하며, 시간이 끝나면 <b>남은 생명력 비율</b>로 판정합니다. 기존 방은 이전 규칙을 유지합니다.<br>
+        D5 피해는 두 사람의 생명력 단위로 환산하며 한 행동의 피해는 대상 최대 생명력의 45%를 넘지 않습니다.
         캐릭터 능력치는 참가할 때 고정되며, 판정은 서버에서 처리합니다. 실제 체력·이성·재화는 감소하지 않습니다.
       </div>
     </div>`;
