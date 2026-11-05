@@ -1983,7 +1983,7 @@ function runStep(){
   const live=[R.me,...R.allies].filter(x=>x.hp>0);
   if(!live.length){ endRun(false); return; }
   R.soulSeconds=(R.soulSeconds||0)+30;
-  const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=(R.soulCasts?60:15)&&R.foes[0]?.hp>0;
+  const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=300&&R.foes[0]?.hp>0;
   const r=soulReady?.5:Math.random();
   if(r<0.14){ pushRun(`<span class="muted quest-flavor">${pick(RUNFLAVOR)}</span>`); return; }
   if(r<0.2 && R.me.hp<R.me.max*.7){
@@ -2008,7 +2008,7 @@ function runStep(){
   resolveAttack(attacker, target, log);
   if(soulReady&&foe.hp>0){
     const attack=live.reduce((sum,f)=>sum+f.atk,0),res=live.reduce((sum,f)=>sum+f.res,0)/live.length;
-    const damage=Math.min(foe.hp,Math.max(1,Math.min(Math.round(foe.max*.15),Math.round(attack*.6*(1+.5*res/(res+100))))));
+    const damage=Math.min(foe.hp,pairSoulQuestPower(attack,res));
     foe.hp=Math.max(0,foe.hp-damage);R.soulSeconds=0;R.soulCasts=(R.soulCasts||0)+1;
     log.push(`<span class="s quest-soul">${esc(R.me.n)} · ${esc(R.allies.find(a=>a.hp>0)?.n||"페어")}의 영혼의 공명 ⌈${esc(pairSoulName())}⌋! ${nf(damage)} 피해</span>`);
   }

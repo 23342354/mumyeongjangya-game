@@ -4054,6 +4054,7 @@ function pairSoulStats(c){
  const raw=attack*380*(1+resonance*.035)*4;
  return {attack,resonance,burst:Math.round(Math.min(raw,c.dps*6)),shield:Math.round(Math.min(c.hp*.10,raw*.05))};
 }
+function pairSoulQuestPower(attack,res){return Math.max(1,Math.round(attack*.6*(1+.5*res/(res+100))));}
 function pairSoulCount(seconds){return seconds<15?0:1+Math.floor((seconds-15)/60);}
 function pairSoulDamage(c,seconds){const skill=pairSoulStats(c);return c.dps*seconds+(skill?skill.burst*pairSoulCount(seconds):0);}
 function pairSoulTime(c,hp){
@@ -4063,7 +4064,7 @@ function pairSoulTime(c,hp){
  return Math.max(0,time);
 }
 function pairSoulGuardHP(c){const skill=pairSoulStats(c);return c.hp+(skill?skill.shield:0);}
-function pairSoulSettingsHTML(){if(!pairEnsure().mine)return '';return `<div class="card pad" style="margin-bottom:14px"><div class="sect-t">영혼의 공명 · 페어 전용 스킬</div><label for="pair-soul-name">스킬명 (함께 사용 · 최대 30자)</label><div class="row" style="margin-top:6px"><input class="inp" id="pair-soul-name" maxlength="30" value="${esc(pairHeadState().soulName||'')}" placeholder="영혼의 공명" style="flex:1;min-width:0"><button class="btn sm" onclick="pairSoulSaveName()">저장</button></div><div class="tiny muted" style="margin-top:8px">의뢰·석탑·결계의 탑·업귀 토벌에서만 자동 발동합니다. 첫 발동 15초 후, 이후 60초마다. 의뢰는 30초 단위 판정으로 첫 30초에 발동합니다. 공격·공명 적성으로 위력이 증가하며 결계의 탑에서는 보호막으로 작동합니다. 이름을 비우면 기본 스킬명이 적용됩니다.</div></div>`;}
+function pairSoulSettingsHTML(){if(!pairEnsure().mine)return '';return `<div class="card pad" style="margin-bottom:14px"><div class="sect-t">영혼의 공명 · 페어 전용 스킬</div><label for="pair-soul-name">스킬명 (함께 사용 · 최대 30자)</label><div class="row" style="margin-top:6px"><input class="inp" id="pair-soul-name" maxlength="30" value="${esc(pairHeadState().soulName||'')}" placeholder="영혼의 공명" style="flex:1;min-width:0"><button class="btn sm" onclick="pairSoulSaveName()">저장</button></div><div class="tiny muted" style="margin-top:8px">의뢰·석탑·결계의 탑·업귀 토벌에서만 자동 발동합니다. 석탑·결계의 탑·업귀 토벌은 첫 15초 후, 이후 60초마다. 의뢰는 첫 발동부터 5분마다 사용하며 적 최대 체력에 따른 피해 상한은 없습니다. 공격·공명 적성으로 위력이 증가하며 결계의 탑에서는 보호막으로 작동합니다. 이름을 비우면 기본 스킬명이 적용됩니다.</div></div>`;}
 async function pairSoulSaveName(){
  const P=pairEnsure();if(!P.mine)return;const name=document.getElementById('pair-soul-name')?.value.trim().slice(0,30)||'';
  // Fetch latest shared header first so renaming never removes a partner's tokens/font.
@@ -4071,7 +4072,7 @@ async function pairSoulSaveName(){
  const data=JSON.parse(pairHeadEncode(H.img,H.tokens||['','']));data.soulName=name;const at=new Date().toISOString();
  try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
 }
-for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">첫 ${kind==='quest'?30:15}초 · 이후 60초마다 · ${kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰에서는 D5 전투 규모에 맞춘 피해와 적 최대 체력 15% 상한을 적용합니다.':''}</div></div>`;};}
+for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?'첫 5분 후 · 이후 5분마다':'첫 15초 · 이후 60초마다'} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰에서는 D5 전투 규모에 맞춘 피해를 적용합니다.':''}</div></div>`;};}
 
 let ROSTER_HEADER_REQUEST=0;
 function rosterPairScene(row,header){
