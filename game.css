@@ -1242,3 +1242,10 @@ body.auth-gate #mobile-chat-toggle{
 .seed-pick-card .spread{gap:5px;flex-wrap:wrap}.seed-eligible{border-color:var(--jadeD)}
 .seed-ready{color:var(--jadeD);font-weight:600}.seed-pick-actions{margin-top:8px;gap:5px;flex-wrap:wrap}
 @media(max-width:600px){.top-effect-group{position:static}.top-effect-list{left:12px;top:100%;width:calc(100vw - 24px);max-width:none}.seed-pick-card{padding:8px}.seed-pick-actions .btn{font-size:11px;padding:6px;white-space:normal}}
+
+.pair-housing-row.three-cards{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.pair-housing-row>.card{height:100%;box-sizing:border-box;display:flex;flex-direction:column}
+.pair-housing-row>.card>.row:last-child{margin-top:auto!important;padding-top:10px}
+@media(max-width:900px){.pair-housing-row.three-cards{grid-template-columns:repeat(3,minmax(220px,1fr));overflow-x:auto;align-items:stretch}}
+
+.pair-housing-row>.card:only-child{grid-column:1/-1}

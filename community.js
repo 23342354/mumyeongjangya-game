@@ -591,10 +591,10 @@ buildHome = function(mode){
   if(typeof syncUp==="function") syncUp(true);
 };
 /* 거처 현황과 동거 안내를 같은 줄에 표시합니다. */
-function pairHousingHTML(){
+function pairHousingHTML(currentHome=""){
   const home=typeof pairHomeHTML==="function"?pairHomeHTML():"";
   const living=typeof pairMergeHTML==="function"?pairMergeHTML():"";
-  return home&&living?`<div class="pair-housing-row">${home}${living}</div>`:home||living;
+  return `<div class="pair-housing-row ${home&&living&&currentHome?'three-cards':''}">${home}${living}${currentHome}</div>`;
 }
 
 /* ───────────────────────────────────────────────────

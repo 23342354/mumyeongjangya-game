@@ -3042,12 +3042,7 @@ VIEWS.hallv=()=>{
   const me=homeOf(S.hall), h=homeS();
   const benefit=id=>hallBenefitsAt(id,hallFactor(id));
   const max=id=>hallBenefitsAt(id,HOMESTAGE[homeMax(id)]);
-  return head("지금 사는 곳",ic("castle")+" 거처",
-    `${me.n} ${me.h} · ${h.stage} / ${homeMax()} 단계`)+`
-  ${typeof pairHousingHTML==="function" ? pairHousingHTML() : (typeof pairHomeHTML==="function" ? pairHomeHTML() : "")}
-  <div class="grid g2" style="margin-bottom:14px">
-    <div>
-      <div class="card pad">
+  const currentHome=`<div class="card pad">
         <div class="spread"><div class="sect-t" style="margin:0">${me.n} <span class="muted">${me.h}</span></div>
           <span class="tag" style="border-color:${me.c};color:${me.c}">
             혜택 ${(hallFactor(S.hall)*100).toFixed(0)}%</span></div>
@@ -3055,7 +3050,13 @@ VIEWS.hallv=()=>{
         ${isDorm()?"":`<div class="tiny muted" style="margin-bottom:6px">구역 특화 효과 ${HALLMULT[S.hall]}배 · 기본 일세 ${rentMoney(RENT[S.hall])} 륜</div>`}
         <div class="tiny" style="color:var(--gold)">${benefit(S.hall)||"일세가 밀려 혜택이 멈췄습니다"}</div>
         <div class="tiny muted" style="margin-top:4px">다 키웠을 때 — ${max(S.hall)}</div>
-      </div>
+      </div>`;
+  return head("지금 사는 곳",ic("castle")+" 거처",
+    `${me.n} ${me.h} · ${h.stage} / ${homeMax()} 단계`)+`
+  ${typeof pairHousingHTML==="function" ? pairHousingHTML(currentHome) : currentHome}
+  <div class="grid g2" style="margin-bottom:14px">
+    <div>
+
       ${homeAct()}
     </div>
     <div class="card pad">
@@ -4735,7 +4736,7 @@ function pairHomeHTML(){
   const sharedPaid=!dorm && shared>nowMin();
   const activeFac=dorm||(!late&&due>nowMin())?fac:0;
   return `<div class="card pad" style="margin-bottom:14px;border-color:var(--gold2)">
-    <div class="spread"><div class="sect-t" style="margin:0">페어의 거처</div>${pairSeen(r)}</div>
+    <div class="spread"><div class="sect-t" style="margin:0">${esc(r.name||"페어")}의 거처</div>${pairSeen(r)}</div>
     <div class="spread" style="margin-top:4px">
       <div>${pairTitle(r)} <span class="tiny muted">· ${esc(h.n)} ${esc(h.h)}</span>
         <div class="tiny muted">${dorm?"방 꾸미기":"집 짓기"} ${st} / ${top} 단계
