@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:"20261106-offline-growth-clock",date:"2026-11-06",title:"자리를 비운 동안의 성장 반영 수정",items:["페어 재접속 시 수업·수행·원예의 경과 시간을 마지막 저장 시각부터 반영하도록 수정했습니다.","다른 탭에서 게임으로 돌아오면 밀린 진행을 바로 확인합니다. 오프라인 반영 한도는 기존처럼 최대 24시간입니다.","혼자 플레이할 때도 5분 이하의 짧은 오프라인 시간을 반영합니다."]},
  {id:"20261106-housing-move-fix",date:"2026-11-06",title:"거처 이전과 페어 동거 오류 수정",items:["프로필의 구역 선택에도 이사 확인창을 적용했습니다. 취소하면 현재 거처를 유지하고, 이사하면 새 거처는 0단계에서 시작합니다.","공동 기록 연결을 마친 페어는 관계를 유지한 채 함께 이사할 수 있습니다. 기존 거처 단계와 새 거처의 일세 조건을 확인한 뒤 진행해 주세요."]},
  {id:'20261106-gear-browser-crest-fold',date:'2026-11-06',title:'법구 전체 열람·부위 필터와 휘장 접기',items:['24개를 넘어도 이전·다음 페이지로 모든 보유 법구를 확인할 수 있습니다.','전체·법의·관·부적·경문 필터와 부위별 보유 수량을 추가했습니다. 전투력 높은 순으로 표시합니다.','보유 휘장 목록을 접고 펼칠 수 있습니다. 착용한 휘장은 계속 표시됩니다.']},
  {id:'20261105-inbox-character-names',date:'2026-11-05',title:'건의함 작성자 이름 표시',items:['건의 목록·본문·답변과 작성 화면에 로그인 아이디 대신 캐릭터 이름을 표시합니다.','공개·비공개 열람 권한과 본인 확인은 기존처럼 계정 기준으로 유지합니다.']},
@@ -819,8 +820,8 @@ function makeNews(){
 let QUIET=false;
 function offline(){
   const el=Math.min(Date.now()-(S.lastReal||Date.now()), 24*3600*1000);
-  const mins=Math.floor(el/60000);
-  if(mins>5){
+  const mins=Math.max(0,el/60000);
+  if(mins>0){
     QUIET=true;                       // 밀린 진행을 돌리는 동안에는 알림을 띄우지 않습니다
     try{
       const chunk=120; let left=mins;

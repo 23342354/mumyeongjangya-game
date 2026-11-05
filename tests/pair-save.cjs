@@ -30,7 +30,7 @@ ctx.endRun=()=>{ctx.S.run.done=true;};ctx.runReturn=()=>ctx.endRun();ctx.nf=n=>S
 ctx.startLesson=id=>{ctx.S.lesson={id,left:30};ctx.save();};
 ctx.startStudy=id=>{ctx.S.study={id,left:20};ctx.save();};
 ctx.fishCast=()=>{ctx.FISHGAME={state:'run'};};
-ctx.step=m=>{ctx.elapsedTicks=(ctx.elapsedTicks||0)+m;if(ctx.S.lesson)ctx.S.lesson.left-=m;if(ctx.S.study)ctx.S.study.left-=m;};
+ctx.step=m=>{ctx.elapsedTicks=(ctx.elapsedTicks||0)+m;if(ctx.S.lesson)ctx.S.lesson.left-=m;if(ctx.S.study)ctx.S.study.left-=m;for(const p of ctx.S.farm.plots||[])if(p)p.left=Math.max(0,p.left-m);};
 const bundled=fs.readFileSync(require('path').join(__dirname,'../coop.js'),'utf8');
 const script=bundled.split('/* ===== module: pair-play.js ===== */')[1].split('/* ===== module: auction-live.js ===== */')[0];vm.createContext(ctx);vm.runInContext(script,ctx);
 (async()=>{
@@ -156,6 +156,22 @@ const script=bundled.split('/* ===== module: pair-play.js ===== */')[1].split('/
  await ctx.PAIR_PLAY.refresh();
  assert.deepEqual([...ctx.S.dex.doll].sort(),['르셀리아','큰요우'],
    '내가 방금 얻은 도감 항목과 상대의 항목이 모두 남아야 합니다');
+ // Offline catch-up must use the confirmed server clock even if the live
+ // timer/cache has already overwritten local lastReal during connection.
+ server.progress.run=null;
+ server.self.lesson={id:'offline',left:30};server.self.study={id:'offline',left:40};
+ server.self.farm.plots=[{id:'crop',left:50}];server.self.lastReal=clock-1200000;
+ ctx.S.lastReal=clock;ctx.PAIR_PLAY.offlineNeeded=true;
+ await ctx.PAIR_PLAY.refresh();
+ assert.ok(Math.abs(server.self.lesson.left-10)<.01,'offline lesson advances twenty minutes');
+ assert.ok(Math.abs(server.self.study.left-20)<.01,'offline study advances twenty minutes');
+ assert.ok(Math.abs(server.self.farm.plots[0].left-30)<.01,'offline crop advances twenty minutes');
+ assert.equal(ctx.PAIR_PLAY.offlineNeeded,false,'offline catch-up acknowledged');
+ await ctx.PAIR_PLAY.refresh();
+ assert.ok(Math.abs(ctx.S.lesson.left-10)<.01,'refresh never applies elapsed time twice');
+ clock+=90000;ctx.S.lastReal=clock;ctx.PAIR_PLAY.offlineNeeded=true;
+ await ctx.PAIR_PLAY.refresh();
+ assert.ok(Math.abs(server.self.lesson.left-8.5)<.01,'short tab absence advances fractional minutes');
  ctx.Date=RealDate;
  console.log('PASS: personal save, shared wallet save, partner concurrent spend, remote profile reload, CAS retry, in-flight edit, durable lost-response recovery, failed save backup, atomic conflict rejection, chat preservation, queued activities, elapsed clock timeout cooldown and concurrent run clock, five-minute batches, early return and completion, shared collection merge');
 })().catch(e=>{console.error(e);process.exitCode=1;});
