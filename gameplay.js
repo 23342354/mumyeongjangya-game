@@ -5255,3 +5255,60 @@ if(typeof openSettings==="function"){
   };
 }
 
+
+/* Internal support inbox: authenticated account IDs, private DM threads. */
+const SUPPORT_INBOX={actor:null,threads:[],staff:false,loading:false,loaded:false,error:'',busy:false,pending:null};
+function inboxAccount(){return boardAccountCredentials();}
+async function inboxRpc(action,args={}){
+ const account=inboxAccount();if(!sbOn())throw Error('내부 문의함 서버 연결을 확인해 주세요.');
+ const data=await sbSend('POST','rpc/suggestion_inbox',{...account,p_action:action,...args});
+ if(inboxAccount().p_actor!==account.p_actor)throw Error('계정이 바뀌었습니다. 문의함을 다시 열어 주세요.');
+ return data;
+}
+async function inboxFetch(){
+ let account;try{account=inboxAccount();}catch(e){SUPPORT_INBOX.error=e.message;return;}
+ if(SUPPORT_INBOX.actor!==account.p_actor){Object.assign(SUPPORT_INBOX,{actor:account.p_actor,threads:[],staff:false,loaded:false,loading:false,error:'',pending:null});}
+ if(SUPPORT_INBOX.loading)return;
+ SUPPORT_INBOX.loading=true;SUPPORT_INBOX.error='';
+ try{const r=await inboxRpc('list');SUPPORT_INBOX.threads=r.threads||[];SUPPORT_INBOX.staff=!!r.staff;SUPPORT_INBOX.loaded=true;}
+ catch(e){SUPPORT_INBOX.error='문의함을 불러오지 못했습니다. '+String(e.message||e);}
+ finally{SUPPORT_INBOX.loading=false;if(VIEW==='board')renderMain();}
+}
+boardFetch=function(){return inboxFetch();};
+VIEWS.board=function(){
+ let actor;try{actor=inboxAccount().p_actor;}catch(e){return head('작성자와 운영진만 보는 내부 문의함',ic('mailbox')+' 건의함','')+`<div class="card pad">${esc(e.message)}</div>`;}
+ if(SUPPORT_INBOX.actor!==actor||(!SUPPORT_INBOX.loaded&&!SUPPORT_INBOX.loading&&!SUPPORT_INBOX.error))setTimeout(inboxFetch,0);
+ const own=SUPPORT_INBOX.actor===actor;
+ return head('작성자와 운영진만 보는 내부 DM',ic('mailbox')+' 건의함',`@${esc(actor)}`)+`
+ <div class="card pad" style="margin-bottom:12px"><div class="spread"><b>${own&&SUPPORT_INBOX.staff?'운영진 문의함':'내 문의함'}</b><div class="row"><button class="btn sm" onclick="inboxFetch()">새로고침</button><button class="btn sm pri" onclick="inboxCompose()">문의 보내기</button></div></div><div class="tiny muted" style="margin-top:8px">로그인 ID @${esc(actor)}로 작성자를 확인합니다. 모든 문의와 답변은 작성자와 지정된 운영진만 볼 수 있습니다. 열람코드는 필요하지 않습니다.</div></div>
+ ${SUPPORT_INBOX.error?`<div class="card pad" role="alert">${esc(SUPPORT_INBOX.error)}<div class="tiny muted" style="margin-top:8px">운영진은 내부 문의함 설치 SQL이 적용되었는지 확인해 주세요.</div></div>`:''}
+ <div class="card pad">${own&&SUPPORT_INBOX.loading?'<div class="tiny muted">불러오는 중…</div>':''}${own?SUPPORT_INBOX.threads.map(t=>`<button type="button" class="btn" style="display:block;text-align:left;width:100%;margin-bottom:8px;white-space:normal" onclick="inboxOpen(${Number(t.id)})"><div class="spread"><b>${esc(t.title)}</b><span class="tag">${esc(t.status)}</span></div><div class="tiny muted">@${esc(t.author_id)} · ${esc(boardDate(t.updated_at))}</div></button>`).join(''):''}${own&&SUPPORT_INBOX.loaded&&!SUPPORT_INBOX.threads.length?'<div class="tiny muted">아직 문의가 없습니다.</div>':''}</div>`;
+};
+function inboxCompose(){
+ let account;try{account=inboxAccount();}catch(e){toast(e.message,'bad');return;}
+ modal('운영진에게 문의 보내기',`<div class="tiny muted">작성 계정 @${esc(account.p_actor)} · 작성자와 운영진만 열람</div><label class="f">제목</label><input class="inp" id="support_title" maxlength="100"><label class="f">내용</label><textarea class="inp" id="support_body" maxlength="5000" style="min-height:160px"></textarea><div class="tiny" id="support_error" role="alert" style="margin-top:8px"></div><button class="btn pri" id="support_send" style="margin-top:12px" onclick="inboxSend()">문의 보내기</button>`);
+}
+async function inboxOpen(id){
+ try{const r=await inboxRpc('read',{p_thread:Number(id)}),t=r.thread;
+ modal('문의 · '+esc(t.title),`<div class="spread"><span>@${esc(t.author_id)}</span><span class="tag">${esc(t.status)}</span></div>
+ <div style="margin:12px 0;max-height:48dvh;overflow-y:auto">${r.messages.map(m=>`<div class="sub" style="margin-bottom:8px"><div class="spread tiny"><b>${m.staff?'운영진 ':''}${m.sender_id?'@'+esc(m.sender_id):'(이전 답변)'}</b><span class="muted">${esc(boardDate(m.created_at))}</span></div><div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:7px">${esc(m.body)}</div></div>`).join('')}</div>
+ ${r.staff?`<div class="row" style="margin:8px 0"><label for="support_status">처리 상태</label><select class="inp" id="support_status" onchange="inboxStatus(${Number(id)},this.value)">${['접수','확인 중','답변','완료'].map(v=>`<option ${t.status===v?'selected':''}>${v}</option>`).join('')}</select></div>`:''}
+ <label class="f">${r.staff?'운영진 답변':'추가 문의'}</label><textarea class="inp" id="support_body" maxlength="5000" style="min-height:90px"></textarea><div class="tiny" id="support_error" role="alert"></div><button class="btn pri" id="support_send" style="margin-top:8px" onclick="inboxSend(${Number(id)})">${r.staff?'답변 보내기':'추가 문의 보내기'}</button>`);
+ }catch(e){toast(String(e.message||e),'bad');}
+}
+async function inboxSend(id){
+ if(SUPPORT_INBOX.busy)return;
+ const body=document.getElementById('support_body')?.value.trim()||'',title=document.getElementById('support_title')?.value.trim()||'';
+ const error=document.getElementById('support_error'),button=document.getElementById('support_send');
+ if(!body||(!id&&!title)){if(error)error.textContent='제목과 내용을 적어 주세요.';return;}
+ let actor;try{actor=inboxAccount().p_actor;}catch(e){if(error)error.textContent=e.message;return;}
+ const signature=JSON.stringify([actor,id||null,title,body]);
+ if(SUPPORT_INBOX.pending?.signature!==signature)SUPPORT_INBOX.pending={signature,request:window.crypto?.randomUUID?.()||'inbox-'+Date.now()+'-'+Math.random().toString(36).slice(2)};
+ SUPPORT_INBOX.busy=true;if(button)button.disabled=true;if(error)error.textContent='';
+ try{const r=await inboxRpc(id?'reply':'send',{p_thread:id||null,p_title:title,p_body:body,p_request:SUPPORT_INBOX.pending.request});
+  if(!r?.id)throw Error('서버에서 등록 확인을 받지 못했습니다.');
+  SUPPORT_INBOX.pending=null;toast('문의함에 저장했습니다.','good');await inboxFetch();await inboxOpen(r.id);
+ }catch(e){if(error)error.textContent='등록 확인을 받지 못했습니다. 내용은 유지됩니다. 다시 누르면 같은 요청으로 재확인합니다. '+String(e.message||e);}
+ finally{SUPPORT_INBOX.busy=false;if(button)button.disabled=false;}
+}
+async function inboxStatus(id,status){try{await inboxRpc('status',{p_thread:Number(id),p_status:status});await inboxFetch();toast('상태를 변경했습니다.','good');}catch(e){toast(String(e.message||e),'bad');}}
