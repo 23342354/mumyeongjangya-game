@@ -4310,3 +4310,47 @@ step=function(minutes){const result=_explorationStep.apply(this,arguments);if(VI
 
 const _pairSoulNameStep=step;
 step=function(){const result=_pairSoulNameStep.apply(this,arguments);if(sbOn()&&pairEnsure().mine)void pairHeadFetch(false);return result;};
+
+/* Opt-in trial requested for this exact shared pair name; no release notice. */
+const PAIR_TRIAL_THEME={signature:'',keys:[]};
+function pairThemeRGB(hex){return /^#[0-9a-f]{6}$/i.test(String(hex||''))?[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)):null;}
+function pairThemeHex(rgb){return '#'+rgb.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');}
+function pairThemeMix(a,b,t){return a.map((v,i)=>v*(1-t)+b[i]*t);}
+function pairThemeLuminance(rgb){return rgb.map(v=>{const n=v/255;return n<=.04045?n/12.92:Math.pow((n+.055)/1.055,2.4);}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);}
+function pairThemeContrast(a,b){const x=pairThemeLuminance(a),y=pairThemeLuminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+function pairThemeAccent(rgb,dark){const target=dark?[255,255,255]:[0,0,0],ink=dark?[0,0,0]:[255,255,255];let out=rgb;for(let n=0;n<20&&pairThemeContrast(out,ink)<7;n++)out=pairThemeMix(out,target,.12);return out;}
+function pairTrialThemePalette(a,b,dark){
+ const rgbA=pairThemeRGB(a),rgbB=pairThemeRGB(b);if(!rgbA||!rgbB)return null;
+ const blend=pairThemeMix(rgbA,rgbB,.5),near=dark?[6,9,14]:[249,250,251],primary=pairThemeAccent(rgbA,dark),secondary=pairThemeAccent(rgbB,dark),palette={};
+ const surface=t=>pairThemeHex(pairThemeMix(blend,near,t));
+ const alpha=(rgb,n)=>`rgba(${rgb.map(Math.round).join(',')},${n})`;
+ const steps=dark?[.96,.91,.86,.80,.66,.52,.37,.22]:[.91,.85,.78,.68,.52,.36,.22,.08];
+ steps.forEach((t,i)=>palette['--s'+i]=surface(t));
+ Object.assign(palette,{'--gold':pairThemeHex(primary),'--goldD':pairThemeHex(secondary),'--onAcc':dark?'#080d12':'#ffffff','--tx':dark?'#eff4f6':'#14202a','--dim':pairThemeHex(pairThemeMix(dark?[220,231,236]:[34,45,56],blend,.15)),'--dim2':pairThemeHex(pairThemeMix(dark?[164,184,196]:[70,83,95],blend,.15)),
+ '--line':surface(dark?.60:.50),'--line2':surface(dark?.43:.30),'--accSoft':alpha(primary,dark?.15:.12),'--accEdge':alpha(primary,.45),'--glowRGB':primary.map(Math.round).join(','),'--glow':'0 0 18px '+alpha(primary,.2),'--neon':'0 0 10px '+alpha(primary,.4),
+ '--glass0':alpha(pairThemeRGB(surface(.94)),.82),'--glass1':alpha(pairThemeRGB(surface(.90)),.92),'--glassTop':alpha(pairThemeRGB(surface(.94)),.97),'--glassTop2':alpha(pairThemeRGB(surface(.88)),.98),
+ '--cardA':alpha(pairThemeRGB(surface(.86)),.94),'--cardB':alpha(pairThemeRGB(surface(.92)),.97),'--subBg':alpha(pairThemeRGB(surface(.82)),.93),'--resBg':alpha(pairThemeRGB(surface(.86)),.94),
+ '--scrim1':alpha(pairThemeRGB(surface(.93)),dark?.82:.78),'--scrim2':alpha(pairThemeRGB(surface(.91)),dark?.9:.85),'--scrim3':alpha(pairThemeRGB(surface(.97)),.96),'--wash1':alpha(rgbA,dark?.24:.16),'--wash2':alpha(rgbB,dark?.22:.16),
+ '--pair-theme-a':pairThemeHex(primary),'--pair-theme-b':pairThemeHex(secondary)});
+ return palette;
+}
+function applyPairTrialTheme(){
+ const root=document.documentElement;
+ const clear=()=>{for(const key of PAIR_TRIAL_THEME.keys)root.style.removeProperty(key);root.removeAttribute('data-pair-theme');PAIR_TRIAL_THEME.keys=[];PAIR_TRIAL_THEME.signature='';};
+ if(!S?.made||typeof SOCIAL==='undefined'){clear();return;}
+ const mine=pairEnsure().mine,shared=mine&&SOCIAL.pairs.find(p=>String(p.id)===String(mine.id));
+ if(!shared||String(shared.pair_name||'').trim().replace(/\s+/g,' ').toLowerCase()!=='wuthering heights'){clear();return;}
+ const roster=[...(SOCIAL.students||[]),...(S.sb?.roster||[])];
+ const profiles=[shared.from_id,shared.to_id].map(id=>String(id)===String(S.sb?.id)?{id,color:S.color}:roster.find(p=>String(p.id)===String(id)));
+ if(profiles.some(p=>!pairThemeRGB(p?.color))){clear();return;}
+ // Stable account order makes both members see the same two-color direction.
+ profiles.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+ const signature=JSON.stringify([shared.id,profiles.map(p=>p.color),THEME]);if(signature===PAIR_TRIAL_THEME.signature)return;
+ const palette=pairTrialThemePalette(profiles[0].color,profiles[1].color,THEME!=='light');clear();
+ for(const [key,value]of Object.entries(palette))root.style.setProperty(key,value);
+ PAIR_TRIAL_THEME.keys=Object.keys(palette);PAIR_TRIAL_THEME.signature=signature;root.setAttribute('data-pair-theme','wuthering-heights');
+}
+const _pairTrialThemeTop=renderTop;
+renderTop=function(){applyPairTrialTheme();return _pairTrialThemeTop.apply(this,arguments);};
+const _pairTrialThemeApply=applyTheme;
+applyTheme=function(){const result=_pairTrialThemeApply.apply(this,arguments);applyPairTrialTheme();return result;};

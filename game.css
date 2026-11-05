@@ -1317,3 +1317,10 @@ body.auth-gate #mobile-chat-toggle{
  body.chat-off #chatcol .chat-fold>.count-badge{position:static;order:-1;writing-mode:horizontal-tb;text-orientation:mixed;letter-spacing:0;margin:0;min-width:20px;height:20px;max-width:28px;padding:0 3px}
  body.chat-off #chatcol .chat-fold>svg{flex-shrink:0;margin:0;transform:rotate(-90deg)}
 }
+
+/* Private two-soul theme trial, enabled only by the matching current pair. */
+:root[data-pair-theme="wuthering-heights"] body::before{filter:grayscale(.9);opacity:.35}
+:root[data-pair-theme="wuthering-heights"] .btn.pri{background:linear-gradient(125deg,var(--pair-theme-a),var(--pair-theme-b));color:var(--onAcc)}
+:root[data-pair-theme="wuthering-heights"] .tab.on,
+:root[data-pair-theme="wuthering-heights"] .ctab.on{border-color:var(--accEdge);background:linear-gradient(120deg,var(--accSoft),color-mix(in srgb,var(--pair-theme-b) 12%,transparent))}
+:root[data-pair-theme="wuthering-heights"] #mobile-nav button.on{background:linear-gradient(135deg,var(--accSoft),color-mix(in srgb,var(--pair-theme-b) 18%,transparent))}
