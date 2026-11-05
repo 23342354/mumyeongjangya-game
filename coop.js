@@ -977,7 +977,7 @@ const AUCTION_GEAR_COMPARE={};
 function auctionCompareToggle(id,key,value){
  if(!['zero','compare'].includes(key))return;
  const state=AUCTION_GEAR_COMPARE[String(id)]||(AUCTION_GEAR_COMPARE[String(id)]={zero:false,compare:false});
- state[key]=!!value;renderMain(true);
+ state[key]=!!value;renderMain();
 }
 function auctionGearComparisonHTML(lot){
  const item=lot.item_data;
