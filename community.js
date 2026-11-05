@@ -4072,3 +4072,30 @@ async function pairSoulSaveName(){
  try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
 }
 for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">첫 ${kind==='quest'?30:15}초 · 이후 60초마다 · ${kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰에서는 D5 전투 규모에 맞춘 피해와 적 최대 체력 15% 상한을 적용합니다.':''}</div></div>`;};}
+
+let ROSTER_HEADER_REQUEST=0;
+function rosterPairScene(row,header){
+ const profiles=[row.from_id,row.to_id].map(id=>String(id)===String(S.sb?.id)?{name:S.name,color:S.color}:(S.sb.roster||[]).find(p=>String(p.id)===String(id))||(SOCIAL.students||[]).find(p=>String(p.id)===String(id))||{});
+ const colors=profiles.map(p=>rosterThemeColor(p.color));
+ const fontCSS=header.fontCSS||'';
+ setTimeout(()=>pairFontApply(fontCSS,'.roster-pair-scene-name'),0);
+ return `<div class="card pair-scene-card"><div class="pair-scene">
+ ${header.img?`<img class="pair-scene-bg" src="${header.img}" alt="${esc(row.pair_name||'페어')} 헤더">`:'<div class="pair-scene-empty tiny muted">등록된 배경 이미지가 없습니다.</div>'}
+ <div class="pair-scene-shade"></div><div class="pair-scene-tokens">${header.tokens.map((src,i)=>src?`<img src="${src}" alt="페어 토큰 ${i+1}">`:'').join('')}</div>
+ <div class="pair-scene-name roster-pair-scene-name" data-font-css="${esc(fontCSS)}" style="--pair-name-a:${colors[0]};--pair-name-b:${colors[1]}">${esc(row.pair_name||'이름 없는 페어')}</div>
+ </div></div><div class="tiny muted">${profiles.map(p=>esc(p.name||'학생')).join(' · ')}</div>`;
+}
+async function rosterPairHeader(studentId){
+ const row=SOCIAL.pairs.find(p=>p.status==='accepted'&&[String(p.from_id),String(p.to_id)].includes(String(studentId)));
+ if(!row){toast('이 학생은 현재 등록된 페어가 없습니다.');return;}
+ const request=++ROSTER_HEADER_REQUEST;
+ modal(esc(row.pair_name||'페어')+' · 헤더 보기','<div id="roster-header-preview" class="tiny muted">페어 헤더를 불러오는 중입니다…</div>','wide');
+ try{
+  const rows=await sbGet(`pairs?select=id,from_id,to_id,status,pair_name,header,header_at&id=eq.${encodeURIComponent(row.id)}&status=eq.accepted&limit=1`);
+  const target=document.getElementById('roster-header-preview');if(request!==ROSTER_HEADER_REQUEST||!target)return;
+  const full=rows?.[0];if(!full){target.textContent='헤더가 공개되어 있지 않거나 페어 정보가 변경되었습니다.';return;}
+  target.innerHTML=rosterPairScene(full,pairHeadDecode(full.header||''));
+ }catch{
+  const target=document.getElementById('roster-header-preview');if(request===ROSTER_HEADER_REQUEST&&target)target.textContent='페어 헤더를 불러오지 못했습니다. 연결 또는 조회 권한을 확인한 뒤 다시 눌러 주세요.';
+ }
+}

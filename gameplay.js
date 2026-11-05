@@ -3976,7 +3976,7 @@ VIEWS.roster=()=>{
       const me=String(r.id)===String(S.sb.id);
       const avatarColor=rosterThemeColor(me?S.color:r.color,hall?hall.c:"var(--gold)");
       const paired=typeof SOCIAL!=="undefined" && SOCIAL.ready && SOCIAL.pairs.some(p=>p.status==="accepted"&&[String(p.from_id),String(p.to_id)].includes(String(r.id)));
-      return `<div class="sub roster-card ${paired?"roster-card-paired":""}" style="${me?"border-color:var(--gold2)":""}">
+      return `<div class="sub roster-card ${paired?"roster-card-paired":""}" ${paired?`role="button" tabindex="0" aria-label="${esc(r.name)}의 페어 헤더 보기" data-student-id="${esc(String(r.id))}" onclick="if(!event.target.closest('button,a,input'))rosterPairHeader(this.dataset.studentId)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();rosterPairHeader(this.dataset.studentId)}"`:''} style="${me?"border-color:var(--gold2)":""}">
         <div class="roster-card-top">
           ${r.av_img?`<div class="roster-avatar" style="border-color:${avatarColor}">
             <img src="${r.av_img}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>`
