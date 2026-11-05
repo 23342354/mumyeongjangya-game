@@ -2,7 +2,7 @@
   "name": "mumyeongjangya-game",
   "private": true,
   "scripts": {
-    "test": "node tests/check-files.cjs && node tests/offline-growth.cjs && node tests/housing-move.cjs && node tests/account-network.cjs && node tests/pair-save.cjs && node tests/raid-health.cjs && node tests/social-poll.cjs && node tests/ledger.cjs && node tests/shell.cjs && node tests/board-submit.cjs && node tests/clubs.cjs && node tests/clubs-expand.cjs && node tests/merchant-levels.cjs && node tests/arena-seasons.cjs && node tests/relation-edit.cjs",
+    "test": "node tests/check-files.cjs && node tests/auto-lesson-offline.cjs && node tests/offline-growth.cjs && node tests/housing-move.cjs && node tests/account-network.cjs && node tests/pair-save.cjs && node tests/raid-health.cjs && node tests/social-poll.cjs && node tests/ledger.cjs && node tests/shell.cjs && node tests/board-submit.cjs && node tests/clubs.cjs && node tests/clubs-expand.cjs && node tests/merchant-levels.cjs && node tests/arena-seasons.cjs && node tests/relation-edit.cjs",
     "test:browser": "node tests/browser-smoke.cjs",
     "test:combat": "python3 tests/combat-model.py",
     "test:sql": "node tests/pair-sql.cjs",
