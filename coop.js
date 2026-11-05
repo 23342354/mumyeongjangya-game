@@ -79,6 +79,7 @@ function replayChanges(list){
   }
   const key=op.path[op.path.length-1],current=parent[key];
   const shared=sharedPath(op.path);
+  if(op.path[0]==='ledger'&&Array.isArray(op.to)){parent[key]=ledgerRebaseEntries(current||[],op.from||[],op.to);continue;}
   // 도감은 쌓이기만 하는 공동 목록입니다. 덮어쓰면 비슷한 때 얻은 한쪽이
   // 지워지므로, 내 기록을 다시 얹을 때도 합집합으로 맞춥니다.
   if(op.path[0]==='dex'&&Array.isArray(op.to)&&Array.isArray(current)){
@@ -558,7 +559,7 @@ function hookFishingNow(){
    한 목록에 모아 봅니다. 보여 주는 쪽은 파일 끝에 있습니다. */
 const LEDGER_MAX=40;           // 줄 수 상한 — 저장본과 페어 전송을 가볍게 유지합니다
 const LEDGER_MERGE_MS=600000;  // 같은 항목이 10분 안에 또 들어오면 한 줄로 합칩니다
-const LEDGER={label:'',income:0};
+const LEDGER={label:'',income:0,measuring:false};
 /* 행동 이름 → 기입장에 적힐 항목 이름 */
 const LEDGER_LABELS={
  buy:'상점', martBuy:'잡화점', buyMerch:'떠돌이 상인', buyMisc:'기타 구매',
@@ -588,16 +589,28 @@ const LEDGER_LABELS={
 /* 기록만 더할 함수들 (위 주석 참고) */
 const LEDGER_EXTRA=['buyMarket','inviteTeacher','payLocalRent','payPairRent'];
 const ledgerLabel=name=>LEDGER_LABELS[name]||String(name||'기타');
+function ledgerMergeEntries(a,b,limit=40){
+ const records=new Map();
+ for(const r of [...a,...b]){const key=r.id||[r.t,r.a,r.k,r.who||''].join('|');records.set(key,r);}
+ return [...records.values()].sort((a,b)=>Number(b.t)-Number(a.t)).slice(0,limit);
+}
+function ledgerRebaseEntries(live,before,after){
+ const base=new Map(before.filter(r=>r.id).map(r=>[r.id,r])),remote=new Map(live.filter(r=>r.id).map(r=>[r.id,r]));
+ return ledgerMergeEntries(live,after.map(r=>{
+  const a=base.get(r.id),b=remote.get(r.id);
+  return a&&b&&r.src!=='server'?{...r,a:Number(b.a)+(Number(r.a)-Number(a.a)),t:Math.max(Number(b.t),Number(r.t))}:r;
+ }));
+}
 /* 한 줄 적기. 같은 항목이 잇따르면 합쳐서 목록이 길어지지 않게 합니다. */
 function ledgerPush(amount,label){
  amount=Math.round(Number(amount)||0);
  if(!amount||typeof S==='undefined'||!S)return;
  if(!Array.isArray(S.ledger))S.ledger=[];
  const now=Date.now(),top=S.ledger[0];
- if(top&&top.k===label&&(amount>0)===(Number(top.a)>0)&&now-Number(top.t)<LEDGER_MERGE_MS){
+ if(top&&top.id&&top.src!=='server'&&top.k===label&&(amount>0)===(Number(top.a)>0)&&now-Number(top.t)<LEDGER_MERGE_MS){
   top.a=Number(top.a)+amount;top.t=now;return;
  }
- S.ledger.unshift({t:now,a:amount,k:String(label).slice(0,24)});
+ S.ledger.unshift({id:'local-'+now+'-'+Math.random().toString(36).slice(2),t:now,a:amount,k:String(label).slice(0,24)});
  if(S.ledger.length>LEDGER_MAX)S.ledger.length=LEDGER_MAX;
 }
 /* 행동 하나가 륜을 얼마나 쓰고 벌었는지 잽니다.
@@ -606,6 +619,8 @@ function ledgerPush(amount,label){
    시계(tick)는 이 바깥에서 돌기 때문에 의뢰 진행 보상이 섞이지 않습니다. */
 function ledgerMeasure(name,run){
  if(typeof S==='undefined'||!S)return run();
+ if(LEDGER.measuring||(name==='payPairRent'&&typeof active==='function'&&active()))return run();
+ LEDGER.measuring=true;
  const label=ledgerLabel(name),before=Number(S.rin)||0;
  const prevLabel=LEDGER.label,prevIncome=LEDGER.income;
  LEDGER.label=label;LEDGER.income=0;
@@ -619,7 +634,7 @@ function ledgerMeasure(name,run){
    // 공동 플레이 중에는 거래가 끝날 때 통째로 저장되므로 건드리지 않습니다.
    if(typeof PJ!=='undefined'&&!PJ.depth&&typeof save==='function')try{save();}catch(_){}
   }
-  LEDGER.label=prevLabel;LEDGER.income=prevIncome;
+  LEDGER.label=prevLabel;LEDGER.income=prevIncome;LEDGER.measuring=false;
  };
  let out;
  try{ out=run(); }
@@ -819,13 +834,14 @@ document.addEventListener('visibilitychange',()=>{
    파트너 기록은 서버의 pp_peer가 'ledger'를 내려 줄 때만 들어옵니다. */
 function ledgerRows(){
  const rows=(Array.isArray(S.ledger)?S.ledger:[])
-   .map(e=>({t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
+   .map(e=>({id:e.id,src:e.src,t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
              who:S.name||'나',color:S.color||'var(--gold)',me:true}));
  const peer=PJ.snapshot?.peer;
  if(Array.isArray(peer?.ledger))for(const e of peer.ledger)
-   rows.push({t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
+   rows.push({id:e.id,src:e.src,t:Number(e.t)||0,a:Number(e.a)||0,k:String(e.k||'기타'),
               who:peer.name||'파트너',color:peer.color||'var(--violet)',me:false});
- return rows.sort((a,b)=>b.t-a.t);
+ const server=typeof ACCT!=='undefined'&&window.LEDGER_SERVER_OWNER===ACCT.id?window.LEDGER_SERVER_ROWS||[]:[];
+ return ledgerMergeEntries(rows,server,80);
 }
 /* 의뢰 진행 보상은 시계가 돌 때 들어오므로 따로 이름을 붙입니다. */
 const ledgerTick=tick;
@@ -1085,13 +1101,27 @@ if(ledgerMarketApply)marketApplyInventory=function(inv){
   window.PAIR_PLAY.auctionSync().catch(e=>toast('공동 지갑 갱신 대기 · '+auctionMessage(e),'bad'));
   return;
  }
- const before=Number(S?.rin)||0;
- const r=ledgerMarketApply.apply(this,arguments);
- const diff=(Number(S?.rin)||0)-before;
- if(diff)LEDGER_API.push(diff,'중개소');
- return r;
+ // Authoritative money changes are recorded by the server, not by a refresh.
+ return ledgerMarketApply.apply(this,arguments);
 };
 
+window.LEDGER_SERVER_ROWS=[];
+const LEDGER_SYNC={at:0,busy:false,error:''};
+async function ledgerServerRefresh(){
+ if(typeof ACCT==='undefined'||!ACCT.id)return;
+ if(window.LEDGER_SERVER_OWNER!==ACCT.id){window.LEDGER_SERVER_OWNER=ACCT.id;window.LEDGER_SERVER_ROWS=[];LEDGER_SYNC.at=0;LEDGER_SYNC.error='';}
+ if(LEDGER_SYNC.busy||Date.now()-LEDGER_SYNC.at<10000)return;
+ LEDGER_SYNC.busy=true;LEDGER_SYNC.at=Date.now();const account=ACCT.id;
+ try{
+  const r=await acctFetch('rpc/rin_ledger_snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_user:account,p_token:ACCT.tok})});
+  if(ACCT.id!==account)return;
+  if(!r?.ok||!Array.isArray(r.rows))throw Error('기록 확인 대기');
+  const rows=r.rows.filter(r=>r.src==='server'),changed=!!LEDGER_SYNC.error||JSON.stringify(rows)!==JSON.stringify(window.LEDGER_SERVER_ROWS);
+  window.LEDGER_SERVER_ROWS=rows;LEDGER_SYNC.error='';if(changed&&VIEW==='ledger')renderMain(true);
+ }catch(e){if(ACCT.id===account){const first=!LEDGER_SYNC.error;LEDGER_SYNC.error='서버 거래 기록을 아직 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.';if(first&&VIEW==='ledger')renderMain(true);}}
+ finally{LEDGER_SYNC.busy=false;}
+}
+setInterval(()=>{if(typeof VIEW!=='undefined'&&VIEW==='ledger'&&!document.hidden)ledgerServerRefresh();},10000);
 /* ── 보여 주기 ────────────────────────────────── */
 function ledgerSince(rows,from){
  let inc=0,out=0;
@@ -1133,6 +1163,7 @@ function ledgerVisibleRows(rows,includeType=true){
  return rows.filter(r=>r.t>=from&&(LEDGER_VIEW.who==='all'||(LEDGER_VIEW.who==='me'?r.me:!r.me))&&(!includeType||LEDGER_VIEW.type==='all'||(LEDGER_VIEW.type==='in'?r.a>0:r.a<0)));
 }
 if(typeof VIEWS!=='undefined')VIEWS.ledger=()=>{
+ ledgerServerRefresh();
  const rows=LEDGER_API.rows(),peer=window.PAIR_PLAY?.snapshot?.peer,paired=!!peer;
  if(!paired)LEDGER_VIEW.who='all';
  const base=ledgerVisibleRows(rows,false),shown=ledgerVisibleRows(rows),totals=ledgerSince(base,0),net=totals.inc-totals.out;
@@ -1146,6 +1177,7 @@ if(typeof VIEWS!=='undefined')VIEWS.ledger=()=>{
  };
  for(const r of shown){if(group.length&&ledgerDayKey(group[0].t)!==ledgerDayKey(r.t)){flush();group=[];}group.push(r);}flush();
  return head('수입과 지출을 한눈에','용돈 기입장',`${shown.length}건`)+`<div class="ledger-page">
+ ${LEDGER_SYNC.error?`<p class="ledger-scope-note">${esc(LEDGER_SYNC.error)}</p>`:''}
  <section class="card pad ledger-wallet"><div><div class="ledger-eyebrow">${paired?'함께 쓰는 공동 지갑':'나의 지갑'}</div><div class="ledger-wallet-value">${ic('coin',22)} ${nf(Number(S.rin)||0)}<small>륜</small></div><p>${paired?'두 사람의 기록을 함께 살펴보세요.':'들어오고 나간 륜을 차근차근 살펴보세요.'}</p></div><span class="ledger-wallet-mark" aria-hidden="true">${ic('coin',48)}</span></section>
  <section class="card pad ledger-toolbar" aria-label="기입장 필터"><div class="ledger-filter-row"><span>기간</span><div class="row">${buttons('period',[['all','전체'],['today','오늘'],['week','최근 7일']])}</div></div><div class="ledger-filter-row"><span>내역</span><div class="row">${buttons('type',[['all','전체'],['in','수입'],['out','지출']])}</div></div>${paired?`<div class="ledger-filter-row"><span>사용자</span><div class="row">${buttons('who',[['all','함께'],['me','나'],['peer','파트너']])}</div></div>`:''}</section>
  <div class="ledger-summary-heading"><b>${periodName} 요약</b><span>선택한 기간·사용자 기준</span></div>
