@@ -565,7 +565,7 @@ const LEDGER_LABELS={
  craftB:'제작', craftBMax:'제작', cook:'조리', brew:'양조',
  eat:'식사', drink:'음용', drinkPotion:'환약', usePotion:'환약', useItem:'물품 사용',
  farmSeedBuy11:'씨앗 구입', farmFertiliserBuy11:'비료 구입',
- farmFertiliserCraft11:'비료 제작', farmFertiliserApply11:'비료 사용',
+ farmFertiliserCraft11:'비료 제작', farmFertiliserApply11:'비료 사용', farmFertiliserApplyAll11:'비료 일괄 사용',
  plant:'파종', plantAll:'파종', water:'물주기', waterAll:'물주기',
  harvest:'수확', harvestAll:'수확', deliverOrder:'납품',
  joinClub:'동아리 가입', clubAttend:'동아리 출석', clubDonate:'동아리 기부', clubBless:'동아리 축복',
@@ -629,7 +629,7 @@ function ledgerMeasure(name,run){
  return out;
 }
 // Resource-changing clicks are serialized. Nested game functions stay synchronous.
-const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','reforgeApply','reforgeLock','talismanExchange','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto','yowaBuySpecial'];
+const actions=['startLesson','quickLesson','stopLesson','balanceLessonQueue','startStudy','cutStudy','cancelStudy','readBook','takeExam','examPractice','runQuest','startRun','runReturn','runClear','climbTower','climbGuard','hitBoss','arenaGo','balanceClaimBoss','rest','buy','useItem','martBuy','exchangeMark','festivalExchange','openBasket','booth','fishScoop','fishStop','fishCast','fishHook','farmSeedBuy11','farmFertiliserBuy11','farmFertiliserCraft11','farmFertiliserApply11','farmFertiliserApplyAll11','plant','plantAll','water','waterAll','harvest','harvestAll','deliverOrder','cook','eat','brew','drink','drinkPotion','usePotion','craftB','craftBMax','equip','unequip','equipBest','unequipAll','reforgeApply','reforgeLock','talismanExchange','enhance','sellGear','dismantle','bulkDo','alloc','autoAlloc','resetAlloc','setTend','buildHome','balanceCollectLoot','joinClub','clubAttend','clubDonate','clubBless','startOuting','outChoose','takeSouv','takeFestSouv','chooseSouv','readStory','takeTea','aucBid','buyMerch','buyMisc','saveMe','setHall','moveHall','toggleRentAuto','yowaBuySpecial'];
 for(const name of actions){const f=window[name];if(typeof f!=='function')continue;if(name==='fishHook')fishingHook=f;window[name]=function(...args){
  if(PJ.depth)return f.apply(this,args);
  if(!active()&&window.CLUB_INVENTORY_TASK)return window.CLUB_INVENTORY_TASK.then(()=>f.apply(this,args));

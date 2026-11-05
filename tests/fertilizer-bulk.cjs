@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync('community.js','utf8'),coop=fs.readFileSync('coop.js','utf8');
+const c={S:{rin:10000,farm:{fertilizers:{regular:0},plots:[]}},FERTILIZERS11:[{id:'regular',name:'기본 비료',price:70,time:.7}],ensureFarmItems11(){},toast(){},nf:String,esc:String,renderTop(){},renderMain(){},save(){},closeModal(){},modal(t,b){c.body=b;}};
+vm.createContext(c);vm.runInContext(src.slice(src.indexOf('function farmFertiliserBuy11('),src.indexOf('function fertYield11(')),c);
+c.farmFertiliserBuy11('regular',5);assert.equal(c.S.rin,9650);assert.equal(c.S.farm.fertilizers.regular,5);
+for(const n of [0,-1,1.5,100,NaN,'5'])c.farmFertiliserBuy11('regular',n);assert.equal(c.S.rin,9650);
+c.S.rin=69;c.farmFertiliserBuy11('regular',1);assert.equal(c.S.farm.fertilizers.regular,5);
+c.S.farm.plots=[{left:100,fert:false},null,{left:0,fert:false},{left:100,fert:true},{left:100,fert:false},{left:100,fert:false}];c.S.farm.fertilizers.regular=2;
+c.farmFertiliserAllChoose11();assert.match(c.body,/3칸/);assert.match(c.body,/2칸에 주기/);
+c.farmFertiliserApplyAll11('regular');assert.equal(c.S.farm.fertilizers.regular,0);assert.equal(c.S.farm.plots[0].left,70);assert.equal(c.S.farm.plots[4].left,70);assert.equal(c.S.farm.plots[5].left,100);assert.equal(c.S.farm.plots[2].fert,false);assert.equal(c.S.farm.plots[3].left,100);
+c.farmFertiliserApplyAll11('regular');assert.equal(c.S.farm.plots[5].left,100);
+c.S.farm.fertilizers.regular=9;c.farmFertiliserApplyAll11('regular');assert.equal(c.S.farm.fertilizers.regular,8);assert.equal(c.S.farm.plots[5].left,70);assert.equal(c.S.farm.plots[0].left,70);
+assert.match(coop,/'farmFertiliserApplyAll11','plant'/);assert.match(src,/farmFertiliserApplyAll11'\]\)/);assert.match(src,/모두 비료 주기<\/button>/);assert.match(src,/farmFertiliserBuy11\('\$\{f.id\}',5\)/);
+console.log('PASS: five-pack cost/quantity, invalid quantities, insufficient funds, eligibility, partial stock in plot order, no repeat application, shared-wallet and notification registration');

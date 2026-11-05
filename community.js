@@ -2548,16 +2548,18 @@ function fertiliserShop11(){
  <div class="grid g3">${FERTILIZERS11.map(f=>`<div class="sub">
  <div class="spread"><b>${esc(f.name)}</b><span class="tag">보유 ${S.farm.fertilizers[f.id]||0}</span></div>
  <div class="tiny muted" style="margin:6px 0">${esc(f.desc)}</div>
- <div class="spread"><b style="color:var(--gold)">${nf(f.price)}륜</b><button class="btn sm pri" onclick="farmFertiliserBuy11('${f.id}')">구매</button></div></div>`).join('')}</div>
+ <div class="spread"><b style="color:var(--gold)">${nf(f.price)}륜</b><button class="btn sm pri" onclick="farmFertiliserBuy11('${f.id}',1)" ${S.rin<f.price?'disabled':''}>1개 구매</button></div><div class="spread" style="margin-top:6px"><b style="color:var(--gold)">${nf(f.price*5)}륜</b><button class="btn sm pri" onclick="farmFertiliserBuy11('${f.id}',5)" ${S.rin<f.price*5?'disabled':''}>5개 구매</button></div></div>`).join('')}</div>
  <div class="sub" style="margin-top:10px"><b>기본 비료 만들기</b><div class="tiny muted">뿌리 계통 부산물 2개 + 약초 계통 부산물 2개 → 기본 비료 1개</div>
  <div class="spread" style="margin-top:8px"><span class="tiny muted">보유 뿌리 ${S.mat.뿌리||0} · 약초 ${S.mat.약초||0}</span>
  <button class="btn sm" onclick="farmFertiliserCraft11()" ${(S.mat.뿌리||0)>=2&&(S.mat.약초||0)>=2?'':'disabled'}>만들기</button></div></div></div>`;
 }
-function farmFertiliserBuy11(id){
+function farmFertiliserBuy11(id,amount=1){
  ensureFarmItems11();const f=FERTILIZERS11.find(f=>f.id===id);if(!f)return;
- if(S.rin<f.price){toast("륜이 부족합니다.","bad");return;}
- S.rin-=f.price;S.farm.fertilizers[id]=(S.farm.fertilizers[id]||0)+1;
- toast(`${f.name} 구매 완료`,"good");renderTop();renderMain();save();
+ if(!Number.isInteger(amount)||![1,5].includes(amount))return;
+ const total=f.price*amount;
+ if(S.rin<total){toast("륜이 부족합니다.","bad");return;}
+ S.rin-=total;S.farm.fertilizers[id]=(S.farm.fertilizers[id]||0)+amount;
+ toast(`${f.name} ${amount}개 구매 · ${nf(total)}륜`,"good");renderTop();renderMain();save();
 }
 function farmFertiliserCraft11(){
  ensureFarmItems11();if((S.mat.뿌리||0)<2||(S.mat.약초||0)<2)return;
@@ -2575,6 +2577,24 @@ function farmFertiliserApply11(i,id){
  S.farm.fertilizers[id]--;p.fert=true;p.fertType11=id;
  p.left=Math.max(1,Math.round(p.left*f.time));
  closeModal();toast(`${f.name} 사용`,"good");renderMain();save();
+}
+function farmFertiliserTargets11(){
+ return S.farm.plots.map((p,i)=>p&&!p.fert&&p.left>0?i:-1).filter(i=>i>=0);
+}
+function farmFertiliserAllChoose11(){
+ ensureFarmItems11();const targets=farmFertiliserTargets11();
+ if(!targets.length){toast('비료를 줄 수 있는 작물이 없습니다.');return;}
+ modal('모두 비료 주기',`<div class="tiny muted" style="margin-bottom:10px">자라는 작물 중 비료를 주지 않은 ${targets.length}칸이 대상입니다. 한 칸에 1개씩 사용하며, 부족하면 왼쪽 위부터 보유 수량만큼 줍니다. 빈 밭·수확 가능한 작물·이미 비료를 준 작물은 제외합니다.</div>
+ ${FERTILIZERS11.map(f=>{const have=S.farm.fertilizers[f.id]||0,count=Math.min(targets.length,have);return `<div class="spread" style="gap:8px;padding:10px 0;border-bottom:1px solid var(--line)"><div><b>${esc(f.name)}</b><div class="tiny muted">${esc(f.desc)} · 보유 ${have}개</div></div><button class="btn sm" ${count>0?'':'disabled'} onclick="farmFertiliserApplyAll11('${f.id}')">${count}칸에 주기</button></div>`;}).join('')}`);
+}
+function farmFertiliserApplyAll11(id){
+ ensureFarmItems11();const f=FERTILIZERS11.find(v=>v.id===id);if(!f)return;
+ const count=Math.min(farmFertiliserTargets11().length,Math.max(0,Math.floor(Number(S.farm.fertilizers[id])||0)));
+ if(!count){toast('비료 또는 비료를 줄 작물이 없습니다.');return;}
+ const targets=farmFertiliserTargets11().slice(0,count);
+ for(const i of targets){const p=S.farm.plots[i];p.fert=true;p.fertType11=id;p.left=Math.max(1,Math.round(p.left*f.time));}
+ S.farm.fertilizers[id]-=count;
+ closeModal();toast(`${f.name} ${count}개 사용 · ${count}칸에 비료를 주었습니다.`,'good');renderMain();save();
 }
 function fertYield11(p){const type=FERTILIZERS11.find(f=>f.id===p?.fertType11);return type?type.yield||0:0;}
 const _crossChance11=farmCrossChance;
@@ -2705,6 +2725,7 @@ const _farmView11=VIEWS.farm;
 VIEWS.farm=function(){
  ensureFarmItems11();
  let html=_farmView11();
+ html=html.replace('onclick="waterAll()">모두 물 주기</button>','onclick="waterAll()">모두 물 주기</button><button class="btn sm" onclick="farmFertiliserAllChoose11()">모두 비료 주기</button>');
  const totalFert=FERTILIZERS11.reduce((sum,f)=>sum+(S.farm.fertilizers[f.id]||0),0);
  html=html.replace(/비료 \d+개/,`비료 ${totalFert}개`);
  // Keep planting centered, but direct the existing fertilizer buttons into the selection screen.
@@ -2934,7 +2955,7 @@ farmPlantCore=function(i,id){
  return ok;
 };
 function push12FarmSave(){if(typeof acctPush==='function'&&typeof acctIn==='function'&&acctIn())acctPush(true).catch(()=>{});}
-for(const name of ['plant','plantAll','harvest','farmSeedBuy11','farmFertiliserApply11']){
+for(const name of ['plant','plantAll','harvest','farmSeedBuy11','farmFertiliserApply11','farmFertiliserApplyAll11']){
  if(typeof window[name]==='function'){
   const original=window[name];window[name]=function(...args){const result=original.apply(this,args);push12FarmSave();return result;};
  }
