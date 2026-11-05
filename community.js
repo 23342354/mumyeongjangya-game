@@ -997,10 +997,16 @@ function pairOrder(){
 }
 
 /* ───────── ② 페어 헤더 ───────── */
-const PAIRHEADW=1500, PAIRHEADH=1000, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
+const PAIRHEADW=1500, PAIRHEADH=625, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
 /* 헤더 그림과 글 목록은 저장본에 넣지 않습니다 — 커서 저장이 무거워집니다.
    서버가 원본을 갖고 있으니 켤 때마다 다시 받아 옵니다. */
-const PAIRHEAD={img:"", at:"", loading:false, forId:null};
+const PAIRHEAD={img:"", tokens:["",""], at:"", loading:false, forId:null};
+function pairHeadDecode(raw){
+ try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i]))};}catch{}
+ return {img:pairHeadImage(raw),tokens:["",""]};
+}
+function pairHeadImage(value){return typeof value==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value)?value:"";}
+function pairHeadEncode(img,tokens){return JSON.stringify({v:2,img,tokens});}
 function pairHeadState(){ return PAIRHEAD; }
 /* 바뀌었을 때만 내려받습니다 — 그림이 커서 20초마다 받으면 느려집니다 */
 let PAIRHEADAT=0;
@@ -1017,12 +1023,12 @@ function pairHeadFetch(force){
       if(!row) return false;
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
-      if(!at){ H.img=""; H.at=""; H.forId=String(P.mine.id);
+      if(!at){ H.img=""; H.tokens=["",""]; H.at=""; H.forId=String(P.mine.id);
                if(VIEW==="pairhub") renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
         const f=(full||[])[0]||{};
-        H.img=f.header||""; H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
+        Object.assign(H,pairHeadDecode(f.header||"")); H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
         if(VIEW==="pairhub") renderMain(true);
         return true;
       });
@@ -1050,21 +1056,24 @@ function pairHeadShrink(img){
   return "";
 }
 function pairHeadPick(){
+  PAIRHEADNEW=""; PAIRHEADTOKENS=[...(pairHeadState().tokens||["",""])];
   const P=pairEnsure();
   if(!P.mine){ toast("페어가 있어야 헤더를 걸 수 있습니다.","bad"); return; }
   modal("페어 헤더 걸기", `
     <div class="tiny muted" style="line-height:1.9">
-      <b>1500 × 1000</b>(가로:세로 3:2) 그림이 가장 잘 맞습니다. 다른 비율은 가운데를 기준으로 잘라 씁니다.<br>
+      <b>1500 × 625</b>(가로:세로 12:5) 그림이 가장 잘 맞습니다. 다른 비율은 가운데를 기준으로 잘라 씁니다.<br>
       건 그림은 <b>페어 두 사람에게 똑같이</b> 보입니다. 상대가 바꾸면 내 화면도 함께 바뀝니다.<br>
       <b>생성형 AI로 만든 그림, 허락받지 않은 다른 사람의 그림은 사용할 수 없습니다.</b>
       받은 그림이라면 아래에 출처를 남겨 주세요.</div>
     <label class="f" style="margin-top:12px">그림 고르기</label>
     <input type="file" id="phfile" accept="image/*" class="inp">
     <label class="f" style="margin-top:10px">출처 (선택 · 30자)</label>
-    <input class="inp" id="phsrc" maxlength="30" placeholder="예: ○○님 커미션">
+    <input class="inp" id="phsrc" maxlength="30" value="${esc(S.pairHeadSrc||'')}" placeholder="예: ○○님 커미션">
     <div id="phprev" style="margin-top:12px"></div>
+    <div class="tiny muted" style="margin-top:12px">토큰 2개 · 투명 PNG 권장. 왼쪽 아래에 나란히 표시됩니다. 배경을 바꾸지 않고 토큰만 저장할 수도 있습니다.</div>
+    <div class="pair-token-fields">${[0,1].map(i=>`<div><label class="f">토큰 ${i+1}</label><input type="file" accept="image/png,image/webp,image/jpeg" class="inp" onchange="pairTokenPick(this,${i})"><div id="phtoken${i}" class="pair-token-preview">${PAIRHEADTOKENS[i]?`<img src="${PAIRHEADTOKENS[i]}" alt="토큰 ${i+1}">`:''}</div><button class="btn sm ghost" onclick="pairTokenRemove(${i})">토큰 지우기</button></div>`).join('')}</div>
     <div class="row" style="margin-top:12px">
-      <button class="btn pri" id="phsave" disabled onclick="pairHeadSave()">걸기</button>
+      <button class="btn pri" id="phsave" onclick="pairHeadSave()">저장</button>
       ${pairHeadState().img?'<button class="btn sm red" onclick="pairHeadClear()">지금 헤더 내리기</button>':""}
     </div>`, "wide");
   const f=document.getElementById("phfile");
@@ -1090,17 +1099,29 @@ function pairHeadPick(){
     rd.readAsDataURL(file);
   };
 }
-let PAIRHEADNEW="";
+let PAIRHEADNEW="",PAIRHEADTOKENS=["",""];
+function pairTokenRemove(i){PAIRHEADTOKENS[i]="";document.getElementById('phtoken'+i).innerHTML='';}
+function pairTokenPick(input,i){
+ const file=input.files?.[0];if(!file)return;
+ if(file.size>14*1024*1024){toast("토큰은 14MB 이하로 올려 주세요.","bad");return;}
+ const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{
+  let url='';for(const size of [480,360,240,160]){const scale=Math.min(1,size/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);url=canvas.toDataURL('image/png');if(url.length<180000)break;}
+  if(url.length>=180000){toast("더 작은 토큰을 선택해 주세요.","bad");return;}
+  PAIRHEADTOKENS[i]=url;document.getElementById('phtoken'+i).innerHTML=`<img src="${url}" alt="토큰 ${i+1}">`;
+ };img.onerror=()=>toast("토큰을 읽지 못했습니다.","bad");img.src=reader.result;};reader.readAsDataURL(file);
+}
 function pairHeadSave(){
   const P=pairEnsure();
-  if(!P.mine || !PAIRHEADNEW) return;
+  if(!P.mine) return;
+  const image=PAIRHEADNEW||pairHeadState().img;
+  const tokens=[...PAIRHEADTOKENS];
   const src=(document.getElementById("phsrc")||{}).value||"";
   const at=new Date().toISOString();
   const btn=document.getElementById("phsave"); if(btn) btn.disabled=true;
-  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:PAIRHEADNEW, header_at:at},"return=minimal")
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:pairHeadEncode(image,tokens), header_at:at},"return=minimal")
     .then(()=>{
       const H=pairHeadState();
-      H.img=PAIRHEADNEW; H.at=at; H.forId=String(P.mine.id);
+      H.img=image; H.tokens=tokens; H.at=at; H.forId=String(P.mine.id);
       S.pairHeadSrc=src.trim().slice(0,30);
       PAIRHEADNEW="";
       closeModal(); renderMain(true); save();
@@ -1115,52 +1136,24 @@ function pairHeadSave(){
 function pairHeadClear(){
   const P=pairEnsure(); if(!P.mine) return;
   if(!confirm("헤더를 내릴까요? 두 사람 화면에서 모두 사라집니다.")) return;
-  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:null, header_at:null},"return=minimal")
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:pairHeadEncode("",pairHeadState().tokens||["",""]), header_at:new Date().toISOString()},"return=minimal")
     .then(()=>{ const H=pairHeadState(); H.img=""; H.at=""; closeModal(); renderMain(true);
       toast("헤더를 내렸습니다."); })
     .catch(()=>toast("내리지 못했습니다.","bad"));
 }
-/* 헤더 카드 — 그림 · 페어명 · 장인/무기 순서의 두 사람 */
+/* 헤더 배경 위에 토큰 두 개와 함께 쓰는 페어명만 표시합니다. */
 function pairHeadHTML(){
-  const P=pairEnsure();
-  if(!sbOn() || !P.mine) return "";
-  const H=pairHeadState();
-  const shared=(typeof SOCIAL!=="undefined") && SOCIAL.pairs.find(r=>String(r.id)===String(P.mine.id));
-  const title=(shared&&shared.pair_name)||"";
-  const people=pairOrder();
-  const lineTag=p=>/장인/.test(p.line||"") ? "장인" : /무기/.test(p.line||"") ? "마무기" : (p.line||"");
-  return `<div class="card" style="margin-bottom:14px;overflow:hidden;border-color:var(--gold2);padding:0">
-    <div style="position:relative;width:100%;aspect-ratio:3/2;max-height:460px;background:var(--s1)">
-      ${H.img
-        ? `<img src="${H.img}" alt="페어 헤더" style="width:100%;height:100%;object-fit:cover;display:block">`
-        : `<div style="width:100%;height:100%;display:grid;place-items:center">
-             <div class="tiny muted" style="text-align:center;line-height:2">
-               ${ic("camera",22)}<br>아직 헤더가 없습니다<br>
-               <span style="opacity:.75">1500 × 1000 그림을 걸어 보세요</span></div></div>`}
-      <div style="position:absolute;inset:auto 0 0 0;height:62%;pointer-events:none;
-        background:linear-gradient(180deg,transparent 0%,var(--cardB) 48%,var(--cardA) 62%,var(--cardA) 100%)"></div>
-      <div style="position:absolute;inset:auto 0 16px 0;text-align:center">
-        <div style="font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--tx)">
-          ${esc(title||"이름 없는 페어")}</div>
-        <div class="tiny muted" style="letter-spacing:.5em;margin:6px 0 10px">· · ·</div>
-        <div class="row" style="justify-content:center;gap:26px;align-items:flex-start">
-          ${people.map(p=>`<div style="text-align:center;width:104px">
-            <div style="display:flex;justify-content:center">${faceHTML(p,64)}</div>
-            <div class="tag" style="margin-top:7px;display:inline-block;max-width:100%;overflow:hidden;
-              text-overflow:ellipsis;white-space:nowrap">${esc(p.name||"")}</div>
-            <div class="tiny muted" style="margin-top:3px">${esc(lineTag(p))}</div>
-          </div>`).join("")}
-        </div>
-      </div>
-    </div>
-    <div class="spread" style="padding:10px 14px">
-      <span class="tiny muted">${H.loading?"헤더를 불러오는 중입니다":
-        S.pairHeadSrc?`두상·헤더 출처 — ${esc(S.pairHeadSrc)}`:"헤더는 두 사람이 함께 씁니다"}</span>
-      <div class="row">
-        <button class="btn sm ghost" onclick="pairHeadPick()">${H.img?"헤더 바꾸기":"헤더 걸기"}</button>
-        <button class="btn sm ghost" onclick="pairHeadFetch(true)">새로 고침</button></div>
-    </div>
-  </div>`;
+ const P=pairEnsure();if(!sbOn()||!P.mine)return '';
+ const H=pairHeadState(),shared=SOCIAL.pairs.find(r=>String(r.id)===String(P.mine.id));
+ return `<div class="card pair-scene-card">
+  <div class="pair-scene">
+   ${H.img?`<img class="pair-scene-bg" src="${H.img}" alt="페어 헤더">`:'<div class="pair-scene-empty tiny muted">헤더 설정에서 배경과 토큰 2개를 올려 보세요 · 권장 1500 × 625</div>'}
+   <div class="pair-scene-shade"></div>
+   <div class="pair-scene-tokens">${[0,1].map(i=>H.tokens?.[i]?`<img src="${H.tokens[i]}" alt="페어 토큰 ${i+1}">`:'').join('')}</div>
+   <div class="pair-scene-name">${esc(shared?.pair_name||'이름 없는 페어')}</div>
+  </div>
+  <div class="spread pair-scene-tools"><span class="tiny muted">${H.loading?'헤더를 불러오는 중입니다':S.pairHeadSrc?`헤더 출처 — ${esc(S.pairHeadSrc)}`:'배경과 토큰은 두 사람이 함께 씁니다'}</span><div class="row"><button class="btn sm ghost" onclick="pairHeadPick()">헤더·토큰 설정</button><button class="btn sm ghost" onclick="pairHeadFetch(true)">새로 고침</button></div></div>
+ </div>`;
 }
 
 /* ───────── ③ 페어 전용 게시판 ───────── */

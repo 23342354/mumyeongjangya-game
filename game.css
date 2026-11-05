@@ -1263,3 +1263,16 @@ body.auth-gate #mobile-chat-toggle{
 .pair-settings-row .inp{width:100%;min-width:0}
 .pair-settings-row .spread{flex-wrap:wrap;gap:7px}
 @media(max-width:900px){.pair-settings-row{grid-template-columns:repeat(3,minmax(240px,1fr));overflow-x:auto}}
+
+.pair-scene-card{padding:0;overflow:hidden;margin-bottom:14px;border-color:var(--gold2)}
+.pair-scene{position:relative;aspect-ratio:12/5;isolation:isolate;background:var(--s1)}
+.pair-scene-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pair-scene-shade{position:absolute;inset:35% 0 0;background:linear-gradient(transparent,#090510a6);pointer-events:none}
+.pair-scene-empty{position:absolute;inset:15% 8% auto;text-align:center}
+.pair-scene-tokens{position:absolute;left:4%;bottom:4%;width:45%;height:64%;display:flex;align-items:flex-end;gap:2%;pointer-events:none}
+.pair-scene-tokens img{width:49%;height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 5px 4px #0006)}
+.pair-scene-name{position:absolute;right:4%;bottom:9%;max-width:47%;text-align:right;font-family:Georgia,serif;font-size:clamp(18px,3.4vw,42px);line-height:1.2;color:#fff4e3;text-shadow:0 2px 8px #000a;overflow-wrap:anywhere}
+.pair-scene-tools{padding:10px 14px;gap:8px;flex-wrap:wrap}
+.pair-token-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
+.pair-token-fields>div{min-width:0}.pair-token-preview{height:120px;margin:8px 0;background:var(--s0);border-radius:8px}.pair-token-preview img{width:100%;height:100%;object-fit:contain}
+@media(max-width:600px){.pair-scene-name{font-size:clamp(15px,4vw,24px)}.pair-scene-tools{padding:8px}.pair-scene-empty{font-size:9px}.pair-token-fields input{font-size:11px}}
