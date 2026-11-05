@@ -1289,3 +1289,13 @@ body.auth-gate #mobile-chat-toggle{
  #navcol{position:sticky;top:var(--chat-top,112px);align-self:start;max-height:calc(100dvh - var(--chat-top,112px) - 16px);overflow-y:auto;overscroll-behavior-y:contain;min-height:0}
  #navcol>.card:first-child{max-height:none;overflow:visible}
 }
+
+/* Release notes share the compact top action row. */
+.act-updates{position:relative}
+.update-notice-dot{position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--s0)}
+.update-notice{padding:13px 0;border-bottom:1px solid var(--line)}
+.update-notice:first-child{padding-top:0}
+.update-notice>.spread{gap:8px;align-items:flex-start;flex-wrap:wrap}
+.update-notice ul{margin:9px 0 0;padding-left:19px;font-size:13px;line-height:1.8}
+.update-notice li+li{margin-top:5px}
+@media(max-width:380px){body.mobile-game:not(.top-open) .tb-mini .tb-pips{display:none}body.mobile-game:not(.top-open) .tb-mini{padding-left:7px;padding-right:7px}}

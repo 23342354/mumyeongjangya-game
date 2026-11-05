@@ -547,6 +547,23 @@ function pollAwake(){
    운영진이 게임 파일을 새로 올리면, 열어 둔 창은 예전 코드를 그대로 쓰고 있습니다.
    파일의 서버 표식(ETag / 수정 시각)을 5분마다 확인해, 바뀌었으면 띠를 띄웁니다.
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
+/* User-facing release notices. Keep newest first; update with every shipped request. */
+const UPDATE_NOTICES=[
+ {id:'20261105-update-notices',date:'2026-11-05',title:'업데이트 안내가 생겼습니다',items:['상단 두루마리 아이콘에서 최근 변경 사항을 확인할 수 있습니다.','새 안내가 올라오면 아이콘에 점이 표시됩니다. 안내를 열면 확인 표시가 사라집니다.']},
+ {id:'20261105-material-exploration',date:'2026-11-05',title:'물약 재료를 모으는 재료 탐사',items:['공방·생활 → 재료 탐사에서 조제 재료 9종의 산지를 선택할 수 있습니다.','1·3·6·12시간 탐사하며 매시간 재료가 누적됩니다. 오프라인 중에도 선택한 시간까지 모입니다.','완료된 시간만큼 중간 수령할 수 있으며, 수업·의뢰와 병행할 수 있습니다.']},
+ {id:'20261105-support-visibility',date:'2026-11-05',title:'건의함 공개·비공개 선택',items:['글을 작성할 때 공개 또는 비공개를 선택할 수 있습니다.','공개 글과 답변은 모든 로그인 사용자가, 비공개 글과 답변은 작성자와 운영진만 볼 수 있습니다.','열람코드 대신 로그인한 @사용자ID로 작성자를 확인합니다. 운영진이 새 문의함 서버 업데이트를 적용한 뒤 이용할 수 있습니다.']},
+ {id:'20261105-equipment-farm',date:'2026-11-05',title:'휘장 보관과 생활 편의 개선',items:['법구 화면에 휘장 착용칸과 보유 목록을 추가했습니다. 보유 휘장 중 1개의 효과만 적용됩니다.','비료 5개 구매와 같은 종류의 비료를 한꺼번에 주는 기능을 추가했습니다.','PC 왼쪽 메뉴를 고정하고, 다른 큰 메뉴를 열면 기존 세부 메뉴가 접히도록 바꿨습니다.','새 법구는 표시 레벨과 기본 수치 계산에 같은 레벨을 사용합니다. 기존 보유 장비의 수치는 유지합니다.']}
+];
+function updateNoticeStorageKey(){
+ let actor='local';try{actor=(typeof ACCT!=='undefined'&&ACCT?.id)||S?.sb?.id||'local';}catch(_){}
+ return 'mmjy:update-notice-seen:'+actor;
+}
+function updateNoticeUnread(){try{return !!UPDATE_NOTICES.length&&localStorage.getItem(updateNoticeStorageKey())!==UPDATE_NOTICES[0].id;}catch(_){return false;}}
+function openUpdateNotices(){
+ if(UPDATE_NOTICES.length)try{localStorage.setItem(updateNoticeStorageKey(),UPDATE_NOTICES[0].id);}catch(_){}
+ modal('업데이트 안내',`<div class="tiny muted" style="margin-bottom:12px">최근 변경 사항부터 표시합니다.</div><div class="update-notice-list">${UPDATE_NOTICES.map(n=>`<article class="update-notice"><div class="spread"><b>${esc(n.title)}</b><time class="tiny muted" datetime="${esc(n.date)}">${esc(n.date)}</time></div><ul>${n.items.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></article>`).join('')||'<p>등록된 안내가 없습니다.</p>'}</div>`);
+ renderTop();
+}
 const UPDFILES=["index.html", "game.css", "game.js", "config.js", "notifications.js", "gameplay.js", "social.js", "community.js", "visuals.js", "coop.js", "notification-worker.js", "manifest.webmanifest"];
 let UPDSTAMP=null, UPDSHOWN=false;
 function updStamps(){
@@ -836,6 +853,7 @@ function renderTop(){
     </div>
     ${topBrief()}
     <div class="top-actions">
+      <button type="button" class="btn sm ghost act-updates" onclick="openUpdateNotices()" title="업데이트 안내" aria-label="업데이트 안내${updateNoticeUnread()?' · 새 소식 있음':''}">${ic("scroll",15)}${updateNoticeUnread()?'<span class="update-notice-dot" aria-hidden="true"></span>':''}</button>
       <button class="btn sm ghost act-me" onclick="openMe()" title="내 정보">${ic("user",15)}</button>
       <button class="btn sm ghost act-theme" onclick="toggleTheme()" title="${THEME==="light"?"어두운 테마로":"밝은 테마로"}">${ic(THEME==="light"?"moonDark":"lens",15)}</button>
       <button class="btn sm ghost act-settings" onclick="openSettings()" title="설정">${ic("gear",15)}</button>
