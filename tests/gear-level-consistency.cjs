@@ -1,0 +1,5 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');const source=fs.readFileSync('gameplay.js','utf8');
+const c={Math,S:{lvl:53,gid:1},SLOTS:[{k:'cap',st:'men'}],PREFIX:['검증'],GEARWORD:{cap:['관']},GRADES:[{m:1,opt:0},{m:1.35,opt:1},{m:1.85,opt:2},{m:2.5,opt:3},{m:3.4,opt:4}],OPTS:[],pick:a=>a[0],clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),lootQualityChance:()=>0};vm.createContext(c);vm.runInContext(source.slice(source.indexOf('function mkGear('),source.indexOf('function gearScore(')),c);
+for(const requested of [1,53,54,99,220,NaN]){let last=0;for(let g=0;g<5;g++){const it=c.mkGear(requested,g);assert.ok(it.lv<=53);assert.equal(it.main.v,Math.max(1,Math.round((.8+it.lv*.085)*c.GRADES[g].m)));assert.ok(it.main.v>=last);last=it.main.v;assert.equal(it.enh,0);}}
+assert.equal(c.mkGear(220,2).main.v,10);assert.equal(c.mkGear(99,3).main.v,13);
+console.log('PASS: same displayed level always drives base stat, high generated levels cannot inflate stats, grade progression, no forced changes to existing items');

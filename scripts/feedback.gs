@@ -7,7 +7,7 @@
  */
 
 var SHEET_NAME = '건의함';
-var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변', '열람 코드 해시', '작성 계정'];
+var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변', '열람 코드 해시', '작성 계정', '전송 요청 ID'];
 
 /** 시트를 가져오고, 없으면 만들어 머리글을 넣습니다. */
 function getSheet_() {
@@ -30,6 +30,7 @@ function getSheet_() {
     sh.getRange(1, 11).setValue(HEADER[10]);
   }
   sh.getRange(1, 12).setValue(HEADER[11]);
+  sh.getRange(1, 13).setValue(HEADER[12]);
   return sh;
 }
 
@@ -92,6 +93,7 @@ function doGet(e) {
 
 /** 게임이 글을 올리거나 공감을 누를 때 */
 function doPost(e) {
+  var submissionLock=null;
   try {
     var p = JSON.parse(e.postData.contents);
     var sh = getSheet_();
@@ -115,6 +117,13 @@ function doPost(e) {
       return json_({ ok:false, error:'본인이 작성한 글만 읽을 수 있습니다. 기존 글은 운영진에게 작성자 연결을 문의해 주세요.' });
     }
 
+    if(p.action==='submission_status'){
+      var owner=accountIdentity_(p),end=sh.getLastRow();
+      if(end>1){var submitted=sh.getRange(2,1,end-1,HEADER.length).getValues();
+        for(var z=0;z<submitted.length;z++)if(String(submitted[z][11])===owner&&String(submitted[z][12])===String(p.request_id)&&p.request_id)return json_({ok:true,id:String(submitted[z][0])});
+      }
+      return json_({ok:true,id:null});
+    }
     if (p.action === 'add') {
       var title = String(p.title || '').slice(0, 80);
       var body  = String(p.body  || '').slice(0, 3000);
@@ -122,16 +131,16 @@ function doPost(e) {
       var actor = accountIdentity_(p);
       var receiptHash = '';
 
-      // 같은 사람이 연달아 올리는 것을 1분에 한 번으로 제한합니다.
-      var last = sh.getLastRow();
-      if (last > 1) {
-        var recent = sh.getRange(Math.max(2, last - 4), 1, Math.min(5, last - 1), 3).getValues();
-        var now = new Date().getTime();
-        for (var i = 0; i < recent.length; i++) {
-          var t = recent[i][1] instanceof Date ? recent[i][1].getTime() : 0;
-          if (String(recent[i][2]) === String(p.name || '') && now - t < 60 * 1000) {
-            return json_({ ok: false, error: '조금 뒤에 다시 올려 주세요 (1분에 한 번)' });
-          }
+      if(!/^[A-Za-z0-9_-]{8,160}$/.test(String(p.request_id||'')))return json_({ok:false,error:'전송 요청 정보가 올바르지 않습니다. 페이지를 새로고침해 주세요.'});
+      submissionLock=LockService.getScriptLock();submissionLock.waitLock(20000);
+      var last=sh.getLastRow(),now=Date.now();
+      if(last>1){
+        var recent=sh.getRange(2,1,last-1,HEADER.length).getValues();
+        for(var i=recent.length-1;i>=0;i--){var r=recent[i];
+          if(String(r[11])!==actor)continue;
+          var sameRequest=String(r[12])===String(p.request_id);
+          var sameDraft=r[1] instanceof Date&&now-r[1].getTime()<60000&&String(r[4])===title&&String(r[5])===body&&String(r[3])===String(p.cat||'기타')&&Boolean(r[6])===Boolean(p.secret);
+          if(sameRequest||sameDraft)return json_({ok:true,id:String(r[0]),replayed:true});
         }
       }
 
@@ -147,7 +156,7 @@ function doPost(e) {
         0,
         '접수',
         '',
-        receiptHash, actor
+        receiptHash, actor, String(p.request_id)
       ]);
       return json_({ ok: true, id:issuedId });
     }
@@ -170,6 +179,8 @@ function doPost(e) {
     return json_({ ok: false, error: '알 수 없는 요청입니다' });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
+  } finally {
+    if(submissionLock)submissionLock.releaseLock();
   }
 }
 

@@ -404,12 +404,13 @@ function mkGear(lv,gradeHint,fromLoot=false){
   g=clamp(g,0,4);
   if(fromLoot&&gradeHint===undefined&&g<4&&Math.random()<lootQualityChance()) g++;
   const G=GRADES[g];
-  const base=Math.max(1,Math.round((0.8+lv*.085)*G.m));
+  const itemLevel=Math.max(1,Math.min(Math.floor(Number(lv)||1),Math.max(1,Number(S.lvl)||1)));
+  const base=Math.max(1,Math.round((0.8+itemLevel*.085)*G.m));
   const opts=[];
   const pool=[...OPTS].sort(()=>Math.random()-.5).slice(0,G.opt);
   pool.forEach(o=>opts.push({k:o.k,n:o.n,v:+(rnd(o.v[0]*10,o.v[1]*10)/10*(1+g*.12)).toFixed(1)}));
   return {id:S.gid++, slot:slot.k, name:`${pick(PREFIX)} ${pick(GEARWORD[slot.k])}`,
-    grade:g, lv:Math.max(1,Math.min(lv,S.lvl)), enh:0, main:{st:slot.st,v:base}, opts, isNew:true};
+    grade:g, lv:itemLevel, statFormulaVersion:2, enh:0, main:{st:slot.st,v:base}, opts, isNew:true};
 }
 function gearScore(it){
   let p=it.main.v*900+it.enh*210*GRADES[it.grade].m;
@@ -3408,6 +3409,35 @@ function boardFetch(force){
       if(VIEW==="board") renderMain();
     });
 }
+// Reuse one request ID when the same account retries the same draft.
+let BOARD_PENDING=null,BOARD_SUBMIT_BUSY=false;
+function boardSubmissionKey(payload){
+ const fingerprint=JSON.stringify([payload.p_actor,payload.p_name??payload.name,payload.p_cat??payload.cat,payload.p_title??payload.title,payload.p_body??payload.body,!!(payload.p_secret??payload.secret)]);
+ if(!BOARD_PENDING||BOARD_PENDING.fingerprint!==fingerprint)BOARD_PENDING={fingerprint,id:window.crypto?.randomUUID?.()||'board-'+Date.now()+'-'+Math.random().toString(36).slice(2)};
+ return BOARD_PENDING.id;
+}
+async function boardDeliver(payload,isSheet){
+ if(BOARD_SUBMIT_BUSY)throw Error('글을 전송하고 있습니다. 잠시 기다려 주세요.');
+ const request=boardSubmissionKey(payload);BOARD_SUBMIT_BUSY=true;
+ try{
+  let result;
+  try{
+   result=isSheet?await boardSend({...payload,request_id:request}):await sbSend('POST','rpc/submit_account_suggestion_once',{...payload,p_request:request});
+   const id=isSheet?(result?.ok?result.id:null):result;
+   if(id!==undefined&&id!==null&&id!=='')return id;
+   throw Error(isSheet?(result?.error||'서버 응답에서 글 번호를 확인하지 못했습니다.'):'서버 응답에서 글 번호를 확인하지 못했습니다.');
+  }catch(error){
+   // A lost response does not mean the insert failed. Verify by request ID first.
+   try{
+    const account=boardAccountCredentials();
+    const check=isSheet?await boardSend({action:'submission_status',...account,request_id:request}):await sbSend('POST','rpc/account_suggestion_status',{...account,p_request:request});
+    const id=isSheet?(check?.ok?check.id:null):check;
+    if(id!==undefined&&id!==null&&id!=='')return id;
+   }catch(_){}
+   throw Error('등록 여부를 확인하지 못했습니다. 작성 내용은 유지됩니다. 같은 내용으로 다시 누르면 등록 여부를 재확인합니다. · '+String(error.message||error));
+  }
+ }finally{BOARD_SUBMIT_BUSY=false;}
+}
 function boardSend(payload){
   // Content-Type을 지정하지 않아 브라우저의 사전 확인 요청(preflight)을 피합니다.
   return fetch(S.board.url, {method:"POST", body:JSON.stringify(payload)})
@@ -3456,12 +3486,11 @@ function boardSubmit(){
   }
   let account;try{account=boardAccountCredentials();}catch(e){toast(e.message,"bad");return;}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  boardSend({action:"add", ...row, ...account})
-    .then(j=>{
-      if(!j||!j.ok) throw new Error(j&&j.error||"보내지 못했습니다");
+  boardDeliver({action:"add", ...row, ...account},true)
+    .then(id=>{
+      BOARD_PENDING=null;
       if(secret){
-        if(!j.id) throw Error("서버에서 글 번호를 받지 못했습니다. 운영진에게 문의해 주세요.");
-        boardPrivateSubmitted(j.id);
+        boardPrivateSubmitted(id);
       }else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
@@ -4090,10 +4119,9 @@ boardSubmit=function(){
   S.board.name=name;
   let account;try{account=boardAccountCredentials();}catch(e){toast(e.message,"bad");return;}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  sbSend("POST","rpc/submit_account_suggestion",
-    {...account,p_name:name,p_cat:cat,p_title:title,p_body:body,p_secret:secret})
+  boardDeliver({...account,p_name:name,p_cat:cat,p_title:title,p_body:body,p_secret:secret},false)
     .then(id=>{
-      if(id===undefined||id===null||id==="") throw Error("서버에서 글 번호를 받지 못했습니다.");
+      BOARD_PENDING=null;
       if(secret) boardPrivateSubmitted(id);
       else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);

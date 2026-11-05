@@ -1,0 +1,15 @@
+const {PGlite}=require('@electric-sql/pglite'),fs=require('node:fs'),assert=require('node:assert/strict');
+(async()=>{const db=new PGlite();await db.exec(`create role anon;create role authenticated;create table accounts(id text primary key,pw text);insert into accounts values('alice','secret'),('bob','secret');create table suggestions(id bigserial primary key,name text,cat text,title text,body text,secret boolean,likes int,status text,reply text,created_at timestamptz default now());`);
+const sql=fs.readFileSync('supabase/suggestion-delivery-fix.sql','utf8');await db.exec(sql);await db.exec(sql);
+const submit=async(actor,token='secret')=>(await db.query("select submit_account_suggestion($1,$2,'same name','문의','제목','비공개 본문',true) id",[actor,token])).rows[0].id;
+const read=async(actor,id,token='secret',legacy='')=>(await db.query("select * from read_account_suggestion($1,$2,$3,$4)",[actor,token,id,legacy])).rows;
+const id=await submit('alice');await db.query("update suggestions set reply='운영진 답변' where id=$1",[id]);assert.equal((await read('alice',id))[0].reply,'운영진 답변');assert.equal((await read('bob',id)).length,0);await assert.rejects(read('alice',id,'bad'));await assert.rejects(submit('alice','bad'));
+const token='a'.repeat(64);const old=(await db.query("insert into suggestions(name,body,secret,author_receipt_hash) values('same name','과거 본문',true,md5($1)) returning id",[token])).rows[0].id;
+assert.equal((await read('alice',old)).length,0);assert.equal((await read('alice',old,'secret',token))[0].body,'과거 본문');assert.equal((await read('alice',old))[0].body,'과거 본문');assert.equal((await read('bob',old,'secret',token)).length,0);
+const src=fs.readFileSync('gameplay.js','utf8');assert.doesNotMatch(src,/id="board_receipt_input"|id="board_new_receipt"/);assert.match(src,/if\(\+r.secret&&boardOn\(\)\) boardPrivateLoad\(r.id\)/);
+const once=async(req)=>(await db.query("select submit_account_suggestion_once('alice','secret','이름','문의','재전송','응답유실',true,$1) id",[req])).rows[0].id;
+const first=await once('request-test-0001');assert.equal(await once('request-test-0001'),first);assert.equal(await once('request-test-0002'),first);
+assert.equal((await db.query("select account_suggestion_status('alice','secret','request-test-0001') id")).rows[0].id,first);
+assert.equal((await db.query("select account_suggestion_status('bob','secret','request-test-0001') id")).rows[0].id,null);
+assert.equal((await db.query("select count(*)::int n from suggestions where title='재전송'")).rows[0].n,1);
+await db.close();console.log('PASS: account authentication, author-only body/reply, no nickname bypass, legacy proof binding once, cross-device account access, repeatable migration and no receipt input');})().catch(e=>{console.error(e);process.exitCode=1;});
