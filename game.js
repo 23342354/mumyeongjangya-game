@@ -1603,6 +1603,15 @@ function researchCost(r,lv){
   return {mana:Math.round(1800*Math.pow(1.115,lv)*r.mana),
     know:Math.round(70*Math.pow(1.115,lv)*r.know),minutes:Math.round(r.t*Math.pow(1.11,lv))};
 }
+function researchPeerCount(r){
+ const pair=typeof pairEnsure==="function"?pairEnsure().mine:null;
+ if(!pair)return '';
+ const play=window.PAIR_PLAY,peer=play?.ready?play.snapshot?.peer:null;
+ const value=peer?.res?.[r.id];
+ const count=Number.isFinite(value)?`${value} / ${r.max===999?'∞':r.max}`:'확인 중';
+ const name=peer?.name||'페어';
+ return `<div class="research-peer-count tiny" style="color:var(--jade);margin-top:3px">${esc(name)} · ${count}${peer?.study?.id===r.id?' · 수행 중':''}</div>`;
+}
 VIEWS.research=()=>{
   const cur=S.study?RESEARCH.find(r=>r.id===S.study.id):null;
   const curBox=cur?`
@@ -1636,7 +1645,7 @@ VIEWS.research=()=>{
     const cost=researchCost(r,lv), cm=cost.mana, ck=cost.know, tm=cost.minutes;
     const busy=!!S.study;
     return `<div class="sub ${locked?"":""}" style="${locked?"opacity:.45":""}">
-      <div class="spread"><h4 style="margin:0">${r.n}</h4><span class="tiny muted">${lv} / ${r.max===999?"∞":r.max}</span></div>
+      <div class="spread"><h4 style="margin:0">${r.n}</h4><div style="text-align:right"><span class="tiny muted">${lv} / ${r.max===999?"∞":r.max}</span>${researchPeerCount(r)}</div></div>
       <div class="tiny muted" style="margin:5px 0 2px">${r.e}</div>
       <div class="tiny" style="color:var(--jade)">지금 받는 효과 · ${effText(r,lv)}</div>
       ${r.id==="r1"&&lv===0?'<div class="tag g" style="margin-top:6px">입문 수행 · 시작 재화로 바로 가능</div>':""}
