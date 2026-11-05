@@ -57,11 +57,11 @@ BEGIN
   SELECT * INTO STRICT st FROM public.pair_play_state WHERE pair_id=p.id FOR UPDATE;
   reward_wallet:=jsonb_set(st.wallet,'{sari}',to_jsonb(coalesce((st.wallet->>'sari')::numeric,0)+9));
   UPDATE public.pair_play_state SET wallet=reward_wallet,revision=revision+1 WHERE pair_id=p.id;
-  UPDATE public.accounts SET save=public.pp_apply(save,reward_wallet,st.progress),
+  UPDATE public.accounts SET save=public.pp_apply(save,reward_wallet,st.progress)||jsonb_build_object('marketRev',market_rev+1),
    pair_play_rev=pair_play_rev+1,market_rev=market_rev+1
   WHERE id IN(p.from_id,p.to_id);
  ELSE
-  UPDATE public.accounts SET save=jsonb_set(save,'{sari}',to_jsonb(coalesce((save->>'sari')::numeric,0)+9)),
+  UPDATE public.accounts SET save=jsonb_set(save,'{sari}',to_jsonb(coalesce((save->>'sari')::numeric,0)+9))||jsonb_build_object('marketRev',market_rev+1),
    pair_play_rev=pair_play_rev+1,market_rev=market_rev+1 WHERE id=l.winner_id;
  END IF;
  RAISE NOTICE '경매 20101 수령 처리 및 사리 9개 운영 보상 완료. 페어면 공동 지갑에 9개 지급됩니다.';

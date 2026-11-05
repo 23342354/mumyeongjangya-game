@@ -44,7 +44,7 @@ function progress(){const q={...S.quests};delete q.room;delete q.pick;delete q.d
 const personalKeys=['exp','lvl','pts','gear','crest','crests','crestSeq','exploration','outing','alloc','sub','res','lesson','study','hp','sn','home','marketRev','lastReal','farm','fish','balance20','buffs','kit','hall','pairBagCap'];
 // Save changes made outside the serialized combat/shop buttons before any server refresh.
 // Each change is a small path-based delta against the last confirmed server snapshot.
-const LOCAL_TRANSIENT=new Set(['sb','pair','pairShared','pairPersonalRev','pairSoloRev','pairBagCap','lastReal','t','passNext','chatFrom',...CLIENT_KEYS]);
+const LOCAL_TRANSIENT=new Set(['marketRev','sb','pair','pairShared','pairPersonalRev','pairSoloRev','pairBagCap','lastReal','t','passNext','chatFrom',...CLIENT_KEYS]);
 const isObject=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function changes(before,after,path=[],out=[]){
