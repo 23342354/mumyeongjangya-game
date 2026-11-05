@@ -1283,3 +1283,9 @@ body.auth-gate #mobile-chat-toggle{
 .pair-font-preview{font-size:26px;margin-top:10px;padding:12px;overflow-wrap:anywhere;background:var(--s0);border-radius:8px}
 
 .roster-card[role="button"]{cursor:pointer}.roster-card[role="button"]:hover{border-color:var(--gold)}.roster-card[role="button"]:focus-visible{outline:2px solid var(--jade);outline-offset:3px}
+
+/* Keep desktop navigation reachable on long pages, with one scroll area. */
+@media(min-width:781px){
+ #navcol{position:sticky;top:var(--chat-top,112px);align-self:start;max-height:calc(100dvh - var(--chat-top,112px) - 16px);overflow-y:auto;overscroll-behavior-y:contain;min-height:0}
+ #navcol>.card:first-child{max-height:none;overflow:visible}
+}

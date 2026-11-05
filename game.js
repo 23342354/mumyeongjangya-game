@@ -911,6 +911,7 @@ function renderNav(){
   const navHost=document.getElementById("navcol");
   const priorMenu=navHost?.querySelector(":scope > .card:first-child");
   const menuScrollY=priorMenu?.scrollTop||0;
+  const navScrollY=navHost?.scrollTop||0;
   renderMobileNav();
   const hpP=S.hp, snP=S.sn;
   const navHTML=NAVDEF.map(g=>{
@@ -952,6 +953,7 @@ function renderNav(){
   </div>`;
   const refreshedMenu=navHost?.querySelector(":scope > .card:first-child");
   if(refreshedMenu && menuScrollY>0) refreshedMenu.scrollTop=menuScrollY;
+  if(navHost) navHost.scrollTop=navScrollY;
 }
 function navOpen(g){ return NAVOPEN[g.id]!==undefined ? NAVOPEN[g.id] : g.sub.some(s=>s.id===VIEW); }
 const MOBILE_GROUP_NAMES={study:"수업",war:"의뢰",gearn:"법구",craft:"공방",plaza:"광장",soc:"교류",shopn:"상점",rec:"기록"};
@@ -981,11 +983,16 @@ function toggleMobileChat(){
   b.setAttribute("aria-expanded",String(MOBILE_CHAT_OPEN));
   if(MOBILE_CHAT_OPEN) renderChat(true);
 }
-function toggleNav(id){ const g=NAVDEF.find(x=>x.id===id); NAVOPEN[id]=!navOpen(g); renderNav(); }
+function toggleNav(id){
+ const g=NAVDEF.find(x=>x.id===id);if(!g?.sub)return;
+ const opening=!navOpen(g);
+ for(const group of NAVDEF)if(group.sub)NAVOPEN[group.id]=opening&&group.id===id;
+ renderNav();
+}
 function go(v){
   VIEW=v;
   const g=NAVDEF.find(x=>x.sub&&x.sub.some(s=>s.id===v));
-  if(g) NAVOPEN[g.id]=true;
+  for(const group of NAVDEF)if(group.sub)NAVOPEN[group.id]=group===g;
   renderNav(); renderMain(); window.scrollTo({top:0,behavior:"smooth"});
 }
 
