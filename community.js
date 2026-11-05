@@ -2023,7 +2023,7 @@ VIEWS.farm=()=>{
        `<button class="btn sm ghost" ${p.watered?'disabled':''} onclick="water(${i})">물</button><button class="btn sm ghost" ${p.fert?'disabled':''} onclick="fertilize(${i})">비료</button>`}</div>
     </div>`;}).join('')}</div>
   <div class="farm-help tiny" style="margin-top:11px">작물을 상하좌우에 붙여 기르면 새로운 씨앗을 발견할 수도 있습니다. 날씨가 바뀌면 품종에 미묘한 변화가 생기기도 합니다. 씨앗 선택창에서 교배 조합과 현재 충족한 변이 조건을 확인하세요.</div>
-  <div class="farm-seedbar"><span class="tiny muted">보유 씨앗 일괄 심기</span>${FARM_NORMALS.map(c=>farmSeedButton(c)).join('')}</div>
+  <div class="farm-seedbar"><span class="tiny muted">보유 씨앗 일괄 심기 · 교배·변이 포함</span>${CROPS.filter(c=>(f.seeds[c.id]||0)>0).sort((a,b)=>Number(b.tier!=="normal")-Number(a.tier!=="normal")).map(c=>farmSeedButton(c)).join('')||'<span class="tiny muted">보유한 씨앗이 없습니다.</span>'}</div>
  </div>
  <div class="grid g2" style="gap:12px">
    <div class="card pad"><div class="spread"><div class="sect-t">오늘의 주문</div><span class="tiny muted">오늘의 지정 납품</span></div>

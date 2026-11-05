@@ -12,6 +12,8 @@ try{
  await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='';MMJY_CONFIG.supabaseKey='';S=newState();S.made=true;S.name='검증';S.t=nowMin();S.dayStamp=cal().day;boot();farmEnsure();S.farm.seeds={g1:3,g2:2};S.weather=0;S.farm.plots=Array(9).fill(null);S.farm.plots[1]={id:'g2',left:90};pickCrop(0);});
  assert.ok((await page.locator('#farm-seed-list').innerText()).includes('교배 조건 충족 · 망천연근 × 백옥무 → 홍련근 씨앗'));
  assert.ok((await page.locator('#farm-seed-list').innerText()).includes('변이 조건 충족'));
+ const seedbar=await page.evaluate(()=>{S.farm.seeds.g17=2;S.farm.seeds.g25=1;const html=VIEWS.farm();const box=document.createElement('div');box.innerHTML=html;return box.querySelector('.farm-seedbar').textContent;});
+ assert.ok(seedbar.includes('홍련근 (2)'),'crossbreed seeds appear in quick planting');assert.ok(seedbar.includes('청화연근 (1)'),'mutation seeds appear in quick planting');assert.ok(!seedbar.includes('구름감자 (0)'),'empty inventory does not clutter quick planting');
  assert.equal(await page.evaluate(()=>{S.farm.plots[1]=null;S.farm.plots[4]={id:'g2'};return farmSeedHints(FARM_CROP_BY_ID.g1,0).filter(h=>h.ready&&h.text.includes('교배')).length;}),0,'diagonals do not qualify');
  await page.locator('#farm-seed-search').fill('백옥무');assert.ok(await page.locator('.seed-pick-card').count()>0);
  await page.evaluate(()=>{closeModal();S.buffs=[];S.potion.q3=1;drink('q3');S.inv.p3=1;useItem('p3');renderTop();});
