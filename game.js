@@ -2335,7 +2335,7 @@ VIEWS.fest=()=>{
   <div class="grid g2" style="margin-bottom:14px">
     <div class="card pad">
       <div class="spread"><b>문 앞 공양 바구니</b><span class="tag ${S.fest.basket?"":"g"}">${S.fest.basket?"오늘 열었습니다":"열 수 있습니다"}</span></div>
-      <div class="tiny muted" style="margin:6px 0 10px">축제 동안 하루 한 번, 이웃 방문 앞에 놓인 바구니를 열 수 있습니다. 대개 연등·부적가루·축제 표식이 들어 있으나, 가끔 장난이 들어 있기도 합니다.</div>
+      <div class="tiny muted" style="margin:6px 0 10px">축제 동안 하루 한 번, 이웃 방문 앞에 놓인 바구니를 열 수 있습니다. 대개 연등·부적·축제 표식이 들어 있으나, 가끔 장난이 들어 있기도 합니다.</div>
       <button class="btn pri sm" ${S.fest.basket?"disabled":""} onclick="openBasket()">바구니 열기</button>
     </div>
     <div class="card pad">
@@ -2414,7 +2414,7 @@ function openBasket(){
   let txt,gain;
   if(r<.08){ txt="바구니 안에 작은 쪽지가 있다. 「올해도 걸렸네.」 — 아무래도 누가 먼저 다녀간 모양이다."; gain="장난 · 표식 2"; addMark(2); }
   else if(r<.4){ S.lotus+=3; txt="잿불을 담은 작은 연등 세 개가 가지런히 놓여 있다."; gain="연등 +3"; }
-  else if(r<.7){ const k=gainKnow(240); txt="부적가루 한 줌과 손때 묻은 경문 사본이 들어 있다."; gain=`지식 +${nf(k)}`; }
+  else if(r<.7){ const k=gainKnow(240); txt="부적 한 줌과 손때 묻은 경문 사본이 들어 있다."; gain=`지식 +${nf(k)}`; }
   else { const n=rnd(30,60); S.fest.marks+=n; S.fest.total+=n; txt="축제 표식이 한 움큼 들어 있다. 누가 이렇게 많이 넣어 둔 걸까."; gain=`축제 표식 +${n}`; }
   modal("문 앞 공양 바구니",`<div style="font-size:15px;line-height:1.9">${txt}</div>
     <div class="card pad" style="margin-top:12px"><div class="tiny" style="color:var(--jade)">${gain}</div></div>

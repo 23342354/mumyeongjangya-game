@@ -502,7 +502,7 @@ homeAct = function(){
   const paired=typeof pairRentActive==="function" && pairRentActive();
   const matRow=(m)=>Object.entries(m).map(([k,v])=>{
     const have=(S.mat&&S.mat[k])||0;
-    return `<span class="tag ${have>=v?"g":""}">${k} ${nf(have)}/${nf(v)}</span>`;
+    return `<span class="tag ${have>=v?"g":""}">${k==="가루"?"부적":k} ${nf(have)}/${nf(v)}</span>`;
   }).join(" ");
   const altRow=(m)=>Object.entries(m).map(([k,v])=>
     `<span class="tag ${bHave(k)>=v?"g":""}">${bName(k)} ${nf(bHave(k))}/${nf(v)}</span>`).join(" ");
@@ -582,7 +582,7 @@ buildHome = function(mode){
       if(bHave(k)<v){ toast(`${bName(k)}이(가) 부족합니다.`,"bad"); return; }
   }else{
     for(const [k,v] of Object.entries(c.mat))
-      if(((S.mat&&S.mat[k])||0) < v){ toast(`${k}이(가) 부족합니다.`,"bad"); return; }
+      if(((S.mat&&S.mat[k])||0) < v){ toast(`${k==="가루"?"부적":k}이(가) 부족합니다.`,"bad"); return; }
   }
   S.rin-=c.rin;
   if(useAlt) Object.entries(alt).forEach(([k,v])=>{ S.bmat[k]=bHave(k)-v; });
@@ -4000,3 +4000,42 @@ renderChat=function(bottom){
   return result;
 };
 
+
+/* Reforging consumes a separate material; the legacy 가루 balance remains talismans. */
+function reforgeItem(id){return Object.values(S.gear||{}).find(it=>it&&String(it.id)===String(id))||(S.bag||[]).find(it=>String(it.id)===String(id));}
+function reforgeCost(it){
+ const locks=(it.reforgeLocks||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<it.opts.length).length;
+ const dust=Math.ceil(20*Math.pow(1+Math.max(1,Number(it.lv)||1)/10,1.5)*Math.pow(1.9,Math.max(0,Number(it.grade)||0))*Math.pow(2.5,locks));
+ return {dust,rin:dust*8,locks};
+}
+function reforgeOpen(id){
+ const it=reforgeItem(id);if(!it||!it.opts?.length){toast('재련할 추가 옵션이 없습니다.');return;}
+ const c=reforgeCost(it),locks=it.reforgeLocks||[],all=c.locks>=it.opts.length;
+ modal('재련 · '+it.name,`<div class="tiny muted" style="line-height:1.8">잠그지 않은 추가 옵션의 종류와 수치가 무작위로 바뀝니다. 이전보다 낮아질 수도 있으며 되돌릴 수 없습니다.<br>등급·레벨·각인·기본 능력치는 유지됩니다. 잠금은 장비에 저장되며 해제할 때까지 유지됩니다. 잠금 1개마다 재련 비용이 2.5배가 됩니다.</div>
+ <div class="sect-t" style="margin-top:12px">현재 옵션 · 잠금 ${c.locks}개</div>
+ ${it.opts.map((o,i)=>`<div class="spread" style="padding:7px 0;gap:8px"><span>${esc(o.n)} +${o.v}% ${locks.includes(i)?'<span class="tag">잠금</span>':''}</span><button class="btn sm" onclick="reforgeLock(${it.id},${i})">${locks.includes(i)?'잠금 해제':'잠금'}</button></div>`).join('')}
+ <div class="tiny muted" style="margin-top:12px">보유 부적 가루 ${nf(S.mat.부적가루||0)} · 륜 ${nf(S.rin)}</div>
+ <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" onclick="closeModal()">취소</button><button class="btn pri" ${all||!(S.mat.부적가루>=c.dust)||S.rin<c.rin?'disabled':''} onclick="reforgeApply(${it.id})">${all?'잠금 옵션을 하나 이상 해제하세요':`재련 · 부적 가루 ${nf(c.dust)} · 륜 ${nf(c.rin)}`}</button></div>`);
+}
+function reforgeLock(id,index){
+ const it=reforgeItem(id);if(!it||!Number.isInteger(index)||index<0||index>=it.opts.length)return;
+ const locks=new Set(it.reforgeLocks||[]);if(locks.has(index))locks.delete(index);else locks.add(index);it.reforgeLocks=[...locks];save();reforgeOpen(id);
+}
+function reforgeApply(id){
+ const it=reforgeItem(id);if(!it?.opts?.length)return;const c=reforgeCost(it);
+ if(c.locks>=it.opts.length)return;
+ if(!(S.mat.부적가루>=c.dust)||S.rin<c.rin){toast('부적 가루 또는 륜이 부족합니다.','bad');return;}
+ const locked=new Set(it.reforgeLocks||[]),used=new Set(it.opts.filter((o,i)=>locked.has(i)).map(o=>o.k));
+ const pool=OPTS.filter(o=>!used.has(o.k));
+ const next=it.opts.map((o,i)=>{if(locked.has(i))return {...o};if(!pool.length)return {...o};const at=Math.floor(Math.random()*pool.length),option=pool.splice(at,1)[0];return {k:option.k,n:option.n,v:+(rnd(option.v[0]*10,option.v[1]*10)/10*(1+it.grade*.12)).toFixed(1)};});
+ S.mat.부적가루-=c.dust;S.rin-=c.rin;it.opts=next;
+ save();renderTop();renderNav();renderMain();reforgeOpen(id);toast('재련했습니다. 새 옵션을 확인해 주세요.','good');
+}
+function talismanExchange(qty){
+ const n=Number(qty);if(!Number.isSafeInteger(n)||n<1||n>1000000)return;
+ if(!(S.mat.가루>=n)){toast('부적이 부족합니다.','bad');return;}
+ S.mat.가루-=n;S.mat.부적가루=(S.mat.부적가루||0)+n*10;
+ save();renderMain();toast(`부적 ${nf(n)}개 → 부적 가루 ${nf(n*10)}개`,'good');
+}
+const _reforgeShop=VIEWS.shop;
+VIEWS.shop=function(){return _reforgeShop.apply(this,arguments)+`<div class="card pad" style="margin-top:14px"><div class="sect-t">부적 가루 교환</div><div class="tiny muted">부적 1개를 부적 가루 10개로 교환합니다. 부적은 각인에, 부적 가루는 재련에 사용합니다. 교환 후 되돌릴 수 없습니다.</div><div class="tiny muted" style="margin-top:6px">보유 부적 ${nf(S.mat.가루||0)} · 부적 가루 ${nf(S.mat.부적가루||0)}</div><div class="row" style="margin-top:10px">${[1,10,100].map(n=>`<button class="btn sm" ${S.mat.가루>=n?'':'disabled'} onclick="talismanExchange(${n})">부적 ${n} → 가루 ${nf(n*10)}</button>`).join('')}<input class="inp" id="talisman-exchange-qty" type="number" min="1" max="1000000" step="1" value="1" aria-label="교환할 부적 수량" style="width:100px"><button class="btn sm" onclick="talismanExchange(document.getElementById('talisman-exchange-qty').value)">수량 교환</button></div></div>`;};

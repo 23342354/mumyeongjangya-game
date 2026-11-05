@@ -323,7 +323,7 @@ window.balanceStoreLoot=function(it,preserve=false){
  if(S.bag.length<cap){S.bag.push(it);return true;}
  if(preserve){balanceEnsure().pendingLoot.push(it);toast('바랑이 가득 차 특별 법구 보상을 보관했습니다. 바랑에서 받을 수 있습니다.');return false;}
  const dust=2+Math.max(0,it.grade||0)*2;S.mat.가루+=dust;
- toast(`바랑이 가득 차 새 전리품을 부적가루 ${dust}개로 받았습니다. 기존 법구는 보존됩니다.`);return false;
+ toast(`바랑이 가득 차 새 전리품을 부적 ${dust}개로 받았습니다. 기존 법구는 보존됩니다.`);return false;
 };
 window.balanceCollectLoot=function(){
  const b=balanceEnsure(),cap=bagCapacity();let count=0;

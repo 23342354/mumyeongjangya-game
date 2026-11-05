@@ -428,13 +428,13 @@ function enhance(slot, prot){
   const it=S.gear[slot]; if(!it) return;
   const c=enhCost(it);
   if(S.rin<c.rin){ toast("륜이 부족합니다.","bad"); return; }
-  if(S.mat.가루<c.dust){ toast("부적가루가 부족합니다.","bad"); return; }
+  if(S.mat.가루<c.dust){ toast("부적가 부족합니다.","bad"); return; }
   if(prot){ if(S.sari<3){ toast("사리가 부족합니다. 보호 각인에는 사리 3이 듭니다.","bad"); return; } S.sari-=3; }
   S.rin-=c.rin; S.mat.가루-=c.dust;
   const r=enhRate(it);
   if(Math.random()<r || prot){ it.enh++; it.main.v=Math.round(it.main.v*1.05+1);
     toast(`<b>${it.name} +${it.enh}</b> 각인 성공${prot?" <span class='muted'>(사리로 보호)</span>":""}`,"good"); }
-  else toast("각인이 어긋났습니다. 부적가루만 사라집니다.","bad");
+  else toast("각인이 어긋났습니다. 부적만 사라집니다.","bad");
   renderTop(); renderNav(); renderMain(); save();
 }
 function sellGear(id){
@@ -445,7 +445,7 @@ function sellGear(id){
 function dismantle(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
   const it=S.bag[i]; const d=Math.round(3+it.lv*.45+it.grade*7+it.enh*6);
-  S.bag.splice(i,1); S.mat.가루+=d; toast(`부적가루 +${d}`); renderMain(); save();
+  S.bag.splice(i,1); S.mat.가루+=d; toast(`부적 +${d}`); renderMain(); save();
 }
 function bulkDo(kind,maxGrade){
   let n=0,gain=0;
@@ -457,7 +457,7 @@ function bulkDo(kind,maxGrade){
   }
   if(!n){ toast("해당하는 법구가 없습니다."); return; }
   if(kind==="sell"){ gainRin(gain); toast(`${n}개 판매 · 륜 +${nf(gain)}`,"good"); }
-  else { S.mat.가루+=gain; toast(`${n}개 분해 · 부적가루 +${gain}`,"good"); }
+  else { S.mat.가루+=gain; toast(`${n}개 분해 · 부적 +${gain}`,"good"); }
   renderTop(); renderMain(); save();
 }
 
@@ -615,7 +615,7 @@ function fishHook(){
 function cook(id){
   const d=DISHES.find(x=>x.id===id);
   if(!d){toast("이전 요리 레시피는 더 이상 사용하지 않습니다.","bad");return;}
-  for(const k in d.mat){ if(S.mat[k]<d.mat[k]){ toast(`${k}이(가) 부족합니다.`,"bad"); return; } }
+  for(const k in d.mat){ if(S.mat[k]<d.mat[k]){ toast(`${k==="가루"?"부적":k}이(가) 부족합니다.`,"bad"); return; } }
   for(const k in d.mat) S.mat[k]-=d.mat[k];
   S.kit.have[id]=(S.kit.have[id]||0)+1;
   toast(`${d.n}을(를) 만들었습니다.`,"good"); renderMain(); save();
@@ -770,10 +770,11 @@ function gearCard(it,where){
       <b style="color:var(--gold)">${nf(gearScore(it))}</b></div></div>
     <div class="tiny" style="margin:6px 0 8px;color:var(--jade)">${gearLine(it)}</div>
     <div class="row">
+      ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
       ${equipped
         ? `<button class="btn sm pri" onclick="enhance('${it.slot}')">각인 +${it.enh+1}</button>
            <button class="btn sm" onclick="unequip('${it.slot}')">해제</button>
-           <span class="tiny muted" style="margin-left:auto">성공 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 가루 ${enhCost(it).dust}</span>`
+           <span class="tiny muted" style="margin-left:auto">성공 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust}</span>`
         : `<button class="btn sm pri" ${can?"":"disabled"} onclick="equip(${it.id})">${can?"장착":`Lv ${it.lv} 필요`}</button>
            <button class="btn sm" onclick="sellGear(${it.id})">판매</button>
            <button class="btn sm" onclick="dismantle(${it.id})">분해</button>
@@ -805,9 +806,10 @@ VIEWS.gear=()=>{
           <button class="btn sm pri" onclick="enhance('${sl.k}')">각인 +${it.enh+1}</button>
           <button class="btn sm" ${S.sari<3?"disabled":""} onclick="enhance('${sl.k}',true)" title="사리 3을 더 내면 실패하지 않습니다">보호 각인</button>
           <button class="btn sm" onclick="unequip('${sl.k}')">해제</button>
+          ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:""}
           ${up?`<button class="btn sm" style="color:var(--jade)" onclick="equip(${b.id})">▲ 교체</button>`:""}
         </div>
-        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적가루 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
+        <div class="tiny muted" style="margin-top:6px">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust} <span style="color:var(--s7)">· 보호는 사리 3 추가</span></div>
       </div>`;
     }).join("")}
   </div>
@@ -817,7 +819,7 @@ VIEWS.gear=()=>{
     <div class="row">
       <button class="btn sm" onclick="equipBest()">가장 좋은 법구 장착</button>
       <button class="btn sm" onclick="unequipAll()">전체 해제</button>
-      <span class="tiny muted" style="margin-left:auto">부적가루 <b style="color:var(--gold)">${nf(S.mat.가루)}</b> · 사리 ${nf(S.sari)} · 각인은 실패해도 단계가 떨어지지 않으며, 법구를 바꾸면 <b>이전 각인의 70%가 새 법구로 옮겨 새겨집니다</b></span>
+      <span class="tiny muted" style="margin-left:auto">부적 <b style="color:var(--gold)">${nf(S.mat.가루)}</b> · 사리 ${nf(S.sari)} · 각인은 실패해도 단계가 떨어지지 않으며, 법구를 바꾸면 <b>이전 각인의 70%가 새 법구로 옮겨 새겨집니다</b></span>
     </div>
   </div>
 
@@ -846,7 +848,7 @@ function equipBest(){
 function unequipAll(){ SLOTS.forEach(sl=>unequip(sl.k)); }
 
 VIEWS.bag=()=>{
-  const matRows=Object.keys(S.mat).map(k=>`<div class="spread tiny" style="padding:3px 0"><span>${k}</span><b>${nf(S.mat[k])}</b></div>`).join("");
+  const matRows=Object.keys(S.mat).map(k=>`<div class="spread tiny" style="padding:3px 0"><span>${k==="가루"?"부적":k==="부적가루"?"부적 가루":k}</span><b>${nf(S.mat[k])}</b></div>`).join("");
   const dishRows=Object.keys(S.kit.have).filter(k=>S.kit.have[k]>0 && DISHES.some(d=>d.id===k)).map(k=>{
     const d=DISHES.find(x=>x.id===k);
     return `<div class="spread" style="padding:6px 0;border-bottom:1px solid var(--s3)">
@@ -1405,7 +1407,7 @@ VIEWS.kitchen=()=>{
           <div class="tiny" style="color:var(--jade);margin:4px 0">${d.buf.map(([a,b])=>OPTNAME(a)+" +"+Math.round(b*100)+"%").join(", ")} · ${hhmm(d.dur)}</div>
           <div class="tiny muted">${d.d}</div>
           <div class="row" style="margin:7px 0 0">
-            ${Object.keys(d.mat).map(k=>`<span class="buffchip" style="${(S.mat[k]||0)>=d.mat[k]?"":"color:var(--red)"}">${k} ${S.mat[k]||0}/${d.mat[k]}</span>`).join("")}
+            ${Object.keys(d.mat).map(k=>`<span class="buffchip" style="${(S.mat[k]||0)>=d.mat[k]?"":"color:var(--red)"}">${k==="가루"?"부적":k} ${S.mat[k]||0}/${d.mat[k]}</span>`).join("")}
           </div>
           <div class="row" style="margin-top:8px">
             <button class="btn sm ${can?"pri":""}" ${can?"":"disabled"} onclick="cook('${d.id}')">만두 1개 빚기</button>
@@ -1548,7 +1550,7 @@ VIEWS.merchant=()=>{
     <div class="grid g3">
       <div class="sub"><b>비료 5개</b><div class="tiny muted">약초밭 작물의 성장 시간을 30% 줄입니다.</div>
         <button class="btn sm pri" style="margin-top:8px" onclick="buyMisc('fert')">3,000륜</button></div>
-      <div class="sub"><b>부적가루 40</b><div class="tiny muted">법구 각인에 쓰입니다.</div>
+      <div class="sub"><b>부적 40</b><div class="tiny muted">법구 각인에 쓰입니다.</div>
         <button class="btn sm pri" style="margin-top:8px" onclick="buyMisc('dust')">8,000륜</button></div>
     </div>
   </div>`;
@@ -1564,7 +1566,7 @@ function buyMisc(k){
   if(S.rin<c){ toast("륜이 부족합니다.","bad"); return; }
   S.rin-=c;
   if(k==="fert"){ S.farm.fert+=5; toast("비료 +5","good"); }
-  if(k==="dust"){ S.mat.가루+=40; toast("부적가루 +40","good"); }
+  if(k==="dust"){ S.mat.가루+=40; toast("부적 +40","good"); }
   renderTop(); renderMain(); save();
 }
 
@@ -1723,7 +1725,7 @@ const STORY=[
 const MART=[
  {id:"m1", n:"사리 꾸러미",  d:"사리 10개",                    cost:{rin:21100},  give:{sari:10},   lim:3,  per:"day"},
  {id:"m2", n:"연등 주머니",  d:"연등 10개 (하루 1번)",          cost:{rin:105000}, give:{lotus:10},  lim:1,  per:"day"},
- {id:"m3", n:"부적가루 교환",d:"사리 10개를 부적가루 80으로",    cost:{sari:10},    give:{dust:80},   lim:99, per:"day"},
+ {id:"m3", n:"부적 교환",d:"사리 10개를 부적 80으로",    cost:{sari:10},    give:{dust:80},   lim:99, per:"day"},
  {id:"m4", n:"보급 상자",    d:"지금 과정보다 3~7단계 높은 법구 1개 (고급 이상)", cost:{rin:26300}, give:{gear:1}, lim:5, per:"day"},
  {id:"m6", n:"륜 주머니",    d:"연등 10개를 륜 10.5만으로",      cost:{lotus:10},   give:{rin:105000},lim:3,  per:"day"},
  {id:"m7", n:"압축 파장병",  d:"파장 4시간 생산분을 즉시 획득",   cost:{lotus:12},   give:{mana:240},  lim:3,  per:"day"},
@@ -1929,7 +1931,7 @@ function runRewardText(R=S.run){
   const parts=[`륜 ${nf(p.rin)} · 경험치 ${nf(p.exp)} · 지식 ${nf(p.know)}`];
   if(p.gear.length)parts.push(`법구 ${p.gear.length}점: `+p.gear.map(it=>esc(it.name)).join(', '));
   for(const group of ['mat','ing','bmat'])for(const [k,n] of Object.entries(p[group]||{})){
-    const name=group==='ing'?(ING.find(x=>x.k===k)?.n||k):group==='bmat'?(BRAW.find(x=>x.k===k)?.n||k):k==='가루'?'부적가루':k;
+    const name=group==='ing'?(ING.find(x=>x.k===k)?.n||k):group==='bmat'?(BRAW.find(x=>x.k===k)?.n||k):k==='가루'?'부적':k;
     if(n)parts.push(`${esc(name)} ${nf(n)}`);
   }
   if(p.sari)parts.push(`사리 ${p.sari}`);if(p.marks)parts.push(`축제 표식 최대 ${p.marks}`);
@@ -2003,7 +2005,7 @@ function runStep(){
       pushRun(`<span class="s">${GRADES[it.grade].n} 법구 「${esc(it.name)}」를 주웠다.</span>`);
     }
     if(Math.random()<0.18){ const dd=rnd(1,3)+Math.floor(R.stage/12); runMaterial("mat","가루",dd);
-      pushRun(`<span class="s">부서진 부적 조각을 쓸어 담았다. 부적가루 +${dd}</span>`); }
+      pushRun(`<span class="s">부서진 부적 조각을 쓸어 담았다. 부적 +${dd}</span>`); }
     R.foes=[];
   }
   if([R.me,...R.allies].every(f=>f.hp<=0)) endRun(false);
@@ -2498,7 +2500,7 @@ function martBuy(id){
   if(g.sari){ S.sari+=g.sari; msg.push(`사리 +${g.sari}`); }
   if(g.lotus){ S.lotus+=g.lotus; msg.push(`연등 +${g.lotus}`); }
   if(g.rin){ const r=g.rin;S.rin+=r; msg.push(`륜 +${nf(r)}`); }
-  if(g.dust){ S.mat.가루+=g.dust; msg.push(`부적가루 +${g.dust}`); }
+  if(g.dust){ S.mat.가루+=g.dust; msg.push(`부적 +${g.dust}`); }
   if(g.mana){ S.mana=Math.min(maxMana()*3, S.mana+manaRate()*g.mana); msg.push(`파장 +${nf(Math.round(manaRate()*g.mana))}`); }
   if(g.wb){ S.wb.tickets+=g.wb; msg.push(`토벌 도전권 +${g.wb}`); }
   if(g.bag){ S.res.r11=Math.min(10,S.res.r11+1); msg.push("바랑 칸 +5"); }
@@ -2972,7 +2974,7 @@ VIEWS.alche=()=>{
           ${["약초","열매","뿌리","꽃","어물"].map(k=>`<tr>
             <td>${k} <span class="tiny muted" style="margin-left:6px">${k==="어물"?"제7구역 검은 바다":"약초 온실 뒤뜰"}</span></td>
             <td style="text-align:right"><b style="${S.mat[k]?"":"color:var(--dim2)"}">${nf(S.mat[k]||0)}</b></td></tr>`).join("")}
-          <tr><td>부적가루 <span class="tiny muted" style="margin-left:6px">법구 분해</span></td>
+          <tr><td>부적 <span class="tiny muted" style="margin-left:6px">법구 분해</span></td>
             <td style="text-align:right"><b>${nf(S.mat.가루||0)}</b></td></tr>
         </table>
       </div>
@@ -2989,7 +2991,7 @@ function homeAct(){
   const paired=typeof pairRentActive==="function" && pairRentActive();
   const matRow=(m)=>Object.entries(m).map(([k,v])=>{
     const have=(S.mat&&S.mat[k])||0;
-    return `<span class="tag ${have>=v?"g":""}">${k} ${nf(have)}/${nf(v)}</span>`;
+    return `<span class="tag ${have>=v?"g":""}">${k==="가루"?"부적":k} ${nf(have)}/${nf(v)}</span>`;
   }).join(" ");
   const rentCard = dorm ? `<div class="card pad">
     <div class="sect-t">일세 없음</div>
@@ -3102,7 +3104,7 @@ function buildHome(){
   if(!c){ toast(isDorm()?"이미 다 꾸몄습니다.":"이미 다 지었습니다."); return; }
   if(S.rin<c.rin){ toast("륜이 부족합니다.","bad"); return; }
   for(const [k,v] of Object.entries(c.mat))
-    if(((S.mat&&S.mat[k])||0) < v){ toast(`${k}이(가) 부족합니다.`,"bad"); return; }
+    if(((S.mat&&S.mat[k])||0) < v){ toast(`${k==="가루"?"부적":k}이(가) 부족합니다.`,"bad"); return; }
   S.rin-=c.rin;
   Object.entries(c.mat).forEach(([k,v])=>{ S.mat[k]-=v; });
   h.stage++; S.lotus+=c.lotus;
