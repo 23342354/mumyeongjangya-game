@@ -74,6 +74,7 @@ begin
    select * into l from public.wandering_auction_lots where id=p_lot_id for update;
    if not found or l.status<>'open' or l.ends_at<=v_clock then raise exception '이미 마감된 경매입니다.';end if;
    if l.winner_id=p_actor then raise exception '이미 이 물건의 최고 입찰자입니다.';end if;
+   if exists(select 1 from public.pairs where status='accepted' and p_actor in(from_id,to_id) and l.winner_id in(from_id,to_id)) then raise exception '파트너가 이미 최고 입찰자입니다. 같은 공동 지갑으로 재입찰할 수 없습니다.';end if;
    if p_expected is distinct from l.bid_amount then
      raise exception '그사이 다른 러너가 입찰했습니다. 목록을 갱신한 뒤 다시 입찰해 주세요.';
    end if;
@@ -106,7 +107,7 @@ begin
  select * into a from public.accounts where id=p_actor;
  select coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) into v_live
    from (select id,level_band,tier,item_name,item_data,start_price,bid_amount,bid_count,winner_name,
-           (winner_id=p_actor) as mine,ends_at
+           (winner_id=p_actor or exists(select 1 from public.pairs where status='accepted' and p_actor in(from_id,to_id) and winner_id in(from_id,to_id))) as mine,ends_at
          from public.wandering_auction_lots
          where status='open' and ends_at>v_clock and session_at=v_start and level_band in(v_band,-1)
          order by level_band desc,tier) x;

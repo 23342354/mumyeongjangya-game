@@ -781,6 +781,27 @@ function card(){
   +(PJ.error?`<div class="pair-team-note pair-sync-error">${esc(PJ.error)}</div>`:``)
  +`</section>`;
 }
+// External auction writes already changed the server wallet: never save them as local deltas.
+async function auctionPairTransaction(write){
+ return enqueue(async()=>{
+  if(!PJ.ready)throw Error('페어 공동 지갑을 연결한 뒤 경매를 이용해 주세요.');
+  const wasBusy=PJ.busy;PJ.busy=true;
+  try{
+   await recoverCommit();markDirty();
+   if(PJ.pending.length&&!await transact('profile',()=>{},false))throw Error('미반영 기록을 저장하지 못했습니다.');
+   let result,error;
+   try{result=write?await write():null;}catch(e){error=e;}
+   PJ.lastAuthoritativeReadAt=0;
+   try{await read(true,true);cache();oldSave();}
+   catch(e){PJ.lastPoll=0;showError(e);if(result?.ok)result={...result,refreshPending:true};else if(!error)error=e;}
+   if(error)throw error;
+   return result?{...result,inventory:undefined}:null;
+  }finally{PJ.busy=wasBusy;}
+ });
+}
+PJ.auctionActive=active;
+PJ.auctionWrite=auctionPairTransaction;
+PJ.auctionSync=()=>auctionPairTransaction(null);
 PJ.refresh=()=>{PJ.lastPoll=0;return init();};
 for(const v of ['plaza','outing','pairhub','class','exam','quest','tower','guard','wboss','arena','bag','stats','hallv']){const f=VIEWS[v];if(!f)continue;VIEWS[v]=function(){const old=PJ.combat;PJ.combat=['tower','guard','wboss','quest','arena'].includes(v)&&PJ.ready;try{let html=f.apply(this,arguments);if(PJ.ready&&v==='quest')html=html.replace('30초에 한 줄. 창을 닫아 두어도 의뢰는 시계대로 흐르고, 돌아오면 그 사이 몫까지 한 번에 따라잡습니다.','진행은 5분마다 누적 기록합니다. 보상은 완료·귀환 후 정산할 때 한꺼번에 받습니다.');if(PJ.ready)html=html.replace(/통행패 (\d+)\/3/g,'통행패 $1/6').replace(/통행패 <b>(\d+) \/ 3<\/b>/g,'통행패 <b>$1 / 6</b>').replace('12시간마다 한 장씩 발급되며 최대 3장','12시간마다 두 장씩 발급되며 페어 최대 6장');if(v==='wboss'&&PJ.ready)html=html.replace('/3 · 공격','/6 · 공동 공격').replace('최대 3장','페어 최대 6장');const box=document.createElement('div');box.innerHTML=html;const h=box.querySelector('.page-head');if(h){box.prepend(h);h.insertAdjacentHTML('afterend',card());return box.innerHTML;}return card()+html;}finally{PJ.combat=old;}};}
 setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth&&document.visibilityState!=='hidden')init();},10000);
@@ -853,6 +874,34 @@ function auctionClock(){
   if(live.some(l=>Date.parse(l.ends_at)<=auctionNow())&&Date.now()-LIVE_AUCTION.at>3000)
     auctionFetch(true);
 }
+function auctionPairOn(){return !!window.PAIR_PLAY?.auctionActive?.();}
+async function auctionApplyServerResult(r){
+ if(auctionPairOn()){
+  // Use the pair baseline/revision path; marketApplyInventory calls save() and
+  // would turn an authoritative deduction into a second shared-wallet delta.
+  await window.PAIR_PLAY.auctionSync();
+ }else if(r.inventory&&Number(r.rev||0)>Number(S?.marketRev||0)&&typeof marketApplyInventory==='function')marketApplyInventory(r.inventory);
+}
+async function auctionWriteOnce(action,lotId,expected){
+ const key='mmjy-auction-request:'+ACCT.id,signature=JSON.stringify([action,Number(lotId),expected??null]);
+ let pending;try{pending=JSON.parse(localStorage.getItem(key)||'null');}catch(_){}
+ if(pending&&pending.signature!==signature){
+  const previous=JSON.parse(pending.signature);
+  const recovered=await auctionRpc(previous[0],previous[1],previous[2],pending.request);
+  if(!recovered?.ok)throw Error('이전 경매 요청을 확인하지 못했습니다. 새 입찰은 실행하지 않았습니다.');
+  localStorage.removeItem(key);pending=null;
+ }
+ if(!pending){pending={signature,request:auctionRequestId()};localStorage.setItem(key,JSON.stringify(pending));}
+ let r;
+ try{r=await auctionRpc(action,Number(lotId),expected,pending.request);}
+ catch(e){
+  let code=e?.code;try{code=code||JSON.parse(e.message).code;}catch(_){}
+  if(['P0001','22023','23503','42501','PGRST202','PGRST203'].includes(code))localStorage.removeItem(key);
+  throw e;
+ }
+ if(!r||r.ok!==true)throw Error('경매 처리 결과를 확인할 수 없습니다.');
+ localStorage.removeItem(key);return r;
+}
 async function auctionFetch(force=false){
   if(!auctionConnected()){LIVE_AUCTION.data=null;return;}
   if(LIVE_AUCTION.loading||(!force&&Date.now()-LIVE_AUCTION.at<8000))return;
@@ -867,8 +916,7 @@ async function auctionFetch(force=false){
     LIVE_AUCTION.error="";
     LIVE_AUCTION.at=Date.now();
     // 다른 러너가 내 최고가를 넘어서면 서버가 보증금을 반환하며 revision이 증가합니다.
-    if(Number(r.rev||0)>Number(S?.marketRev||0)&&r.inventory&&typeof marketApplyInventory==="function")
-      marketApplyInventory(r.inventory);
+    await auctionApplyServerResult(r);
     if(VIEW==="merchant")renderMain(true);
     if(VIEW==="plaza"&&typeof plazaActivityRefresh==="function")plazaActivityRefresh();
   }catch(e){
@@ -886,17 +934,15 @@ async function auctionCommit(action,lotId,expected){
   if(typeof PAIR_PLAY!=="undefined"&&PAIR_PLAY.busy)return toast("페어 공동 기록을 먼저 반영해 주세요.","bad");
   LIVE_AUCTION.busy=true;
   try{
-    // 현재 게임 상태를 안전하게 저장한 다음 서버 트랜잭션을 실행합니다.
-    if(typeof acctPush==="function"){
-      const ok=await acctPush(true);
-      if(ok===false)throw new Error("서버에 캐릭터 기록을 저장하지 못했습니다. 저장 상태를 확인해 주세요.");
+    let r;
+    if(auctionPairOn()){
+      r=await window.PAIR_PLAY.auctionWrite(()=>auctionWriteOnce(action,lotId,expected));
+    }else{
+      if(typeof acctPush==='function'&&await acctPush(true)===false)throw Error('최신 기록을 저장하지 못했습니다.');
+      r=await auctionWriteOnce(action,lotId,expected);
+      await auctionApplyServerResult(r);
     }
-    const r=await auctionRpc(action,Number(lotId),expected,auctionRequestId());
-    if(!r||r.ok!==true)throw new Error("경매 처리 결과를 확인할 수 없습니다.");
     LIVE_AUCTION.at=0;
-    // 입찰과 환불, 법구 수령은 서버 잔고를 기준으로 반영합니다.
-    if(r.inventory&&Number(r.rev||0)>Number(S?.marketRev||0))marketApplyInventory(r.inventory);
-    if(typeof PAIR_PLAY!=="undefined"&&PAIR_PLAY.ready)await PAIR_PLAY.refresh();
     toast(action==="bid"?"공용 경매에 입찰했습니다. 다른 러너가 더 높은 값을 제시하면 륜이 자동 반환됩니다.":"낙찰품을 바랑에 수령했습니다.","good");
     await auctionFetch(true);
     renderTop();renderNav();renderMain(true);
@@ -1014,6 +1060,12 @@ if(typeof gainRin==='function'){
 /* 중개소는 서버가 잔액을 통째로 내려 주므로 그 차액을 적습니다. */
 const ledgerMarketApply=typeof marketApplyInventory==='function'?marketApplyInventory:null;
 if(ledgerMarketApply)marketApplyInventory=function(inv){
+ if(window.PAIR_PLAY?.auctionActive?.()){
+  // Market snapshots can also observe an auction debit/refund from the partner.
+  // Never attribute those authoritative shared changes as this account's spend.
+  window.PAIR_PLAY.auctionSync().catch(e=>toast('공동 지갑 갱신 대기 · '+auctionMessage(e),'bad'));
+  return;
+ }
  const before=Number(S?.rin)||0;
  const r=ledgerMarketApply.apply(this,arguments);
  const diff=(Number(S?.rin)||0)-before;
