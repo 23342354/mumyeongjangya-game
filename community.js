@@ -4055,7 +4055,7 @@ function pairSoulStats(c){
  const raw=attack*380*(1+resonance*.035)*4;
  return {attack,resonance,burst:Math.round(Math.min(raw,c.dps*6)),shield:Math.round(Math.min(c.hp*.10,raw*.05))};
 }
-function pairSoulQuestPower(attack,res){return Math.max(1,Math.round(attack*.6*(1+.5*res/(res+100))));}
+function pairSoulQuestPower(attack,res){return Math.max(1,Math.round(attack*6*(1+res/100)));}
 function pairSoulCount(seconds){return seconds<15?0:1+Math.floor((seconds-15)/60);}
 function pairSoulDamage(c,seconds){const skill=pairSoulStats(c);return c.dps*seconds+(skill?skill.burst*pairSoulCount(seconds):0);}
 function pairSoulTime(c,hp){
@@ -4073,7 +4073,7 @@ async function pairSoulSaveName(){
  const data=JSON.parse(pairHeadEncode(H.img,H.tokens||['','']));data.soulName=name;const at=new Date().toISOString();
  try{await sbSend('PATCH',`pairs?id=eq.${P.mine.id}`,{header:JSON.stringify(data),header_at:at},'return=minimal');H.soulName=name;H.at=at;renderMain(true);toast('페어 스킬명을 저장했습니다.','good');}catch{toast('스킬명을 저장하지 못했습니다. 다시 시도해 주세요.','bad');}
 }
-for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?'첫 5분 후 · 이후 5분마다':'첫 15초 · 이후 60초마다'} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰에서는 D5 전투 규모에 맞춘 피해를 적용합니다.':''}</div></div>`;};}
+for(const kind of ['quest','tower','guard','wboss']){const view=VIEWS[kind];VIEWS[kind]=function(){const html=view.apply(this,arguments);if(!pairSoulReady())return html;const c=C(),skill=pairSoulStats(c);return html+`<div class="card pad" style="margin-top:12px"><b style="color:var(--jade)">${esc(pairSoulName())}</b> <span class="tag">페어 전용 · 자동</span><div class="tiny muted" style="margin-top:6px">${kind==='quest'?'첫 5분 후 · 이후 5분마다':'첫 15초 · 이후 60초마다'} · ${kind==='quest'?`공격·공명 기반 추가 피해 (적 최대 체력 상한 없음)`:kind==='guard'?`보호막 ${nf(skill.shield)} (합산 생명력의 최대 10%)`:`추가 피해 ${nf(skill.burst)} (합산 초당 피해의 최대 6초분)`}</div><div class="tiny muted">두 사람의 공격 합계 ${nf(skill.attack)} · 평균 공명 적성 ${nf(skill.resonance)}${kind==='quest'?' · 의뢰 피해 = 두 사람의 공격 합계 × 6 × (1 + 평균 공명 적성 ÷ 100).':''}</div></div>`;};}
 
 let ROSTER_HEADER_REQUEST=0;
 function rosterPairScene(row,header){
