@@ -1002,13 +1002,13 @@ function pairOrder(){
 const PAIRHEADW=1500, PAIRHEADH=625, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
 /* 헤더 그림과 글 목록은 저장본에 넣지 않습니다 — 커서 저장이 무거워집니다.
    서버가 원본을 갖고 있으니 켤 때마다 다시 받아 옵니다. */
-const PAIRHEAD={img:"", tokens:["",""], fontCSS:"", soulName:"", at:"", loading:false, forId:null};
+const PAIRHEAD={img:"", tokens:["",""], fontCSS:"", soulName:"", at:"", loading:false, forId:null,themeBg:""};
 function pairHeadDecode(raw){
- try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i])),fontCSS:typeof v.fontCSS==="string"?v.fontCSS.slice(0,12000):"",soulName:typeof v.soulName==="string"?v.soulName.slice(0,30):""};}catch{}
- return {img:pairHeadImage(raw),tokens:["",""],fontCSS:"",soulName:""};
+ try{const v=JSON.parse(raw);if(v?.v===2)return {themeBg:pairHeadImage(v.themeBg),img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i])),fontCSS:typeof v.fontCSS==="string"?v.fontCSS.slice(0,12000):"",soulName:typeof v.soulName==="string"?v.soulName.slice(0,30):""};}catch{}
+ return {themeBg:"",img:pairHeadImage(raw),tokens:["",""],fontCSS:"",soulName:""};
 }
 function pairHeadImage(value){return typeof value==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value)?value:"";}
-function pairHeadEncode(img,tokens,fontCSS=pairHeadState().fontCSS||""){return JSON.stringify({v:2,img,tokens,fontCSS,soulName:pairHeadState().soulName||""});}
+function pairHeadEncode(img,tokens,fontCSS=pairHeadState().fontCSS||""){return JSON.stringify({v:2,img,tokens,fontCSS,themeBg:pairHeadState().themeBg||"",soulName:pairHeadState().soulName||""});}
 const PAIR_FONT_CACHE=new Map();
 function pairFontURL(raw){const u=new URL(raw);if(u.protocol!=="https:")throw Error("HTTPS 폰트 주소를 사용해 주세요.");return u.href;}
 function pairFontSpec(css){
@@ -1065,7 +1065,7 @@ function pairHeadFetchCore(force){
       if(!row||String(pairEnsure().mine?.id)!==pairId) return false;
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
-      if(!at){ pairSoulRememberName(pairId,'');H.img=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
+      if(!at){ pairSoulRememberName(pairId,'');H.img=""; H.themeBg=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
                if(VIEW==="pairhub") renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
@@ -4334,72 +4334,70 @@ function pairTrialThemePalette(a,b,dark){
  '--violet':pairThemeHex(secondary),'--violetL':pairThemeHex(primary),'--pink':pairThemeHex(secondary),'--pinkD':pairThemeHex(secondary),'--lift':'0 10px 24px -18px '+alpha(pairThemeRGB(surface(.97)),.55),'--pair-theme-a':pairThemeHex(primary),'--pair-theme-b':pairThemeHex(secondary),'--pair-raw-a':a,'--pair-raw-b':b});
  return palette;
 }
-const PAIR_THEME_PREVIEW={actor:null,authorized:false,pairId:null,request:0};
-const PAIR_THEME_HEADERS=new Map();
-async function pairThemePreviewHeader(id){
- const actor=ACCT?.id;
- try{const rows=await sbGet(`pairs?select=id,header&id=eq.${encodeURIComponent(id)}&limit=1`);
- if(ACCT?.id!==actor||!PAIR_THEME_PREVIEW.authorized||String(PAIR_THEME_PREVIEW.pairId)!==String(id))return;
- PAIR_THEME_HEADERS.set(String(id),pairHeadDecode(rows?.[0]?.header||'').img||'');applyPairTrialTheme();
- }catch(_){}
+/* Pair skins belong only to the signed-in pair; skin choice is personal, artwork shared. */
+function pairSkinMine(){
+ const p=typeof pairEnsure==='function'?pairEnsure().mine:null,actor=typeof ACCT!=='undefined'?ACCT?.id:null;
+ return actor&&p&&(!p.status||p.status==='accepted')&&[p.from_id,p.to_id].some(id=>String(id)===String(actor))?p:null;
 }
-function pairThemePreviewClear(){PAIR_THEME_PREVIEW.pairId=null;applyPairTrialTheme();}
+function pairSkinKey(){return 'mmjy_pair_skin:'+ACCT.id;}
+function pairSkinChoice(){
+ const p=pairSkinMine();if(!p)return null;
+ try{const v=JSON.parse(localStorage.getItem(pairSkinKey())||'null');return String(v?.id)===String(p.id)&&['color','header','custom'].includes(v.kind)?v:null;}catch(_){return null;}
+}
 function applyPairTrialTheme(){
  const root=document.documentElement;
- const clear=()=>{for(const key of PAIR_TRIAL_THEME.keys)root.style.removeProperty(key);root.removeAttribute('data-pair-theme');PAIR_TRIAL_THEME.keys=[];PAIR_TRIAL_THEME.signature='';};
- const actor=typeof ACCT!=='undefined'?ACCT?.id:null;
- if(!S?.made||!actor||PAIR_THEME_PREVIEW.actor!==actor||!PAIR_THEME_PREVIEW.authorized||!PAIR_THEME_PREVIEW.pairId||typeof SOCIAL==='undefined'){clear();return;}
- const shared=SOCIAL.pairs.find(p=>String(p.id)===String(PAIR_THEME_PREVIEW.pairId));
- if(!shared){clear();return;}
+ const clear=()=>{for(const key of PAIR_TRIAL_THEME.keys)root.style.removeProperty(key);root.removeAttribute('data-pair-theme');root.removeAttribute('data-pair-backdrop');PAIR_TRIAL_THEME.keys=[];PAIR_TRIAL_THEME.signature='';};
+ const shared=pairSkinMine(),choice=pairSkinChoice();if(!S?.made||!shared||!choice){clear();return;}
  const roster=[...(SOCIAL.students||[]),...(S.sb?.roster||[])];
- const profiles=[shared.from_id,shared.to_id].map(id=>String(id)===String(S.sb?.id)?{id,color:S.color}:roster.find(p=>String(p.id)===String(id)));
+ const profiles=[shared.from_id,shared.to_id].map(id=>String(id)===String(ACCT.id)?{id,color:S.color}:roster.find(p=>String(p.id)===String(id)));
  if(profiles.some(p=>!pairThemeRGB(p?.color))){clear();return;}
  profiles.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
- const ownHeader=typeof pairHeadState==='function'?pairHeadState():null;
- const header=pairHeadImage(ownHeader?.forId===String(shared.id)?ownHeader.img:PAIR_THEME_HEADERS.get(String(shared.id))||'');
- const signature=JSON.stringify([shared.id,profiles.map(p=>p.color),THEME,header]);if(signature===PAIR_TRIAL_THEME.signature)return;
+ const h=pairHeadState(),ready=h.forId===String(shared.id);
+ const image=ready&&choice.kind!=='color'?pairHeadImage(choice.kind==='custom'?h.themeBg:h.img):'';
+ const signature=JSON.stringify([ACCT.id,shared.id,profiles.map(p=>p.color),THEME,choice.kind,image]);if(signature===PAIR_TRIAL_THEME.signature)return;
  const palette=pairTrialThemePalette(profiles[0].color,profiles[1].color,THEME!=='light');clear();
- if(header)palette['--pair-theme-image']=`url(${JSON.stringify(header)})`;
+ // Color-only skins have no default scenery; image skins retain the original colors.
+ palette['--pair-theme-image']=image?`url(${JSON.stringify(image)})`:'none';
  for(const [key,value]of Object.entries(palette))root.style.setProperty(key,value);
  PAIR_TRIAL_THEME.keys=Object.keys(palette);PAIR_TRIAL_THEME.signature=signature;root.setAttribute('data-pair-theme','preview');
+ if(image)root.setAttribute('data-pair-backdrop','on');
 }
-async function pairThemePreviewAccess(){
- const actor=typeof ACCT!=='undefined'?ACCT?.id:null;
- if(!actor){Object.assign(PAIR_THEME_PREVIEW,{actor:null,authorized:false,pairId:null});applyPairTrialTheme();return false;}
- try{
-  const r=await inboxRpc('list');
-  if(ACCT.id!==actor)return false;
-  PAIR_THEME_PREVIEW.actor=actor;PAIR_THEME_PREVIEW.authorized=r?.staff===true;
-  if(!PAIR_THEME_PREVIEW.authorized){PAIR_THEME_PREVIEW.pairId=null;applyPairTrialTheme();}
-  return PAIR_THEME_PREVIEW.authorized;
- }catch(_){Object.assign(PAIR_THEME_PREVIEW,{actor,authorized:false,pairId:null});applyPairTrialTheme();return false;}
+function pairSkinChoose(kind,mode){
+ const p=pairSkinMine();if(kind&&!p)return;
+ try{if(kind)localStorage.setItem(pairSkinKey(),JSON.stringify({id:p.id,kind}));else if(ACCT?.id)localStorage.removeItem(pairSkinKey());}catch(_){}
+ setTheme(mode);openSettings();
 }
-function pairThemePreviewRows(){
- return [...SOCIAL.pairs].filter(p=>!p.status||p.status==='accepted').sort((a,b)=>String(a.pair_name||'').localeCompare(String(b.pair_name||''),'ko')).map(p=>{
-  const selected=String(PAIR_THEME_PREVIEW.pairId)===String(p.id),name=p.pair_name?.trim()||'페어명 미설정';
-  return `<div class="pair-theme-preview-row"><b>${esc(name)}</b><div class="row"><button class="btn sm ${selected&&THEME==='dark'?'pri':''}" onclick="pairThemePreviewChoose(${Number(p.id)},'dark')">어두운 테마</button><button class="btn sm ${selected&&THEME==='light'?'pri':''}" onclick="pairThemePreviewChoose(${Number(p.id)},'light')">밝은 테마</button></div></div>`;
- }).join('')||'<div class="tiny muted">등록된 페어가 없습니다.</div>';
+async function pairSkinSettings(){
+ const slot=document.getElementById('pair-skin-settings'),p=pairSkinMine();if(!slot||!p)return;
+ const actor=ACCT.id,id=String(p.id);await pairHeadFetch(true);
+ if(ACCT?.id!==actor||String(pairSkinMine()?.id)!==id||document.getElementById('pair-skin-settings')!==slot)return;
+ applyPairTrialTheme();const choice=pairSkinChoice(),h=pairHeadState();
+ slot.innerHTML=`<div class="sect-t" style="margin-top:15px">${esc(SOCIAL.pairs?.find(r=>String(r.id)===id)?.pair_name||p.pair_name||'우리 페어')} · 전용 스킨</div><div class="tiny muted">우리 페어 두 사람만 사용할 수 있습니다. 스킨 선택은 각자 저장하고, 업로드한 배경은 둘이 함께 씁니다.</div>${[['color','페어 테마색'],['header','페어 테마색 + 헤더 그림'],['custom','페어 테마색 + 공유 배경']].map(([kind,label])=>`<div class="pair-theme-preview-row"><b>${label}</b><div class="row">${['dark','light'].map(mode=>`<button class="btn sm ${choice?.kind===kind&&THEME===mode?'pri':''}" onclick="pairSkinChoose('${kind}','${mode}')">${mode==='dark'?'어두운':'밝은'} 테마</button>`).join('')}</div></div>`).join('')}<div class="tiny muted" style="margin-top:8px">그림은 채팅창 뒤까지 은은하게 이어집니다. 헤더·배경이 없으면 페어 컬러로 표시됩니다.</div><label class="btn sm" style="margin-top:8px">공유 배경 업로드<input type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="pairSkinUpload(this)"></label>${h.forId===id&&h.themeBg?'<button class="btn sm ghost" onclick="pairSkinSaveBackground(\'\')">공유 배경 삭제</button>':''}`;
 }
-async function pairThemePreviewSettings(){
- const slot=document.getElementById('admin-pair-theme-preview');if(!slot)return;
- const request=++PAIR_THEME_PREVIEW.request;
- if(!await pairThemePreviewAccess()||document.getElementById('admin-pair-theme-preview')!==slot||request!==PAIR_THEME_PREVIEW.request)return;
- await socialFetch(true);
- if(!PAIR_THEME_PREVIEW.authorized||document.getElementById('admin-pair-theme-preview')!==slot||request!==PAIR_THEME_PREVIEW.request)return;
- slot.innerHTML=`<div class="sect-t" style="margin-top:15px">운영진 전용 · 페어 테마 미리보기</div><div class="tiny muted" style="margin-bottom:8px">이 화면에서만 시험 적용합니다. 다른 계정의 테마는 바뀌지 않으며, 새로고침하면 기본 테마로 돌아갑니다.</div>${pairThemePreviewRows()}`;
+async function pairSkinUpload(input){
+ const file=input.files?.[0],p=pairSkinMine();if(!file||!p)return;
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>15000000){toast('15MB 이하 PNG·JPG·WebP 그림을 골라 주세요.','bad');return;}
+ const actor=ACCT.id,id=String(p.id),url=URL.createObjectURL(file),img=new Image();
+ try{await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+ const canvas=document.createElement('canvas'),scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+ const data=canvas.toDataURL('image/jpeg',.78);if(data.length>1400000)throw Error('그림 용량이 큽니다. 작은 그림으로 다시 골라 주세요.');
+ if(ACCT.id!==actor||String(pairSkinMine()?.id)!==id)return;await pairSkinSaveBackground(data);
+ }catch(e){toast(e.message||'그림을 불러오지 못했습니다.','bad');}finally{URL.revokeObjectURL(url);input.value='';}
 }
-async function pairThemePreviewChoose(id,mode){
- if(id===null){PAIR_THEME_PREVIEW.pairId=null;setTheme(mode);return;}
- if(!await pairThemePreviewAccess()){toast('운영진 계정에서만 미리볼 수 있습니다.','bad');return;}
- const row=SOCIAL.pairs.find(p=>String(p.id)===String(id));if(!row)return;
- const profiles=[row.from_id,row.to_id].map(user=>String(user)===String(S.sb?.id)?{color:S.color}:[...(SOCIAL.students||[]),...(S.sb?.roster||[])].find(p=>String(p.id)===String(user)));
- if(profiles.some(p=>!pairThemeRGB(p?.color))){toast('두 캐릭터의 영혼 컬러를 불러온 뒤 다시 시도해 주세요.','bad');return;}
- PAIR_THEME_PREVIEW.pairId=id;THEME=mode==='light'?'light':'dark';applyTheme();renderTop();renderMain();openSettings();void pairThemePreviewHeader(id);
+let PAIR_SKIN_SAVING=false;
+async function pairSkinSaveBackground(image){
+ const p=pairSkinMine();if(!p||PAIR_SKIN_SAVING)return;PAIR_SKIN_SAVING=true;
+ const actor=ACCT.id,id=String(p.id);
+ try{await pairHeadFetch(true);const h=pairHeadState();if(h.forId!==id||ACCT.id!==actor||String(pairSkinMine()?.id)!==id)throw Error('페어 정보를 새로 불러온 뒤 다시 시도해 주세요.');
+ const payload=JSON.parse(pairHeadEncode(h.img,h.tokens,h.fontCSS));payload.themeBg=pairHeadImage(image);const at=new Date().toISOString();
+ await sbSend('PATCH',`pairs?id=eq.${encodeURIComponent(id)}`,{header:JSON.stringify(payload),header_at:at},'return=minimal');
+ if(ACCT.id!==actor||String(pairSkinMine()?.id)!==id)return;
+ h.themeBg=payload.themeBg;h.at=at;applyPairTrialTheme();openSettings();toast(image?'페어 공유 배경을 저장했습니다.':'공유 배경을 삭제했습니다.','good');
+ }catch(e){toast(e.message||'공유 배경을 저장하지 못했습니다.','bad');}finally{PAIR_SKIN_SAVING=false;}
 }
 const _pairTrialThemeTop=renderTop;
 renderTop=function(){applyPairTrialTheme();return _pairTrialThemeTop.apply(this,arguments);};
 const _pairTrialThemeApply=applyTheme;
 applyTheme=function(){const result=_pairTrialThemeApply.apply(this,arguments);applyPairTrialTheme();return result;};
-
-const _pairThemePreviewSettingsBase=openSettings;
-openSettings=function(){_pairThemePreviewSettingsBase.apply(this,arguments);void pairThemePreviewSettings();};
+const _pairSkinSettingsBase=openSettings;
+openSettings=function(){_pairSkinSettingsBase.apply(this,arguments);void pairSkinSettings();};

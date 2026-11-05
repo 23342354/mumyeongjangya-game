@@ -3023,10 +3023,10 @@ function openSettings(){
     <div class="sect-t">보기 · 기본 테마</div>
     <div class="tiny muted">눈이 편한 쪽으로 고르세요. 이 브라우저에만 저장됩니다.</div>
     <div class="row" style="margin-top:8px"><span class="seg">
-      <button class="${THEME!=="light"&&(typeof PAIR_THEME_PREVIEW==='undefined'||!PAIR_THEME_PREVIEW.pairId)?"on":""}" onclick="pairThemePreviewChoose(null,'dark');openSettings()">어두운 테마</button>
-      <button class="${THEME==="light"&&(typeof PAIR_THEME_PREVIEW==='undefined'||!PAIR_THEME_PREVIEW.pairId)?"on":""}" onclick="pairThemePreviewChoose(null,'light');openSettings()">밝은 테마</button>
+      <button class="${THEME!=="light"&&(typeof pairSkinChoice==='undefined'||!pairSkinChoice())?"on":""}" onclick="pairSkinChoose(null,'dark');openSettings()">어두운 테마</button>
+      <button class="${THEME==="light"&&(typeof pairSkinChoice==='undefined'||!pairSkinChoice())?"on":""}" onclick="pairSkinChoose(null,'light');openSettings()">밝은 테마</button>
     </span></div>
-    <div id="admin-pair-theme-preview"></div>
+    <div id="pair-skin-settings"></div>
     <hr class="hr">
     <div class="sect-t">기록</div>
     <div class="tiny muted">진행 상황은 이 브라우저에 자동 저장됩니다. 자리를 비운 동안에도 최대 24시간까지 시간이 흐릅니다.</div>
