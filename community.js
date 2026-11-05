@@ -1000,13 +1000,53 @@ function pairOrder(){
 const PAIRHEADW=1500, PAIRHEADH=625, PAIRHEADMAX=420000;   // 글자로 바꿨을 때의 한도
 /* 헤더 그림과 글 목록은 저장본에 넣지 않습니다 — 커서 저장이 무거워집니다.
    서버가 원본을 갖고 있으니 켤 때마다 다시 받아 옵니다. */
-const PAIRHEAD={img:"", tokens:["",""], at:"", loading:false, forId:null};
+const PAIRHEAD={img:"", tokens:["",""], fontCSS:"", at:"", loading:false, forId:null};
 function pairHeadDecode(raw){
- try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i]))};}catch{}
- return {img:pairHeadImage(raw),tokens:["",""]};
+ try{const v=JSON.parse(raw);if(v?.v===2)return {img:pairHeadImage(v.img),tokens:[0,1].map(i=>pairHeadImage(v.tokens?.[i])),fontCSS:typeof v.fontCSS==="string"?v.fontCSS.slice(0,12000):""};}catch{}
+ return {img:pairHeadImage(raw),tokens:["",""],fontCSS:""};
 }
 function pairHeadImage(value){return typeof value==="string"&&/^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value)?value:"";}
-function pairHeadEncode(img,tokens){return JSON.stringify({v:2,img,tokens});}
+function pairHeadEncode(img,tokens,fontCSS=pairHeadState().fontCSS||""){return JSON.stringify({v:2,img,tokens,fontCSS});}
+const PAIR_FONT_CACHE=new Map();
+function pairFontURL(raw){const u=new URL(raw);if(u.protocol!=="https:")throw Error("HTTPS 폰트 주소를 사용해 주세요.");return u.href;}
+function pairFontSpec(css){
+ if(!css.trim())return null;
+ if(css.length>12000)throw Error("폰트 CSS는 12,000자 이내로 넣어 주세요.");
+ const imported=css.match(/@import\s+(?:url\(\s*)?["']([^"']+)["']/i);
+ if(imported)return {url:pairFontURL(imported[1])};
+ const faces=pairFontFaces(css);if(!faces.length)throw Error("@import 또는 @font-face 형식을 확인해 주세요.");
+ return {faces};
+}
+function pairFontFaces(css){
+ return [...css.matchAll(/@font-face\s*\{([^}]+)\}/gi)].map(m=>{
+  const family=m[1].match(/font-family\s*:\s*([^;]+)/i)?.[1]?.trim().replace(/^["']|["']$/g,'');
+  const source=m[1].match(/(?:^|;)\s*src\s*:\s*([^;]+)/i)?.[1];
+  const urls=[...(source||'').matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/gi)].map(u=>`url("${pairFontURL(u[1])}")`);
+  if(!family||!urls.length)return null;
+  const weight=m[1].match(/font-weight\s*:\s*([^;]+)/i)?.[1]?.trim()||'400';
+  const style=m[1].match(/font-style\s*:\s*([^;]+)/i)?.[1]?.trim()||'normal';
+  const unicodeRange=m[1].match(/unicode-range\s*:\s*([^;]+)/i)?.[1]?.trim();
+  return {family,source:urls.join(','),descriptors:{weight,style,...(unicodeRange?{unicodeRange}:{})}};
+ }).filter(Boolean);
+}
+function pairFontLoad(css){
+ if(!css.trim())return Promise.resolve('');
+ if(PAIR_FONT_CACHE.has(css))return PAIR_FONT_CACHE.get(css);
+ const task=(async()=>{const spec=pairFontSpec(css);let faces=spec.faces;
+  if(spec.url){const res=await fetch(spec.url);if(!res.ok)throw Error('폰트 CSS를 불러오지 못했습니다.');faces=pairFontFaces(await res.text());}
+  if(!faces?.length)throw Error('불러온 CSS에서 폰트를 찾지 못했습니다.');
+  // FontFace만 등록하므로 입력한 CSS가 다른 화면의 스타일을 바꾸지 않습니다.
+  const loaded=await Promise.all(faces.map(async f=>{const font=new FontFace(f.family,f.source,f.descriptors);await font.load();document.fonts.add(font);return f.family;}));return loaded[0];
+ })();PAIR_FONT_CACHE.set(css,task);task.catch(()=>PAIR_FONT_CACHE.delete(css));return task;
+}
+function pairFontApply(css,selector='.pair-scene-name'){
+ pairFontLoad(css).then(family=>{document.querySelectorAll(selector).forEach(el=>{if(el.dataset.fontCss!==css)return;el.style.fontFamily=family?JSON.stringify(family)+', Georgia, serif':'';});}).catch(()=>{});
+}
+async function pairFontPreview(){
+ const css=document.getElementById('phfont').value.trim(),preview=document.getElementById('phfont-preview'),status=document.getElementById('phfont-status');
+ preview.dataset.fontCss=css;preview.style.fontFamily='';status.textContent=css?'폰트 불러오는 중…':'기본 폰트';
+ try{const family=await pairFontLoad(css);if(preview.dataset.fontCss!==css)return;preview.style.fontFamily=family?JSON.stringify(family)+', serif':'';status.textContent=family?'적용됨 · '+family:'기본 폰트';}catch(e){status.textContent=e.message||'폰트를 불러오지 못했습니다. 주소와 외부 접근 허용 여부를 확인해 주세요.';}
+}
 function pairHeadState(){ return PAIRHEAD; }
 /* 바뀌었을 때만 내려받습니다 — 그림이 커서 20초마다 받으면 느려집니다 */
 let PAIRHEADAT=0;
@@ -1023,7 +1063,7 @@ function pairHeadFetch(force){
       if(!row) return false;
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
-      if(!at){ H.img=""; H.tokens=["",""]; H.at=""; H.forId=String(P.mine.id);
+      if(!at){ H.img=""; H.tokens=["",""]; H.fontCSS=""; H.at=""; H.forId=String(P.mine.id);
                if(VIEW==="pairhub") renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
@@ -1072,6 +1112,11 @@ function pairHeadPick(){
     <div id="phprev" style="margin-top:12px"></div>
     <div class="tiny muted" style="margin-top:12px">토큰 2개 · 투명 PNG 권장. 왼쪽 아래에 나란히 표시됩니다. 배경을 바꾸지 않고 토큰만 저장할 수도 있습니다.</div>
     <div class="pair-token-fields">${[0,1].map(i=>`<div><label class="f">토큰 ${i+1}</label><input type="file" accept="image/png,image/webp,image/jpeg" class="inp" onchange="pairTokenPick(this,${i})"><div id="phtoken${i}" class="pair-token-preview">${PAIRHEADTOKENS[i]?`<img src="${PAIRHEADTOKENS[i]}" alt="토큰 ${i+1}">`:''}</div><button class="btn sm ghost" onclick="pairTokenRemove(${i})">토큰 지우기</button></div>`).join('')}</div>
+    <label class="f" style="margin-top:14px" for="phfont">페어명 폰트 CSS</label>
+    <textarea class="inp" id="phfont" rows="5" maxlength="12000" placeholder="@import url('https://fonts.googleapis.com/css2?family=Rock+Salt&display=swap');">${esc(pairHeadState().fontCSS||'')}</textarea>
+    <div class="tiny muted">@import 또는 @font-face 전체를 붙여 넣어 주세요. 비우면 기본 폰트로 돌아갑니다. 폰트는 페어명에만 적용됩니다.</div>
+    <button class="btn sm" style="margin-top:8px" onclick="pairFontPreview()">폰트 미리보기</button>
+    <div id="phfont-preview" class="pair-font-preview">${esc(SOCIAL.pairs.find(p=>String(p.id)===String(P.mine.id))?.pair_name||'페어명 미리보기')}</div><div class="tiny muted" id="phfont-status"></div>
     <div class="row" style="margin-top:12px">
       <button class="btn pri" id="phsave" onclick="pairHeadSave()">저장</button>
       ${pairHeadState().img?'<button class="btn sm red" onclick="pairHeadClear()">지금 헤더 내리기</button>':""}
@@ -1115,13 +1160,15 @@ function pairHeadSave(){
   if(!P.mine) return;
   const image=PAIRHEADNEW||pairHeadState().img;
   const tokens=[...PAIRHEADTOKENS];
+  const fontCSS=(document.getElementById("phfont")?.value??pairHeadState().fontCSS??"").trim();
+  try{pairFontSpec(fontCSS);}catch(e){toast(e.message,"bad");return;}
   const src=(document.getElementById("phsrc")||{}).value||"";
   const at=new Date().toISOString();
   const btn=document.getElementById("phsave"); if(btn) btn.disabled=true;
-  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:pairHeadEncode(image,tokens), header_at:at},"return=minimal")
+  sbSend("PATCH",`pairs?id=eq.${P.mine.id}`,{header:pairHeadEncode(image,tokens,fontCSS), header_at:at},"return=minimal")
     .then(()=>{
       const H=pairHeadState();
-      H.img=image; H.tokens=tokens; H.at=at; H.forId=String(P.mine.id);
+      H.img=image; H.tokens=tokens; H.fontCSS=fontCSS; H.at=at; H.forId=String(P.mine.id);
       S.pairHeadSrc=src.trim().slice(0,30);
       PAIRHEADNEW="";
       closeModal(); renderMain(true); save();
@@ -1145,12 +1192,15 @@ function pairHeadClear(){
 function pairHeadHTML(){
  const P=pairEnsure();if(!sbOn()||!P.mine)return '';
  const H=pairHeadState(),shared=SOCIAL.pairs.find(r=>String(r.id)===String(P.mine.id));
+ const colors=pairOrder().map(p=>rosterThemeColor(p.color));
+ const colorA=colors[0]||'var(--gold)',colorB=colors[1]||colorA;
+ const fontCSS=H.fontCSS||'';setTimeout(()=>pairFontApply(fontCSS),0);
  return `<div class="card pair-scene-card">
   <div class="pair-scene">
    ${H.img?`<img class="pair-scene-bg" src="${H.img}" alt="페어 헤더">`:'<div class="pair-scene-empty tiny muted">헤더 설정에서 배경과 토큰 2개를 올려 보세요 · 권장 1500 × 625</div>'}
    <div class="pair-scene-shade"></div>
    <div class="pair-scene-tokens">${[0,1].map(i=>H.tokens?.[i]?`<img src="${H.tokens[i]}" alt="페어 토큰 ${i+1}">`:'').join('')}</div>
-   <div class="pair-scene-name">${esc(shared?.pair_name||'이름 없는 페어')}</div>
+   <div class="pair-scene-name" data-font-css="${esc(fontCSS)}" style="--pair-name-a:${colorA};--pair-name-b:${colorB}">${esc(shared?.pair_name||'이름 없는 페어')}</div>
   </div>
   <div class="spread pair-scene-tools"><span class="tiny muted">${H.loading?'헤더를 불러오는 중입니다':S.pairHeadSrc?`헤더 출처 — ${esc(S.pairHeadSrc)}`:'배경과 토큰은 두 사람이 함께 씁니다'}</span><div class="row"><button class="btn sm ghost" onclick="pairHeadPick()">헤더·토큰 설정</button><button class="btn sm ghost" onclick="pairHeadFetch(true)">새로 고침</button></div></div>
  </div>`;
