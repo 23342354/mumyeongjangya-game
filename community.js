@@ -432,20 +432,20 @@ pairBreak = function(){
     }
   }, 1500);
 };
-/* 동거 중에는 거처를 혼자 옮길 수 없다는 점을 먼저 알립니다 */
+/* 공동 기록 연결 후에는 이사를 공동 행동으로 저장합니다. */
 const _moveHall8 = moveHall;
 moveHall = function(id){
-  const sh=pairSharedHome();
-  if(sh){
-    const worth=homeWorth(id,0);
-    if(worth<=sh.worth){
-      toast(`페어와 동거 중입니다. ${homeOf(sh.hall).n} ${sh.stage}단계가 더 좋은 집이라 곧 다시 그리로 동거됩니다. 옮기려면 먼저 페어를 풀어 주세요.`,"bad");
+  if(!HALLS.some(h=>h.id===id) || S.hall===id) return;
+  const paired=typeof pairEnsure==="function" && pairEnsure().mine;
+  if(paired){
+    if(typeof PAIR_PLAY==="undefined" || !PAIR_PLAY.ready){
+      toast("페어 공동 기록을 연결한 뒤 함께 이사할 수 있습니다. 잠시 후 다시 시도해 주세요.","bad");
       return;
     }
-    if(!confirm(`지금 옮기면 페어도 함께 ${homeOf(id).n}로 들어옵니다. 두 사람 모두 집 단계가 0이 되고 일세도 이곳 기준으로 바뀝니다. 옮기시겠습니까?`)) return;
   }
+  const before=S.hall;
   _moveHall8(id);
-  if(sh) S.homeSolo=null;
+  if(paired && before!==S.hall){ S.homeSolo=null; save(); }
 };
 /* 명부 단추에 페어 상대 이름까지 */
 if(typeof pairBtn==="function"){

@@ -3115,14 +3115,16 @@ VIEWS.rank=()=>{
 /* 거처 화면은 part4 에서 만듭니다 */
 
 function moveHall(id){
-  if(S.hall===id) return;
+  if(!HALLS.some(h=>h.id===id) || S.hall===id) return;
   const built=(S.home&&S.home.stage)||0;
   const msg = id==="dorm"
     ? (built?`기숙사로 들어가면 지금까지 지은 집 ${built}단계를 두고 갑니다. 옮길까요?`
             :"기숙사로 들어갈까요? 일세는 없지만 혜택 천장이 100%입니다.")
     : (built?`옮기면 지금까지 지은 집 ${built}단계를 두고 가고, 새 집을 처음부터 짓게 됩니다. 옮길까요?`
             :"이 구역으로 옮길까요? 하루마다 일세를 내야 합니다.");
-  if(!confirm(msg)) return;
+  const paired=typeof pairEnsure==="function" && pairEnsure().mine;
+  const moveMsg=paired ? `페어를 유지한 채 함께 ${homeOf(id).n}로 이사합니다. 현재 거처 ${built}단계를 두고 가며 새 거처는 0단계에서 시작합니다. 일세는 새 거처 기준으로 적용됩니다. 계속할까요?` : msg;
+  if(!confirm(moveMsg)) return;
   S.hall=id;
   if(S.home){ S.home.stage=0; S.home.due=0; }   // 집은 두고 갑니다
   renderTop(); renderNav(); renderMain(); save();

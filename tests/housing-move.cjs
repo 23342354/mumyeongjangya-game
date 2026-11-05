@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const game=fs.readFileSync('game.js','utf8'),play=fs.readFileSync('gameplay.js','utf8'),community=fs.readFileSync('community.js','utf8');
+let accept=true,prompts=0;
+const noop=()=>{},c={S:{hall:'dorm',home:{stage:4,due:100},homeSolo:{hall:'dorm',stage:4}},HALLS:['dorm','w1','w2'].map(id=>({id})),PAIR_PLAY:{ready:true},pairEnsure:()=>({mine:{id:1}}),confirm:()=>{prompts++;return accept;},homeOf:id=>({n:id}),toast:noop,renderTop:noop,renderNav:noop,renderMain:noop,save:noop};
+vm.createContext(c);
+vm.runInContext(play.slice(play.indexOf('function moveHall(id){'),play.indexOf('// District descriptions:')),c);
+vm.runInContext(community.slice(community.indexOf('const _moveHall8 ='),community.indexOf('/* 명부 단추')),c);
+vm.runInContext(game.match(/function setHall\(h\)\{[^\n]+/)[0],c);
+accept=false;c.setHall('w1');assert.equal(c.S.hall,'dorm');assert.equal(c.S.home.stage,4);assert.equal(prompts,1);
+accept=true;c.setHall('w1');assert.equal(c.S.hall,'w1');assert.equal(c.S.home.stage,0);assert.equal(c.S.home.due,0);assert.equal(c.S.homeSolo,null);assert.equal(prompts,2);
+c.S.home.stage=4;c.setHall('w1');assert.equal(c.S.home.stage,4);assert.equal(prompts,2);
+c.PAIR_PLAY.ready=false;c.setHall('w2');assert.equal(c.S.hall,'w1');assert.equal(c.S.home.stage,4);
+c.PAIR_PLAY.ready=true;c.setHall('dorm');assert.equal(c.S.hall,'dorm');assert.equal(c.S.home.stage,0);
+c.setHall('invalid');assert.equal(c.S.hall,'dorm');
+c.pairEnsure=()=>({mine:null});c.S.home.stage=4;c.setHall('w2');assert.equal(c.S.home.stage,0);assert.equal(c.S.hall,'w2');
+console.log('PASS: profile move confirmation/cancellation, no stage transfer, pair move without breakup, connection guard, same/invalid district and solo move');
