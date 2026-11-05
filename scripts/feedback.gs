@@ -7,7 +7,7 @@
  */
 
 var SHEET_NAME = '건의함';
-var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변', '열람 코드 해시'];
+var HEADER = ['id', '올린 때', '쓴 사람', '분류', '제목', '내용', '비공개', '공감', '상태', '답변', '열람 코드 해시', '작성 계정'];
 
 /** 시트를 가져오고, 없으면 만들어 머리글을 넣습니다. */
 function getSheet_() {
@@ -29,6 +29,7 @@ function getSheet_() {
     // 기존 건의함에 있는 10개 열은 보존하고, 개인 열람 코드 해시 열만 추가합니다.
     sh.getRange(1, 11).setValue(HEADER[10]);
   }
+  sh.getRange(1, 12).setValue(HEADER[11]);
   return sh;
 }
 
@@ -42,6 +43,16 @@ function receiptHash_(token) {
   if (!/^[a-f0-9]{64}$/.test(String(token || ''))) return '';
   var data = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, token, Utilities.Charset.UTF_8);
   return data.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+
+/** Script Properties에 SUPABASE_URL, SUPABASE_ANON_KEY를 설정합니다.
+ * 계정 토큰은 저장하지 않으며 서버에서 검증한 계정 ID만 저장합니다. */
+function accountIdentity_(p){
+ var props=PropertiesService.getScriptProperties(),url=props.getProperty('SUPABASE_URL'),key=props.getProperty('SUPABASE_ANON_KEY');
+ if(!url||!key)throw Error('운영진이 건의함 계정 연결 설정을 적용해야 합니다.');
+ var r=UrlFetchApp.fetch(url.replace(/\/$/,'')+'/rest/v1/rpc/suggestion_account_identity',{method:'post',contentType:'application/json',headers:{apikey:key,Authorization:'Bearer '+key},payload:JSON.stringify({p_actor:p.p_actor,p_token:p.p_token}),muteHttpExceptions:true});
+ if(r.getResponseCode()!==200)throw Error('로그인한 계정을 확인해 주세요.');
+ var id=JSON.parse(r.getContentText());if(typeof id!=='string'||!id)throw Error('계정 확인에 실패했습니다.');return id;
 }
 
 /** 게임이 목록을 불러갈 때 */
@@ -86,8 +97,8 @@ function doPost(e) {
     var sh = getSheet_();
 
     if (p.action === 'read_private') {
+      var actor = accountIdentity_(p);
       var receiptHash = receiptHash_(p.receipt);
-      if (!receiptHash) return json_({ ok: false, error: '올바른 열람 코드를 입력해 주세요.' });
       var lastPrivate = sh.getLastRow();
       if (lastPrivate > 1) {
         var privateRows = sh.getRange(2, 1, lastPrivate - 1, HEADER.length).getValues();
@@ -95,21 +106,21 @@ function doPost(e) {
           var rec = privateRows[j];
           if (String(rec[0]) === String(p.id)
               && (rec[6] === true || rec[6] === 1 || rec[6] === '1' || rec[6] === 'Y')
-              && String(rec[10] || '') === receiptHash) {
+              && (String(rec[11] || '') === actor || (!rec[11] && receiptHash && String(rec[10] || '') === receiptHash))) {
+            if(!rec[11])sh.getRange(j+2,12).setValue(actor);
             return json_({ok:true, body:String(rec[5] || ''), reply:String(rec[9] || '')});
           }
         }
       }
-      return json_({ ok:false, error:'열람 코드가 맞지 않거나 이전 방식으로 작성한 글입니다.' });
+      return json_({ ok:false, error:'본인이 작성한 글만 읽을 수 있습니다. 기존 글은 운영진에게 작성자 연결을 문의해 주세요.' });
     }
 
     if (p.action === 'add') {
       var title = String(p.title || '').slice(0, 80);
       var body  = String(p.body  || '').slice(0, 3000);
       if (!title || !body) return json_({ ok: false, error: '제목과 내용이 필요합니다' });
-      var receiptHash = p.secret ? receiptHash_(p.receipt) : '';
-      if (p.secret && !receiptHash)
-        return json_({ ok:false, error:'비공개 글을 위한 개인 열람 코드가 필요합니다.' });
+      var actor = accountIdentity_(p);
+      var receiptHash = '';
 
       // 같은 사람이 연달아 올리는 것을 1분에 한 번으로 제한합니다.
       var last = sh.getLastRow();
@@ -136,7 +147,7 @@ function doPost(e) {
         0,
         '접수',
         '',
-        receiptHash
+        receiptHash, actor
       ]);
       return json_({ ok: true, id:issuedId });
     }

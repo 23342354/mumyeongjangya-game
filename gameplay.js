@@ -3328,43 +3328,39 @@ function boardNewReceipt(){
   const bytes=new Uint8Array(32);window.crypto.getRandomValues(bytes);
   return Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
 }
-function boardReadPrivate(id,receipt){
-  if(S.board&&S.board.url){
-    return boardSend({action:"read_private",id:String(id),receipt}).then(j=>{
-      if(!j||!j.ok||typeof j.body!=="string") throw Error(j&&j.error||"열람 코드를 확인할 수 없습니다.");
-      return {body:j.body, reply:typeof j.reply==="string"?j.reply:null};
-    });
-  }
-  if(typeof sbSend==="function" && typeof sbOn==="function" && sbOn()){
-    return sbSend("POST","rpc/read_my_private_suggestion_full",{p_id:Number(id),p_receipt:receipt}).then(rows=>{
-      const item=Array.isArray(rows)?rows[0]:rows;
-      if(!item||typeof item.body!=="string") throw Error("열람 코드가 맞지 않거나 이전 방식으로 작성한 글입니다.");
-      return {body:item.body, reply:typeof item.reply==="string"?item.reply:null};
-    });
-  }
-  return Promise.reject(Error("건의함이 연결되지 않았습니다."));
+function boardAccountCredentials(){
+ if(typeof ACCT==='undefined'||!ACCT?.id||!ACCT?.tok)throw Error('내 글을 읽거나 작성하려면 계정에 로그인해 주세요.');
+ return {p_actor:ACCT.id,p_token:ACCT.tok};
+}
+function boardReadPrivate(id){
+ let account;try{account=boardAccountCredentials();}catch(e){return Promise.reject(e);}
+ const receipt=boardReceiptFor(id);
+ if(S.board&&S.board.url){
+  return boardSend({action:'read_private',id:String(id),...account,receipt}).then(j=>{
+   if(!j?.ok||typeof j.body!=='string')throw Error(j?.error||'본인이 작성한 글만 읽을 수 있습니다.');
+   return {body:j.body,reply:typeof j.reply==='string'?j.reply:''};
+  });
+ }
+ if(typeof sbSend==='function'&&typeof sbOn==='function'&&sbOn()){
+  return sbSend('POST','rpc/read_account_suggestion',{...account,p_id:Number(id),p_legacy_receipt:receipt}).then(rows=>{
+   const item=Array.isArray(rows)?rows[0]:rows;
+   if(!item||typeof item.body!=='string')throw Error('본인이 작성한 글만 읽을 수 있습니다. 기존 글의 작성자 정보가 없으면 운영진에게 문의해 주세요.');
+   return {body:item.body,reply:typeof item.reply==='string'?item.reply:''};
+  });
+ }
+ return Promise.reject(Error('건의함이 연결되지 않았습니다.'));
 }
 function boardPrivateArea(id,hasReply){
-  const token=boardReceiptFor(id);
-  return `<div id="board_private_body" data-post-id="${esc(String(id))}" style="white-space:pre-wrap;line-height:1.9;font-size:14px">${token?"비공개 본문을 확인하는 중…":"비공개 글입니다. 작성자만 열람 코드로 본문을 볼 수 있습니다."}</div>
-    ${hasReply?`<div class="card pad" id="board_private_reply_panel" data-post-id="${esc(String(id))}" style="margin-top:14px;border-color:var(--gold2)">
-      <div class="sect-t" style="margin:0 0 6px">운영진 답변</div>
-      <div id="board_private_reply" style="white-space:pre-wrap;line-height:1.9;font-size:13.5px">${token?"답변을 확인하는 중…":"작성자 인증 후 답변을 볼 수 있습니다."}</div>
-    </div>`:""}
-    <div id="board_private_unlock" style="margin-top:10px;${token?"display:none":""}">
-      <div class="tiny muted" style="margin-bottom:6px">본인이 작성한 글이라면 글을 올릴 때 받은 열람 코드를 입력해 주세요.</div>
-      <div class="row" style="gap:8px">
-        <input class="inp" id="board_receipt_input" type="text" autocomplete="off" spellcheck="false" placeholder="64자리 개인 열람 코드" maxlength="64" style="flex:1;min-width:180px">
-        <button class="btn sm pri" onclick="boardUnlock('${esc(String(id))}')">본문 보기</button>
-      </div>
-      <div class="tiny muted" style="margin-top:6px">기존 비공개 글은 작성자 확인용 코드가 없어 운영진이 기존 글에 코드를 발급해야 합니다.</div>
-    </div>`;
+ return `<div id="board_private_body" data-post-id="${esc(String(id))}" style="white-space:pre-wrap;line-height:1.9;font-size:14px">로그인한 계정으로 작성자를 확인하는 중…</div>
+ ${hasReply?`<div class="card pad" id="board_private_reply_panel" data-post-id="${esc(String(id))}" style="margin-top:14px;border-color:var(--gold2)"><div class="sect-t">운영진 답변</div><div id="board_private_reply" style="white-space:pre-wrap">작성자를 확인하는 중…</div></div>`:''}`;
 }
 function boardPrivateLoad(id,code){
+  const actor=typeof ACCT!=="undefined"?ACCT?.id:null;
   const body=document.getElementById("board_private_body"), unlock=document.getElementById("board_private_unlock");
   if(!body || body.dataset.postId!==String(id)) return;
   body.textContent="비공개 본문을 확인하는 중…";
   boardReadPrivate(id,code).then(data=>{
+    if((typeof ACCT!=="undefined"?ACCT?.id:null)!==actor)return;
     const current=document.getElementById("board_private_body");
     if(!current || current.dataset.postId!==String(id)) return;
     current.textContent=data.body;
@@ -3375,7 +3371,7 @@ function boardPrivateLoad(id,code){
         ? "답변 열람 기능을 업데이트해야 합니다. 서버의 최신 보안 SQL 또는 Apps Script를 적용해 주세요."
         : (data.reply || "아직 답변이 없습니다.");
     const row=document.getElementById("board_private_unlock");if(row)row.style.display="none";
-    boardRememberReceipt(id,code);
+
   }).catch(e=>{
     const current=document.getElementById("board_private_body");if(!current || current.dataset.postId!==String(id))return;
     current.textContent="비공개 글입니다. "+String(e.message||e);
@@ -3384,32 +3380,8 @@ function boardPrivateLoad(id,code){
     const row=document.getElementById("board_private_unlock");if(row)row.style.display="";
   });
 }
-function boardUnlock(id){
-  const input=document.getElementById("board_receipt_input");
-  const token=String(input&&input.value||"").trim().toLowerCase();
-  if(!/^[a-f0-9]{64}$/.test(token)){toast("64자리 열람 코드를 입력해 주세요.","bad");return;}
-  boardPrivateLoad(id,token);
-}
-function boardPrivateSubmitted(id,receipt){
-  boardRememberReceipt(id,receipt);
-  modal("비공개 건의글 등록 완료",`
-    <div class="tiny" style="line-height:1.8;margin-bottom:12px">내 글의 본문은 이 기기에서 바로 읽을 수 있습니다.
-    <b>다른 기기에서 읽으려면 아래 개인 열람 코드가 필요합니다.</b>
-    운영진 이외의 다른 러너에게는 본문을 공개하지 않습니다.</div>
-    <label class="f">개인 열람 코드</label>
-    <input class="inp" id="board_new_receipt" readonly value="${esc(receipt)}" style="width:100%;font-size:12px" onclick="this.select()">
-    <div class="row" style="margin-top:12px">
-      <button class="btn pri" onclick="boardCopyReceipt()">열람 코드 복사</button>
-      <button class="btn" onclick="closeModal()">확인</button>
-    </div>
-    <div class="tiny muted" style="margin-top:10px">코드를 잃으면 운영진에게 별도 재발급을 요청해야 합니다.</div>`);
-}
-function boardCopyReceipt(){
-  const el=document.getElementById("board_new_receipt");if(!el)return;
-  el.select();
-  if(navigator.clipboard&&navigator.clipboard.writeText)
-    navigator.clipboard.writeText(el.value).then(()=>toast("열람 코드를 복사했어요.","good")).catch(()=>toast("코드를 선택했어요. 직접 복사해 주세요."));
-  else toast("코드를 선택했어요. 직접 복사해 주세요.");
+function boardPrivateSubmitted(){
+ closeModal();toast('등록했습니다. 같은 계정으로 로그인하면 내 글과 답변을 읽을 수 있습니다.','good');
 }
 
 /* ─── 구글 시트와 주고받기 ─── */
@@ -3482,15 +3454,14 @@ function boardSubmit(){
     toast("혼자 보기에 저장했습니다. 운영진에게 보내려면 설정에서 건의함을 연결해 주세요.");
     return;
   }
-  let receipt="";
-  if(secret){try{receipt=boardNewReceipt();}catch(e){toast(String(e.message||e),"bad");return;}}
+  let account;try{account=boardAccountCredentials();}catch(e){toast(e.message,"bad");return;}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  boardSend({action:"add", ...row, receipt})
+  boardSend({action:"add", ...row, ...account})
     .then(j=>{
       if(!j||!j.ok) throw new Error(j&&j.error||"보내지 못했습니다");
       if(secret){
         if(!j.id) throw Error("서버에서 글 번호를 받지 못했습니다. 운영진에게 문의해 주세요.");
-        boardPrivateSubmitted(j.id,receipt);
+        boardPrivateSubmitted(j.id);
       }else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
@@ -3529,7 +3500,7 @@ function boardOpen(id){
         onclick="boardLike('${esc(String(r.id))}')">공감 ${+r.likes||0}</button>
       <button class="btn" style="margin-left:auto" onclick="closeModal()">닫기</button>
     </div>`);
-  if(+r.secret&&boardOn()&&boardReceiptFor(r.id)) boardPrivateLoad(r.id,boardReceiptFor(r.id));
+  if(+r.secret&&boardOn()) boardPrivateLoad(r.id);
 }
 function boardDate(t){
   try{ const d=new Date(t);
@@ -4117,14 +4088,13 @@ boardSubmit=function(){
   if(!title){ toast("제목을 적어 주세요.","bad"); return; }
   if(!body){ toast("내용을 적어 주세요.","bad"); return; }
   S.board.name=name;
-  let receipt="";
-  if(secret){try{receipt=boardNewReceipt();}catch(e){toast(String(e.message||e),"bad");return;}}
+  let account;try{account=boardAccountCredentials();}catch(e){toast(e.message,"bad");return;}
   const btn=$("#b_go"); if(btn){ btn.disabled=true; btn.textContent="보내는 중…"; }
-  sbSend("POST","rpc/submit_private_readable_suggestion",
-    {p_name:name,p_cat:cat,p_title:title,p_body:body,p_secret:secret,p_receipt:receipt})
+  sbSend("POST","rpc/submit_account_suggestion",
+    {...account,p_name:name,p_cat:cat,p_title:title,p_body:body,p_secret:secret})
     .then(id=>{
       if(id===undefined||id===null||id==="") throw Error("서버에서 글 번호를 받지 못했습니다.");
-      if(secret) boardPrivateSubmitted(id,receipt);
+      if(secret) boardPrivateSubmitted(id);
       else{closeModal();toast("건의함에 올렸습니다. 고맙습니다.","good");}
       boardFetch(true);
     })
