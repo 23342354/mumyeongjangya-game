@@ -402,7 +402,8 @@ function tick(minutes,advanceRun=true,forceRun=false){
   // Combat remains unchanged; checkpoints list the whole unclaimed pouch.
   const ending=R.done?(R.logs||[]).filter(l=>/정산 대기 ·|■/.test(l.t)).slice(-2):[];
   const summary={t:`<b>${runTimeText(Math.max(0,R.total-R.left))} 의뢰 진행</b> · 누적 처치 ${nf(R.kills||0)}체 · ${runRewardText(R)} · 정산 대기${R.soulCasts?` · ${esc(pairSoulName())} 누적 ${R.soulCasts}회`:""}`,time:cal().str.replace(/^(오전|오후) /,'')};
-  R.logs=[...previousLogs,summary,...ending].slice(-80);
+  const events=(R.logs||[]).filter(l=>!previousLogs.includes(l)&&/quest-soul|quest-flavor/.test(l.t));
+  R.logs=[...previousLogs,...events,summary,...ending].slice(-160);
  }
 }
 function updateRunClock(){

@@ -1880,14 +1880,26 @@ function aucClose(){
 
 /* ═══════════ 실시간 의뢰 일지 ═══════════ */
 const RUNFLAVOR=[
- "잠시 숨을 고른다. 파장이 천천히 차오른다.",
- "골목 끝에서 전자 풍경이 낮게 울린다.",
- "벽에 붙은 진언이 문장의 순서를 바꾼다.",
- "어디선가 확성기로 송출되는 독경이 들린다.",
- "낡은 간판이 마지막 글자 하나만 깜빡인다.",
- "지도 애플리케이션은 계속 직진하라고 안내한다.",
- "배달 드론 한 대가 머리 위를 지나간다.",
- "향 냄새가 채 가시기 전에 납땜 연기가 끼어든다.",
+ "발자국이 끊긴 자리에서 검은 파장이 솟았다.",
+ "오래된 부적이 바람도 없이 흔들렸다.",
+ "창문마다 다른 시간의 달빛이 걸려 있었다.",
+ "젖은 돌바닥 아래에서 희미한 종소리가 올라왔다.",
+ "골목을 가로지른 붉은 실이 손끝의 파장에 끊어졌다.",
+ "사람 없는 가게에서 손님을 부르는 종이 울렸다.",
+ "흩어진 잔향을 따라 의뢰서에 다음 경로를 표시했다.",
+ "고개를 돌리자 벽에 드리운 그림자가 한 박자 늦게 따라왔다.",
+ "금 간 표지판 너머로 정체 모를 기척이 움직였다.",
+ "꺼진 등롱 아래에서 아직 따뜻한 향재를 발견했다.",
+ "담장에 새겨진 진언이 가까이 갈수록 흐릿해졌다.",
+ "바람이 지나간 뒤에도 처마 끝의 방울은 울리지 않았다.",
+ "의뢰서의 먹빛이 잠깐 번지더니 원래 자리로 돌아왔다.",
+ "닫힌 문 너머의 발소리가 걸음을 멈추자 함께 멎었다.",
+ "길을 가로막은 잔류 파장을 걷어 내고 안쪽으로 들어갔다.",
+ "우물 속에서 비친 하늘은 이곳의 하늘과 달랐다.",
+ "길모퉁이에 남은 작은 불씨를 밟지 않도록 돌아갔다.",
+ "흩어진 부적 조각 사이로 낯선 이름의 일부가 보였다.",
+ "멀리서 독경이 끊기자 주변의 기척도 잠시 숨을 죽였다.",
+ "방금 지나온 문은 돌아보니 벽으로 막혀 있었다.",
 ];
 function startRun(stage,party,mins){
   if(S.run?.done&&S.run.rewardVersion===2&&!S.run.settled){toast("이전 의뢰의 보상을 먼저 정산해 주세요.","bad");return;}
@@ -1973,7 +1985,7 @@ function runStep(){
   R.soulSeconds=(R.soulSeconds||0)+30;
   const soulReady=typeof pairSoulReady==='function'&&pairSoulReady()&&String(R.pairId)===String(window.PAIR_PLAY.snapshot.pairId)&&live.length>=2&&R.me.hp>0&&R.allies.some(a=>a.hp>0)&&R.soulSeconds>=(R.soulCasts?60:15)&&R.foes[0]?.hp>0;
   const r=soulReady?.5:Math.random();
-  if(r<0.14){ pushRun(`<span class="muted">${pick(RUNFLAVOR)}</span>`); return; }
+  if(r<0.14){ pushRun(`<span class="muted quest-flavor">${pick(RUNFLAVOR)}</span>`); return; }
   if(r<0.2 && R.me.hp<R.me.max*.7){
     const heal=Math.round(R.me.max*0.06*(1+mod("heal")));
     R.me.hp=Math.min(R.me.max,R.me.hp+heal);
@@ -1996,9 +2008,9 @@ function runStep(){
   resolveAttack(attacker, target, log);
   if(soulReady&&foe.hp>0){
     const attack=live.reduce((sum,f)=>sum+f.atk,0),res=live.reduce((sum,f)=>sum+f.res,0)/live.length;
-    const damage=Math.max(1,Math.min(Math.round(foe.max*.15),Math.round(attack*.6*(1+.5*res/(res+100)))));
+    const damage=Math.min(foe.hp,Math.max(1,Math.min(Math.round(foe.max*.15),Math.round(attack*.6*(1+.5*res/(res+100))))));
     foe.hp=Math.max(0,foe.hp-damage);R.soulSeconds=0;R.soulCasts=(R.soulCasts||0)+1;
-    log.push(`<span class="s">${esc(pairSoulName())} 발동 · 영혼의 공명 · 피해 ${nf(damage)}</span>`);
+    log.push(`<span class="s quest-soul">${esc(R.me.n)} · ${esc(R.allies.find(a=>a.hp>0)?.n||"페어")}의 영혼의 공명 ⌈${esc(pairSoulName())}⌋! ${nf(damage)} 피해</span>`);
   }
   pushRun(log.join("<br>")||"");
   if(foe.hp<=0){

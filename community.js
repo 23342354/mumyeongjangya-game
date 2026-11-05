@@ -917,8 +917,9 @@ setInterval(()=>{
   const R=S.run;
   const clock=document.getElementById("runclock");
   if(!clock) return;
-  if(R.logs.length!==RUNUILOGS){
-    RUNUILOGS=R.logs.length;
+  const logSignature=JSON.stringify([R.logs.length,R.logs.at(-1),R.soulCasts||0]);
+  if(logSignature!==RUNUILOGS){
+    RUNUILOGS=logSignature;
     renderMain(true);
     return;
   }
