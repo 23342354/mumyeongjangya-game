@@ -1819,10 +1819,12 @@ VIEWS.stats=()=>{
         <tr><td>공격력</td><td style="text-align:right">${nf(c.atkPow)}</td></tr>
         <tr><td>공격 속도</td><td style="text-align:right">${c.spd.toFixed(2)}/초</td></tr>
         <tr><td>치명타</td><td style="text-align:right">${(c.crit*100).toFixed(1)}% · ×${c.critD.toFixed(2)}</td></tr>
-        <tr><td>생명력 · 방어력</td><td style="text-align:right">${nf(c.hp)} · ${nf(c.def)}</td></tr>
+        <tr><td>전투 생명력</td><td style="text-align:right">${nf(c.hp)}</td></tr>
+        <tr><td>PvE 방어력</td><td style="text-align:right">${nf(c.def)}</td></tr>
         <tr><td>치유·보호막 위력</td><td style="text-align:right">×${c.heal.toFixed(2)}</td></tr>
       </table>
       <div class="tiny muted" style="margin-top:8px">초당 피해는 석탑·결계의 탑·업귀 토벌·연무제에서 쓰입니다.
+        새 대련의 최대 HP는 입장 시 개인 생명력을 사용합니다. 대련 방어·회피는 별도의 D5 판정이며, 상단 체력·이성 100은 콘텐츠 이용 상태입니다.
       의뢰·대련·승급 시험은 <b>공격 D5 + 5</b>에 치명타·업귀 피해 효과를 적용합니다.</div>
       <hr class="hr">
       <div class="sect-t">적용 중인 효과</div>

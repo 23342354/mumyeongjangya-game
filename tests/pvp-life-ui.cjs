@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+(async()=>{const src=fs.readFileSync('community.js','utf8'),c={S:{hp:100,sn:100},C:()=>({hp:280000}),save(){},acctPush:async()=>true,ACCT:{id:'alice'},esc:String,nf:String};vm.createContext(c);
+vm.runInContext(src.slice(src.indexOf('async function pvpPrepareLife('),src.indexOf('function pvpStats(')),c);
+await c.pvpPrepareLife();assert.equal(c.S.pvpLife.hp,280000);assert.equal(c.S.hp,100);assert.equal(c.S.sn,100,'content vitals unchanged');
+c.acctPush=async()=>false;await assert.rejects(c.pvpPrepareLife(),/저장하지 못했습니다/);
+vm.runInContext(src.slice(src.indexOf('function pvpFighter('),src.indexOf('function pvpPhase(')),c);
+let html=c.pvpFighter({host_id:'alice',host_name:'A',host_hp:140000,host_max_hp:280000,host_stats:{atk:80,def:80,agi:80}},'host');assert.ok(html.includes('생명력 140000 / 280000'));assert.ok(html.includes('width:50%'));
+html=c.pvpFighter({host_id:'alice',host_name:'A',host_hp:50,host_stats:{}},'host');assert.ok(html.includes('50 / 100'),'legacy room defaults to HP100');
+let resolveSave,calls=[];c.PVP={busy:false};c.VIEW='duel';c.renderMain=()=>{};c.pvpToastError=e=>calls.push('error');c.acctPush=()=>new Promise(r=>resolveSave=r);c.pvpRpc=async name=>{calls.push(name);return name==='pvp_view'?{rooms:[],records:[],mine:null,messages:[]}:1;};
+vm.runInContext(src.slice(src.indexOf('function pvpExecute('),src.indexOf('function pvpCreate(')),c);
+const pending=c.pvpExecute('pvp_create',{});await Promise.resolve();await Promise.resolve();assert.deepEqual(calls,[],'room waits for life save');resolveSave(true);await pending;assert.deepEqual(calls,['pvp_create','pvp_view']);
+console.log('PASS: personal life snapshot, unchanged content vitals, failed save refusal, creation waits for save, full HP progress and legacy fallback');
+})().catch(e=>{console.error(e);process.exitCode=1;});
