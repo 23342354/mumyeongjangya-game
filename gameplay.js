@@ -1662,10 +1662,10 @@ function gearOptionsHTML(it){
  const main=gearOptionRows(it)[0];
  return `<section class="gear-option-section"><h4>기본 옵션</h4><div class="gear-option-row"><span>${esc(main.name)}</span><b>+${nf(main.value)}</b></div></section><hr class="gear-option-divider"><section class="gear-option-section"><h4>추가 옵션</h4>${it.opts.length?it.opts.map(o=>`<div class="gear-option-row"><span>${esc(o.n)}</span><span>+${o.v}%</span></div>`).join(''):'<div class="tiny muted">추가 옵션이 없습니다.</div>'}</section>`;
 }
-function gearComparisonTable(data){
+function gearComparisonTable(data,zero=GEAR_INSPECT.zero){
  const mine=gearOptionRows(data.candidate),other=gearOptionRows(data.current),keys=[...new Set([...mine,...other].map(o=>o.key))];
  const value=(row)=>row?`+${row.percent?row.value:nf(row.value)}${row.percent?'%':''}`:'—';
- return `<div class="gear-compare-table-wrap"><table class="gear-compare-table"><caption>같은 부위 법구 비교${GEAR_INSPECT.zero?' · 각인 0 기준':''}</caption><thead><tr><th scope="col">옵션</th><th scope="col">선택한 법구</th><th scope="col">현재 착용</th><th scope="col">차이</th></tr></thead><tbody>${keys.map(key=>{const a=mine.find(o=>o.key===key),b=other.find(o=>o.key===key),row=a||b,diff=(a?.value||0)-(b?.value||0);return `<tr><th scope="row">${esc(row.name)}${key.startsWith('main:')?' · 기본':''}</th><td>${value(a)}</td><td>${value(b)}</td><td class="${diff>0?'gain':diff<0?'loss':''}">${diff?`${diff>0?'+':''}${Number(diff.toFixed(2)).toLocaleString('ko-KR')}${row.percent?'%p':''}`:'—'}</td></tr>`;}).join('')}</tbody></table></div>`;
+ return `<div class="gear-compare-table-wrap"><table class="gear-compare-table"><caption>같은 부위 법구 비교${zero?' · 각인 0 기준':''}</caption><thead><tr><th scope="col">옵션</th><th scope="col">선택한 법구</th><th scope="col">현재 착용</th><th scope="col">차이</th></tr></thead><tbody>${keys.map(key=>{const a=mine.find(o=>o.key===key),b=other.find(o=>o.key===key),row=a||b,diff=(a?.value||0)-(b?.value||0);return `<tr><th scope="row">${esc(row.name)}${key.startsWith('main:')?' · 기본':''}</th><td>${value(a)}</td><td>${value(b)}</td><td class="${diff>0?'gain':diff<0?'loss':''}">${diff?`${diff>0?'+':''}${Number(diff.toFixed(2)).toLocaleString('ko-KR')}${row.percent?'%p':''}`:'—'}</td></tr>`;}).join('')}</tbody></table></div>`;
 }
 function gearInspectHTML(location='any'){
  const selected=gearInspectItem(),isEquipped=!!selected&&S.gear[selected.slot]===selected;

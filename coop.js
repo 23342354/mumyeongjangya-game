@@ -973,6 +973,23 @@ function auctionSelectBand(band){
 function auctionViewTime(iso){
   const t=Date.parse(iso);return Number.isFinite(t)?new Date(t).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Seoul"}):"";
 }
+const AUCTION_GEAR_COMPARE={};
+function auctionCompareToggle(id,key,value){
+ if(!['zero','compare'].includes(key))return;
+ const state=AUCTION_GEAR_COMPARE[String(id)]||(AUCTION_GEAR_COMPARE[String(id)]={zero:false,compare:false});
+ state[key]=!!value;renderMain(true);
+}
+function auctionGearComparisonHTML(lot){
+ const item=lot.item_data;
+ if(!item?.main||!Array.isArray(item.opts)||!SLOTS.some(s=>s.k===item.slot))return '';
+ const state=AUCTION_GEAR_COMPARE[String(lot.id)]||{zero:false,compare:false},data=gearComparisonData(item,state.zero);
+ return `<div class="auction-gear-comparison"><div class="gear-compare-controls"><label><input type="checkbox" ${state.zero?'checked':''} onchange="auctionCompareToggle(${Number(lot.id)},'zero',this.checked)"> 각인 제외</label><label><input type="checkbox" ${state.compare?'checked':''} onchange="auctionCompareToggle(${Number(lot.id)},'compare',this.checked)"> 장비 비교</label></div>
+ <div class="gear-comparison-summary"><span>${state.zero?'두 법구 모두 각인 0 기준':'현재 착용 대비'} 전투력${data.estimated?' (추정)':''}</span><b class="${data.delta>0?'gain':data.delta<0?'loss':''}">${data.delta>0?'+':''}${data.delta.toLocaleString('ko-KR')}</b></div>
+ ${!data.current?'<div class="tiny muted">현재 이 부위에 착용한 법구가 없습니다.</div>':''}
+ ${data.estimated?'<div class="tiny muted">기본 수치 기록이 없는 법구는 각인 공식을 역산한 추정값입니다.</div>':''}
+ ${gearCanEquip(item)?'':`<div class="tiny" style="color:var(--red)">Lv. ${item.lv} 필요</div>`}
+ ${state.compare?gearComparisonTable(data,state.zero):''}</div>`;
+}
 VIEWS.merchant=()=>{
   const d=LIVE_AUCTION.data;
   const headHTML=head("서버 공용 경매 · 매시 정각 개장",ic("luggage")+" 떠돌이 상인","낙찰품 귀속 · <b>륜</b> 입찰");
@@ -995,7 +1012,7 @@ VIEWS.merchant=()=>{
    ${pend.length?`<div class="card pad" style="margin-bottom:14px"><div class="sect-t">낙찰품 수령 대기 · ${pend.length}점</div>
      ${pend.map(p=>`<div class="spread auction-pending"><div><b>${esc(p.item_name)}</b>
        <div class="tiny muted">${auctionTierName(p.tier,p.level_band)} · 최종 ${nf(p.bid_amount)}륜</div></div>
-       <button class="btn sm pri" ${LIVE_AUCTION.busy?"disabled":""} onclick="auctionClaim(${Number(p.id)})">바랑에 수령</button></div>`).join("")}</div>`:""}
+       <button class="btn sm pri" ${LIVE_AUCTION.busy?"disabled":""} onclick="auctionClaim(${Number(p.id)})">바랑에 수령</button></div>${auctionGearComparisonHTML(p)}`).join("")}</div>`:""}
    ${live.length?`<div class="grid g3" style="margin-bottom:14px">${live.map(l=>{
        const item=l.item_data||{},G=GRADES[item.grade]||GRADES[2];
        const mine=l.mine,step=Math.max(500,Math.ceil(Number(l.bid_amount||0)*.1));
@@ -1004,8 +1021,9 @@ VIEWS.merchant=()=>{
        return `<article class="card pad auction-lot"><div class="spread"><span class="tag j">${auctionTierName(l.tier,l.level_band)} 경매</span><span class="tiny muted">${Number(l.bid_count||0)}회 입찰</span></div>
         <h3 style="color:${G.c};margin:10px 0 4px">${esc(l.item_name)}</h3>${item.merchantElite?`<span class="tag g">상인 특선 · ${item.auctionQualityVersion>=3?"전투 특화 · 각인 +"+Number(item.enh||0):"고수치 옵션"}</span>`:''}
         <div class="tiny muted">${GRADES[item.grade]?.n||"희귀"} · Lv ${Number(item.lv||1)} · ${SLOTS.find(x=>x.k===item.slot)?.n||"법구"} · 귀속</div>
-        <div class="tiny muted">전투력 ${nf(gearScore(item))} ${gearUpgradeHTML(item)}</div>
-        <div class="tiny" style="color:var(--jade);margin:8px 0;min-height:42px">${gearLine(item)}</div>
+        <div class="tiny muted">전투력 ${nf(gearScore(item))}</div>
+        ${gearOptionsHTML(item)}
+        ${auctionGearComparisonHTML(l)}
         <div class="spread tiny" style="margin-bottom:5px"><span class="muted">현재 최고가</span><b style="color:var(--gold);font-size:18px">${nf(Number(l.bid_amount)||Number(l.start_price))}륜</b></div>
         <div class="spread tiny"><span class="muted">최고 입찰자</span><span>${mine?"나 (최고가)":esc(l.winner_name||"아직 없음")}</span></div>
         <div class="spread tiny" style="margin:9px 0"><span class="muted">마감까지</span><b style="color:var(--gold)" data-auction-until="${esc(l.ends_at)}">${auctionDeadlineText(l.ends_at)}</b></div>

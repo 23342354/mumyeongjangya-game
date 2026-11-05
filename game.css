@@ -1427,3 +1427,9 @@ body.auth-gate #mobile-chat-toggle{
 .gear-equipped-detail .gain{color:var(--jade)}
 .gear-equipped-detail .loss{color:var(--red)}
 .gear-mini-card>.gear-mini-required{color:var(--red);font-size:11px;margin-top:auto;padding-top:4px;font-weight:600}
+
+.auction-gear-comparison{min-width:0;border-top:1px solid var(--line);margin:12px 0;padding-top:4px}
+.auction-gear-comparison .gain{color:var(--jade)}
+.auction-gear-comparison .loss{color:var(--red)}
+.auction-gear-comparison .gear-comparison-summary{align-items:baseline}
+.auction-gear-comparison .gear-compare-controls{gap:8px 14px}
