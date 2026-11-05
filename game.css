@@ -1307,3 +1307,13 @@ body.auth-gate #mobile-chat-toggle{
 #mobile-chat-toggle>.count-badge{margin-left:7px}
 .chat-fold>.count-badge{position:absolute;right:2px;top:3px}
 .ctab>.count-badge{margin-left:4px}
+
+/* Folded chat: keep badge, label and arrow in separate rows. */
+@media(min-width:1181px){
+ #chatcol .chat-fold{position:absolute;top:0;right:0}
+ body.chat-off #chatcol .chat-panel{padding:0;border:0;background:none;overflow:visible}
+ body.chat-off #chatcol .chat-fold{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;writing-mode:horizontal-tb;width:34px;min-height:104px;height:auto;padding:10px 3px;gap:9px;overflow:visible;box-sizing:border-box}
+ body.chat-off #chatcol .chat-fold>span:not(.count-badge){writing-mode:vertical-rl;text-orientation:upright;line-height:1;letter-spacing:3px;white-space:nowrap}
+ body.chat-off #chatcol .chat-fold>.count-badge{position:static;order:-1;writing-mode:horizontal-tb;text-orientation:mixed;letter-spacing:0;margin:0;min-width:20px;height:20px;max-width:28px;padding:0 3px}
+ body.chat-off #chatcol .chat-fold>svg{flex-shrink:0;margin:0;transform:rotate(-90deg)}
+}
