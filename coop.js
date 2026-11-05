@@ -992,6 +992,10 @@ VIEWS.merchant=()=>{
      <div class="tiny muted" style="margin-top:8px">보유 륜 <b style="color:var(--gold)">${nf(S.rin)}</b> · 최고가 입찰 시 전액 보관 · 다른 러너가 입찰하면 자동 환불 · 낙찰 뒤 직접 수령</div>
    </div>
    ${LIVE_AUCTION.error?`<div class="tiny" style="color:var(--red);margin-bottom:12px">${esc(LIVE_AUCTION.error)}</div>`:""}
+   ${pend.length?`<div class="card pad" style="margin-bottom:14px"><div class="sect-t">낙찰품 수령 대기 · ${pend.length}점</div>
+     ${pend.map(p=>`<div class="spread auction-pending"><div><b>${esc(p.item_name)}</b>
+       <div class="tiny muted">${auctionTierName(p.tier,p.level_band)} · 최종 ${nf(p.bid_amount)}륜</div></div>
+       <button class="btn sm pri" ${LIVE_AUCTION.busy?"disabled":""} onclick="auctionClaim(${Number(p.id)})">바랑에 수령</button></div>`).join("")}</div>`:""}
    ${live.length?`<div class="grid g3" style="margin-bottom:14px">${live.map(l=>{
        const item=l.item_data||{},G=GRADES[item.grade]||GRADES[2];
        const mine=l.mine,step=Math.max(500,Math.ceil(Number(l.bid_amount||0)*.1));
@@ -1011,10 +1015,6 @@ VIEWS.merchant=()=>{
      `<div class="card pad" style="margin-bottom:14px"><div class="sect-t">지금은 다음 경매를 준비하고 있습니다.</div>
        <div>다음 개장까지 <b style="color:var(--gold)" data-auction-until="${esc(d.next_at)}">${auctionDeadlineText(d.next_at)}</b></div>
        <div class="tiny muted" style="margin-top:7px">다음 개장: ${auctionViewTime(d.next_at)} (한국 시간) · 선택한 레벨대의 러너들과 경쟁합니다.</div></div>`}
-   ${pend.length?`<div class="card pad" style="margin-bottom:14px"><div class="sect-t">낙찰품 수령 대기 · ${pend.length}점</div>
-     ${pend.map(p=>`<div class="spread auction-pending"><div><b>${esc(p.item_name)}</b>
-       <div class="tiny muted">${auctionTierName(p.tier,p.level_band)} · 최종 ${nf(p.bid_amount)}륜</div></div>
-       <button class="btn sm pri" ${LIVE_AUCTION.busy?"disabled":""} onclick="auctionClaim(${Number(p.id)})">바랑에 수령</button></div>`).join("")}</div>`:""}
    <div class="card pad"><div class="spread" style="gap:12px"><div class="sect-t" style="margin:0">최근 낙찰 결과</div><span class="tiny muted">서버 공동 기록</span></div>
       ${hist.length?hist.map(p=>`<div class="spread auction-history tiny"><span><b>${esc(p.item_name)}</b>
           <span class="muted"> · ${auctionTierName(p.tier,p.level_band)} · ${esc(p.winner_name||"낙찰자 없음")}</span></span>

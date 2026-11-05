@@ -1257,7 +1257,7 @@ function enhance(slot, prot){
   const r=enhRate(it);
   if(Math.random()<r || prot){ it.enh++; it.main.v=Math.round(it.main.v*1.05+1);
     toast(`<b>${it.name} +${it.enh}</b> 각인 성공${prot?" <span class='muted'>(사리로 보호)</span>":""}`,"good"); }
-  else toast("각인이 어긋났습니다. 부적만 사라집니다.","bad");
+  else toast("각인이 어긋났습니다. 륜과 부적이 소모되며 각인 단계는 유지됩니다.","bad");
   renderTop(); renderNav(); renderMain(); save();
 }
 function sellGear(id){
@@ -3533,7 +3533,7 @@ const _startOuting=startOuting;
 startOuting=function(w){ _startOuting(w); ct("outing");
   if(!S.dex.wards.includes(w)) S.dex.wards.push(w); achCheck(); };
 const _enhance=enhance;
-enhance=function(slot){ _enhance(slot); const it=S.gear[slot];
+enhance=function(slot,prot){ _enhance(slot,prot); const it=S.gear[slot];
   if(it) ctMax("enhMax",it.enh); S.war.mine=(S.war.mine||0)+3; achCheck(); };
 const _setTitle=setTitle;
 setTitle=function(t){ const i=TITLES.indexOf(t); if(i<0 || !titleUnlocked(i)){ toast("아직 칭호 획득 조건을 달성하지 못했습니다.","bad"); return; } syncTitles(); _setTitle(t); achCheck(); };
