@@ -285,7 +285,7 @@ async function init(){
     const state=await read(PJ.ready&&!PJ.offlineNeeded);
     didChange=!state.unchanged;
    }
-   if(PJ.ready&&PJ.offlineNeeded){PJ.offlineNeeded=false;await transact('offline',()=>oldOffline(),false);didChange=false;}
+   if(PJ.ready&&PJ.offlineNeeded){const result=await transact('tick',()=>{},false);if(result&&result.ok)PJ.offlineNeeded=false;didChange=false;}
    if(didChange)cache();
    if(preflightFailed){
     const warning='공동지갑 연결 직전의 개인 저장에 실패했습니다. 원본을 별도 백업했으니 설정에서 확인해 주세요.';
@@ -810,7 +810,7 @@ setInterval(()=>{if(active()&&!PJ.busy&&!PJ.depth&&document.visibilityState!=='h
 // when the player returns, and flush any locally queued save on tab switch.
 document.addEventListener('visibilitychange',()=>{
  if(!active())return;
- if(document.visibilityState==='visible'){PJ.lastPoll=0;init();}
+ if(document.visibilityState==='visible'){PJ.offlineNeeded=true;PJ.lastPoll=0;init();}
  else if(PJ.ready&&PJ.pending.length)acctPush(true);
 });
 
