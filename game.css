@@ -1476,3 +1476,13 @@ body.auth-gate #mobile-chat-toggle{
 .ledger-empty b{font-size:14px}
 .ledger-empty p{color:var(--dim);font-size:12px;line-height:1.6}
 @media(max-width:540px){.ledger-summary{gap:6px}.ledger-summary>.card{padding:12px 9px}.ledger-wallet-mark{display:none}.ledger-entry{padding:12px 10px;gap:8px}.ledger-entry-amount{font-size:13px}.ledger-direction{width:27px;height:27px;border-radius:8px}.ledger-filter-row{gap:8px}}
+
+/* 공동 지갑 아래 거처 그림 */
+.home-scene-card{margin:0 0 14px;overflow:hidden}
+.home-scene-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+.home-scene-control{display:flex;align-items:center;gap:8px;margin:0;min-width:0}
+.home-scene-control .inp{width:auto;max-width:230px;margin:0}
+.home-scene-art{background:#151426;display:flex;justify-content:center;padding:12px}
+.home-scene-art img{display:block;width:100%;max-width:760px;height:auto;aspect-ratio:2.1;object-fit:contain;image-rendering:pixelated}
+.home-scene-note{margin:0;padding:10px 16px;line-height:1.7}
+@media(max-width:600px){.home-scene-heading{align-items:flex-start;flex-direction:column;padding:12px}.home-scene-control{width:100%;justify-content:space-between}.home-scene-control .inp{max-width:75%;font-size:16px}.home-scene-art{padding:6px}.home-scene-note{padding:10px 12px}}

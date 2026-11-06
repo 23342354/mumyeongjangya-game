@@ -403,3 +403,34 @@ for(const key of ['class','exam','research','fishv','hallv']){
 }
 })();
 
+
+/* 거처 그림 — 현재 거주 구역 안에서 표시 단계만 선택합니다. */
+function homeSceneKey(){
+ let actor='local';try{actor=(typeof ACCT!=='undefined'&&ACCT?.id)||S?.sb?.id||'local';}catch(_){}
+ return 'mmjy:home-scene:'+actor+':'+homeSceneHall();
+}
+function homeSceneHall(){return HALLS.some(h=>h.id===S.hall)?S.hall:'dorm';}
+function homeSceneStage(){
+ const hall=homeSceneHall(),max=homeMax(hall);
+ let choice=null;try{choice=localStorage.getItem(homeSceneKey());}catch(_){}
+ return choice!==null&&/^[0-5]$/.test(choice)&&Number(choice)<=max ? Number(choice) : null;
+}
+function setHomeSceneStage(value){
+ const max=homeMax(homeSceneHall());
+ if(value!=='auto'&&(!/^[0-5]$/.test(String(value))||Number(value)>max))return;
+ try{if(value==='auto')localStorage.removeItem(homeSceneKey());else localStorage.setItem(homeSceneKey(),String(value));}catch(_){toast('그림 선택을 저장하지 못했습니다. 브라우저 저장 설정을 확인해 주세요.','bad');return;}
+ const old=document.querySelector('.home-scene-card');
+ if(old)old.outerHTML=homeSceneHTML();
+ const select=document.querySelector('#home-scene-stage');if(select)select.focus();
+}
+function homeSceneHTML(){
+ const hall=homeSceneHall(),h=homeOf(hall),choice=homeSceneStage();
+ const actual=clamp(Number(homeS().stage)||0,0,homeMax(hall)),stage=choice===null?actual:choice;
+ const names=['기본 공간',...homePlan(hall).map(s=>s.n)];
+ return `<section class="card home-scene-card" aria-label="거처 이미지">
+  <div class="home-scene-heading"><div><b>${esc(h.n)} · ${stage}단계</b><div class="tiny muted">${esc(names[stage])}${choice===null?' · 현재 단계에 맞춤':' · 선택한 그림'}</div></div>
+   <label class="home-scene-control" for="home-scene-stage"><span class="tiny">표시할 단계</span><select class="inp" id="home-scene-stage" onchange="setHomeSceneStage(this.value)"><option value="auto" ${choice===null?'selected':''}>현재 단계에 맞춤</option>${names.map((n,i)=>`<option value="${i}" ${choice===i?'selected':''}>${i}단계 · ${esc(n)}</option>`).join('')}</select></label></div>
+  <div class="home-scene-art"><img src="assets/housing/${hall}-${stage}.webp" width="660" height="310" alt="${esc(h.n)} ${stage}단계 · ${esc(names[stage])} 도트 이미지" decoding="async"></div>
+  <p class="tiny muted home-scene-note">살고 있는 구역의 그림만 선택할 수 있습니다. 그림을 바꿔도 실제 거처 단계와 혜택은 그대로입니다.</p>
+ </section>`;
+}
