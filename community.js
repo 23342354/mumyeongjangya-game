@@ -593,11 +593,14 @@ buildHome = function(mode){
   syncHall(); renderTop(); renderNav(); renderMain(); save();
   if(typeof syncUp==="function") syncUp(true);
 };
-/* 작은 거처 그림 옆에 거처 현황과 동거 안내를 세로로 표시합니다. */
+/* 작은 거처 그림 옆에 거처 현황과 구역 안내만 표시합니다. */
 function pairHousingHTML(currentHome=""){
   const home=typeof pairHomeHTML==="function"?pairHomeHTML():"";
-  const living=typeof pairMergeHTML==="function"?pairMergeHTML():"";
-  return `<div class="housing-overview">${typeof homeSceneHTML==="function"?homeSceneHTML():""}<div class="pair-housing-row ${home&&living&&currentHome?'three-cards':''}">${home}${living}${currentHome}</div></div>`;
+  if(!currentHome){
+    const me=homeOf(S.hall);
+    currentHome=`<div class="card pad"><div class="spread"><div class="sect-t" style="margin:0">${me.n} <span class="muted">${me.h}</span></div><span class="tag">혜택 ${(hallFactor(S.hall)*100).toFixed(0)}%</span></div><div class="tiny muted" style="margin-bottom:8px">${me.d}</div>${isDorm()?"":`<div class="tiny muted" style="margin-bottom:6px">구역 특화 효과 ${HALLMULT[S.hall]}배 · 기본 일세 ${rentMoney(RENT[S.hall])} 륜</div>`}<div class="tiny" style="color:var(--gold)">${hallBenefitsAt(S.hall,hallFactor(S.hall))||"일세가 밀려 혜택이 멈췄습니다"}</div><div class="tiny muted" style="margin-top:4px">다 키웠을 때 — ${hallBenefitsAt(S.hall,HOMESTAGE[homeMax(S.hall)])}</div></div>`;
+  }
+  return `<div class="housing-overview">${typeof homeSceneHTML==="function"?homeSceneHTML():""}<div class="pair-housing-row">${home}${currentHome}</div></div>`;
 }
 
 /* ───────────────────────────────────────────────────

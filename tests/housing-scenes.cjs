@@ -47,6 +47,9 @@ try{
    assert.ok(await page.locator('.home-scene-art img').evaluate(el=>el.getBoundingClientRect().width<=250));
    const layout=await page.locator('.housing-overview').evaluate(el=>{const a=el.querySelector('.home-scene-card').getBoundingClientRect(),b=el.querySelector('.pair-housing-row').getBoundingClientRect(),cards=[...el.querySelectorAll('.pair-housing-row>.card')].map(c=>c.getBoundingClientRect());return {side:b.x>a.x,below:b.y>=a.bottom,cards:cards.every((c,i)=>i===0||c.y>=cards[i-1].bottom)};});
    assert.ok(width>700?layout.side:layout.below);assert.ok(layout.cards);
+   assert.equal(await page.locator('.pair-housing-row>.card').count(),2);
+   assert.equal(await page.locator('.pair-housing-row .sect-t').filter({hasText:'동거'}).count(),0);
+   if(width>700)assert.ok(await page.locator('.housing-overview').evaluate(el=>{const image=el.querySelector('.home-scene-card').getBoundingClientRect(),row=el.querySelector('.pair-housing-row').getBoundingClientRect(),cards=[...el.querySelectorAll('.pair-housing-row>.card')].map(c=>c.getBoundingClientRect());return Math.abs(image.height-row.height)<2&&Math.abs(cards[0].height-cards[1].height)<2;}));
    assert.ok(await page.locator('.home-scene-card').evaluate(el=>{const b=el.getBoundingClientRect();return b.width<=innerWidth&&b.x>=0;}));
   }
   await page.screenshot({path:`/workspace/scratch/248fee2a9e88/housing-${width}.png`,fullPage:true});

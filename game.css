@@ -1499,3 +1499,10 @@ body.auth-gate #mobile-chat-toggle{
 .housing-overview .pair-housing-row,.housing-overview .pair-housing-row.three-cards{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;overflow:visible;margin:0}
 .housing-overview .pair-housing-row>.card{height:auto}
 @media(max-width:700px){.housing-overview{grid-template-columns:minmax(0,1fr)}.housing-overview .home-scene-control .inp{font-size:16px}}
+
+/* 두 안내 카드와 이미지 블록의 높이를 맞춥니다. */
+.housing-overview{align-items:stretch}
+.housing-overview .home-scene-card{display:flex;flex-direction:column}
+.housing-overview .home-scene-art{flex:1;align-items:center}
+.housing-overview .pair-housing-row{grid-template-rows:repeat(2,minmax(0,1fr))}
+@media(max-width:700px){.housing-overview .pair-housing-row{grid-template-rows:auto}}
