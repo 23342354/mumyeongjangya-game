@@ -12,7 +12,7 @@ try{
  await page.evaluate(()=>{MMJY_CONFIG.supabaseUrl='';MMJY_CONFIG.supabaseKey='';S=newState();S.made=true;S.name='검증';S.t=nowMin();S.dayStamp=cal().day;boot();sbOn=()=>true;pairEnsure=()=>({mine:{id:1}});SOCIAL.pairs=[{id:1,pair_name:'오즈란위'}];pairRow=()=>({name:'란위안',hall:'w6',home_stage:3,updated_at:new Date().toISOString()});pairSharedHome=()=>({hall:'w6',stage:3,mine:true});pairRentDue=()=>0;pairMergeApply=()=>false;S.hall='w6';document.querySelector('#main').innerHTML=VIEWS.hallv();});
  await page.evaluate(()=>{S.home.stage=5;VIEW='hallv';document.activeElement?.blur();renderMain(true);});
  assert.equal(await page.locator('.home-scene-card').count(),1);
- assert.ok(await page.locator('.pair-team-card + .home-scene-card').count());
+ assert.ok(await page.locator('.pair-team-card + .housing-overview .home-scene-card').count());
  assert.equal(await page.locator('.home-scene-art img').getAttribute('src'),'assets/housing/w6-5.webp');
  const before=await page.evaluate(()=>JSON.stringify(S));
  await page.selectOption('#home-scene-stage','2');
@@ -42,8 +42,11 @@ try{
   await page.setViewportSize({width,height:950});
   for(const view of ['pairhub','hallv']){
    await page.evaluate(view=>{VIEW=view;document.activeElement?.blur();renderMain(true);},view);
-   assert.equal(await page.locator('.pair-team-card + .home-scene-card').count(),1);
+   assert.equal(await page.locator('.pair-team-card + .housing-overview .home-scene-card').count(),1);
    assert.ok(await page.locator('button[onclick="openUpdateNotices()"]').first().isVisible());
+   assert.ok(await page.locator('.home-scene-art img').evaluate(el=>el.getBoundingClientRect().width<=250));
+   const layout=await page.locator('.housing-overview').evaluate(el=>{const a=el.querySelector('.home-scene-card').getBoundingClientRect(),b=el.querySelector('.pair-housing-row').getBoundingClientRect(),cards=[...el.querySelectorAll('.pair-housing-row>.card')].map(c=>c.getBoundingClientRect());return {side:b.x>a.x,below:b.y>=a.bottom,cards:cards.every((c,i)=>i===0||c.y>=cards[i-1].bottom)};});
+   assert.ok(width>700?layout.side:layout.below);assert.ok(layout.cards);
    assert.ok(await page.locator('.home-scene-card').evaluate(el=>{const b=el.getBoundingClientRect();return b.width<=innerWidth&&b.x>=0;}));
   }
   await page.screenshot({path:`/workspace/scratch/248fee2a9e88/housing-${width}.png`,fullPage:true});

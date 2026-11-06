@@ -16,7 +16,7 @@ try{
  assert.equal(await page.locator('#mobile-subnav button.on').innerText(),'오즈란위');
  assert.ok((await page.locator('#navcol').innerText()).includes('오즈란위'));
  assert.equal(await page.evaluate(()=>{SOCIAL.pairs[0].pair_name='';return navItemLabel({id:'pairhub',n:'우리 페어'});}),'우리 페어');
- for(const width of [1721,390]){await page.setViewportSize({width,height:900});const boxes=await page.locator('.pair-housing-row>.card').evaluateAll(els=>els.map(el=>{const b=el.getBoundingClientRect();return {y:b.y,h:b.height,x:b.x};}));assert.ok(boxes.every(b=>Math.abs(b.y-boxes[0].y)<1&&Math.abs(b.h-boxes[0].h)<1),'three cards share top and height');assert.ok(boxes[2].x>boxes[1].x);}
- console.log('PASS: shared pair name title, three aligned equal-height housing cards on desktop and mobile');
+ for(const width of [1721,390]){await page.setViewportSize({width,height:900});const boxes=await page.locator('.pair-housing-row>.card').evaluateAll(els=>els.map(el=>{const b=el.getBoundingClientRect();return {y:b.y,h:b.height,x:b.x};}));assert.ok(boxes.every(b=>Math.abs(b.x-boxes[0].x)<1),'three cards share left edge');assert.ok(boxes[1].y>=boxes[0].y+boxes[0].h&&boxes[2].y>=boxes[1].y+boxes[1].h,'three cards stack vertically');}
+ console.log('PASS: shared pair name title, three vertically stacked housing cards on desktop and mobile');
 }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

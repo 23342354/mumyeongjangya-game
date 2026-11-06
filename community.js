@@ -593,11 +593,11 @@ buildHome = function(mode){
   syncHall(); renderTop(); renderNav(); renderMain(); save();
   if(typeof syncUp==="function") syncUp(true);
 };
-/* 거처 현황과 동거 안내를 같은 줄에 표시합니다. */
+/* 작은 거처 그림 옆에 거처 현황과 동거 안내를 세로로 표시합니다. */
 function pairHousingHTML(currentHome=""){
   const home=typeof pairHomeHTML==="function"?pairHomeHTML():"";
   const living=typeof pairMergeHTML==="function"?pairMergeHTML():"";
-  return `<div class="pair-housing-row ${home&&living&&currentHome?'three-cards':''}">${home}${living}${currentHome}</div>`;
+  return `<div class="housing-overview">${typeof homeSceneHTML==="function"?homeSceneHTML():""}<div class="pair-housing-row ${home&&living&&currentHome?'three-cards':''}">${home}${living}${currentHome}</div></div>`;
 }
 
 /* ───────────────────────────────────────────────────
