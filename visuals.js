@@ -440,3 +440,30 @@ function homeSceneHTML(){
   <p class="tiny muted home-scene-note">살고 있는 구역의 그림만 선택할 수 있습니다. 그림을 바꿔도 실제 거처 단계와 혜택은 그대로입니다.</p>
  </section>`;
 }
+
+/* 각 토큰이 매번 새 목적지·속도·휴식 시간을 고릅니다. */
+const HOME_ROAMERS=new WeakMap();
+const HOME_ROAM_MOTION=matchMedia('(prefers-reduced-motion: reduce)');
+function homeRoamStop(el){const state=HOME_ROAMERS.get(el);HOME_ROAMERS.delete(el);if(state)state.animation?.cancel();}
+function homeRoamNext(el,state){
+ if(!el.isConnected||HOME_ROAMERS.get(el)!==state||HOME_ROAM_MOTION.matches){homeRoamStop(el);return;}
+ let target=3+Math.random()*75;
+ if(Math.abs(target-state.x)<8)target=state.x<40?Math.min(78,state.x+12+Math.random()*25):Math.max(3,state.x-12-Math.random()*25);
+ const pause=2500+Math.random()*4500;
+ const speed=2.5+Math.random()*2.5;
+ const travel=Math.max(3000,Math.abs(target-state.x)/speed*1000);
+ const total=pause+travel;
+ const anim=el.animate([{left:state.x+'%',offset:0},{left:state.x+'%',offset:pause/total,easing:'ease-in-out'},{left:target+'%',offset:1}],{duration:total,fill:'forwards'});
+ state.animation=anim;
+ if(document.hidden)anim.pause();
+ anim.finished.then(()=>{if(HOME_ROAMERS.get(el)!==state)return;state.x=target;el.style.left=target+'%';anim.cancel();homeRoamNext(el,state);}).catch(()=>{});
+}
+function homeRoamStart(el){
+ if(HOME_ROAMERS.has(el)||HOME_ROAM_MOTION.matches||!el.isConnected)return;
+ const state={x:3+Math.random()*75,animation:null};el.style.left=state.x+'%';HOME_ROAMERS.set(el,state);homeRoamNext(el,state);
+}
+function homeRoamVisit(node,action){if(node.nodeType!==1)return;if(node.matches('.home-roamer'))action(node);node.querySelectorAll('.home-roamer').forEach(action);}
+const HOME_ROAM_OBSERVER=new MutationObserver(changes=>{for(const change of changes){change.removedNodes.forEach(n=>homeRoamVisit(n,homeRoamStop));change.addedNodes.forEach(n=>homeRoamVisit(n,homeRoamStart));}});
+HOME_ROAM_OBSERVER.observe(document.getElementById('main'),{childList:true,subtree:true});
+HOME_ROAM_MOTION.addEventListener('change',()=>document.querySelectorAll('.home-roamer').forEach(el=>{homeRoamStop(el);if(!HOME_ROAM_MOTION.matches)homeRoamStart(el);}));
+document.addEventListener('visibilitychange',()=>document.querySelectorAll('.home-roamer').forEach(el=>{const a=HOME_ROAMERS.get(el)?.animation;if(a){if(document.hidden)a.pause();else a.play();}}));
