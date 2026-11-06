@@ -13,16 +13,16 @@ try{
  await page.evaluate(()=>{S.home.stage=5;VIEW='hallv';document.activeElement?.blur();renderMain(true);});
  assert.equal(await page.locator('.home-scene-card').count(),1);
  assert.ok(await page.locator('.pair-team-card + .housing-overview .home-scene-card').count());
- assert.equal(await page.locator('.home-scene-art img').getAttribute('src'),'assets/housing/w6-5.webp');
+ assert.equal(await page.locator('.home-scene-background').getAttribute('data-scene'),'w6-5');
  const before=await page.evaluate(()=>JSON.stringify(S));
  await page.selectOption('#home-scene-stage','2');
- assert.equal(await page.locator('.home-scene-art img').getAttribute('src'),'assets/housing/w6-2.webp');
+ assert.equal(await page.locator('.home-scene-background').getAttribute('data-scene'),'w6-2');
  assert.equal(await page.evaluate(()=>JSON.stringify(S)),before,'image choice must not mutate gameplay state');
  await page.evaluate(()=>renderMain(true));
  assert.equal(await page.locator('#home-scene-stage').inputValue(),'2');
  await page.evaluate(()=>{S.hall='dorm';document.activeElement?.blur();renderMain(true);});
  assert.equal(await page.locator('#home-scene-stage option').count(),6);
- assert.equal(await page.locator('.home-scene-art img').getAttribute('src'),'assets/housing/dorm-4.webp');
+ assert.equal(await page.locator('.home-scene-background').getAttribute('data-scene'),'dorm-4');
  await page.evaluate(()=>setHomeSceneStage('5'));
  assert.equal(await page.locator('#home-scene-stage').inputValue(),'auto');
  await page.evaluate(()=>{S.hall='w7';document.activeElement?.blur();renderMain(true);});
@@ -30,12 +30,12 @@ try{
  await page.evaluate(()=>{S.hall='w6';document.activeElement?.blur();renderMain(true);});
  assert.equal(await page.locator('#home-scene-stage').inputValue(),'2');
  await page.selectOption('#home-scene-stage','auto');
- assert.equal(await page.locator('.home-scene-art img').getAttribute('src'),'assets/housing/w6-5.webp');
+ assert.equal(await page.locator('.home-scene-background').getAttribute('data-scene'),'w6-5');
  for(const hall of ['dorm','w1','w2','w3','w4','w5','w6','w7']){
   await page.evaluate(hall=>{S.hall=hall;document.activeElement?.blur();renderMain(true);},hall);
   for(let st=0;st<=(hall==='dorm'?4:5);st++){
    await page.selectOption('#home-scene-stage',String(st));
-   assert.equal(await page.locator('.home-scene-art img').evaluate(async img=>{await img.decode();return img.naturalWidth>0;}),true);
+   assert.equal(await page.locator('.home-scene-background').evaluate(async img=>{await img.decode();return img.naturalWidth>=200;}),true);
   }
  }
  for(const width of [1440,390]){
@@ -44,7 +44,7 @@ try{
    await page.evaluate(view=>{VIEW=view;document.activeElement?.blur();renderMain(true);},view);
    assert.equal(await page.locator('.pair-team-card + .housing-overview .home-scene-card').count(),1);
    assert.ok(await page.locator('button[onclick="openUpdateNotices()"]').first().isVisible());
-   assert.ok(await page.locator('.home-scene-art img').evaluate(el=>el.getBoundingClientRect().width<=250));
+   assert.ok(await page.locator('.home-scene-background').evaluate(el=>el.getBoundingClientRect().width>250&&el.getBoundingClientRect().width<=370));
    const layout=await page.locator('.housing-overview').evaluate(el=>{const a=el.querySelector('.home-scene-card').getBoundingClientRect(),b=el.querySelector('.pair-housing-row').getBoundingClientRect(),cards=[...el.querySelectorAll('.pair-housing-row>.card')].map(c=>c.getBoundingClientRect());return {side:b.x>a.x,below:b.y>=a.bottom,cards:cards.every((c,i)=>i===0||c.y>=cards[i-1].bottom)};});
    assert.ok(width>700?layout.side:layout.below);assert.ok(layout.cards);
    assert.equal(await page.locator('.pair-housing-row>.card').count(),2);
@@ -54,6 +54,12 @@ try{
   }
   await page.screenshot({path:`/workspace/scratch/248fee2a9e88/housing-${width}.png`,fullPage:true});
  }
+ await page.evaluate(()=>{const h=pairHeadState();h.forId='1';h.tokens=['data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgUAAAAAASUVORK5CYII=','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jgUAAAAAASUVORK5CYII='];document.activeElement?.blur();renderMain(true);});
+ assert.equal(await page.locator('.home-roamer').count(),2);
+ const still=await page.locator('.home-roamer-0').evaluate(el=>{const a=el.getAnimations()[0];a.pause();a.currentTime=0;const first=el.getBoundingClientRect().x;a.currentTime=2000;return Math.abs(el.getBoundingClientRect().x-first)<1;});assert.ok(still,'token pauses');
+ for(const width of [1440,390]){await page.setViewportSize({width,height:950});for(const time of [0,10000,21000,33000,47000])assert.ok(await page.locator('.home-scene-viewport').evaluate((el,t)=>{const b=el.getBoundingClientRect();return [...el.querySelectorAll('.home-roamer')].every(token=>{const anim=token.getAnimations()[0];anim.pause();anim.currentTime=t;const r=token.getBoundingClientRect();return r.left>=b.left-1&&r.right<=b.right+1&&r.top>=b.top-1&&r.bottom<=b.bottom+1;});},time));}
+ await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.home-roamer-0').evaluate(el=>getComputedStyle(el).animationName),'none');
+ await page.evaluate(()=>{pairHeadState().forId='another-pair';document.activeElement?.blur();renderMain(true);});assert.equal(await page.locator('.home-roamer').count(),0);
  assert.deepEqual(errors,[]);
  console.log('PASS: all 47 housing images, region-only stage selection, persistence, unchanged gameplay state, wallet placement, desktop/mobile and update notice button');
 }finally{await browser.close();}

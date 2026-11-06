@@ -1069,7 +1069,7 @@ function pairHeadFetchCore(force){
       const at=row.header_at||"";
       if(H.forId===String(P.mine.id) && H.at===at) return false;     // 그대로면 그냥 둡니다
       if(!at){ pairSoulRememberName(pairId,'');H.img=""; H.themeBg=""; H.tokens=["",""]; H.fontCSS=""; H.soulName=""; H.at=""; H.forId=String(P.mine.id);
-               if(VIEW==="pairhub") renderMain(true); return true; }
+               if(["pairhub","hallv"].includes(VIEW)) renderMain(true); return true; }
       H.loading=true;
       return sbGet(`pairs?select=id,header,header_at&id=eq.${id}&limit=1`).then(full=>{
         const f=(full||[])[0];
@@ -1077,7 +1077,7 @@ function pairHeadFetchCore(force){
         if(H.forId===pairId&&H.at&&f.header_at&&H.at>f.header_at)return false;
         Object.assign(H,pairHeadDecode(f.header||""));
         pairSoulRememberName(pairId,H.soulName||''); H.at=f.header_at||""; H.forId=String(P.mine.id); H.loading=false;
-        if(["pairhub","quest","tower","guard","wboss"].includes(VIEW)) renderMain(true);
+        if(["pairhub","hallv","quest","tower","guard","wboss"].includes(VIEW)) renderMain(true);
         return true;
       });
     })
@@ -1547,7 +1547,7 @@ go = function(v){
     if(PAIRBOARD.forId!==id){PAIRBOARD.rows=[];PAIRBOARD.loaded=false;PAIRBOARD.forId=id;PAIRBOARD.err="";}
   }
   _go8(v);
-  if(v==="pairhub"){ pairHeadFetch(false); }
+  if(v==="pairhub"||v==="hallv"){ pairHeadFetch(false); }
   if(v==="pairboard"){ pairHeadFetch(false); pairPostFetch(true); }
 };
 setInterval(()=>{ if(pollAwake() && VIEW==="pairboard") pairPostFetch(false); }, 12000);

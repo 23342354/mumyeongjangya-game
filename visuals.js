@@ -423,6 +423,12 @@ function setHomeSceneStage(value){
  if(old)old.outerHTML=homeSceneHTML();
  const select=document.querySelector('#home-scene-stage');if(select)select.focus();
 }
+function homeSceneTokensHTML(){
+ const pair=typeof pairEnsure==='function'?pairEnsure().mine:null;
+ const header=typeof pairHeadState==='function'?pairHeadState():null;
+ if(!pair||!header||String(header.forId)!==String(pair.id))return '';
+ return [0,1].map(i=>{const src=pairHeadImage(header.tokens?.[i]);return src?`<span class="home-roamer home-roamer-${i}" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span>`:'';}).join('');
+}
 function homeSceneHTML(){
  const hall=homeSceneHall(),h=homeOf(hall),choice=homeSceneStage();
  const actual=clamp(Number(homeS().stage)||0,0,homeMax(hall)),stage=choice===null?actual:choice;
@@ -430,7 +436,7 @@ function homeSceneHTML(){
  return `<section class="card home-scene-card" aria-label="거처 이미지">
   <div class="home-scene-heading"><div><b>${esc(h.n)} · ${stage}단계</b><div class="tiny muted">${esc(names[stage])}${choice===null?' · 현재 단계에 맞춤':' · 선택한 그림'}</div></div>
    <label class="home-scene-control" for="home-scene-stage"><span class="tiny">표시할 단계</span><select class="inp" id="home-scene-stage" onchange="setHomeSceneStage(this.value)"><option value="auto" ${choice===null?'selected':''}>현재 단계에 맞춤</option>${names.map((n,i)=>`<option value="${i}" ${choice===i?'selected':''}>${i}단계 · ${esc(n)}</option>`).join('')}</select></label></div>
-  <div class="home-scene-art"><img src="assets/housing/${hall}-${stage}.webp" width="660" height="310" alt="${esc(h.n)} ${stage}단계 · ${esc(names[stage])} 도트 이미지" decoding="async"></div>
+  <div class="home-scene-art"><div class="home-scene-viewport"><img class="home-scene-background" data-scene="${hall}-${stage}" src="assets/housing/${hall}-${stage}.webp" width="660" height="310" alt="${esc(h.n)} ${stage}단계 · ${esc(names[stage])} 도트 이미지" decoding="async">${homeSceneTokensHTML()}</div></div>
   <p class="tiny muted home-scene-note">살고 있는 구역의 그림만 선택할 수 있습니다. 그림을 바꿔도 실제 거처 단계와 혜택은 그대로입니다.</p>
  </section>`;
 }
