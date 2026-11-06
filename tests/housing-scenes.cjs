@@ -59,6 +59,18 @@ try{
  assert.equal(await page.locator('.home-roamer').count(),2);
  const still=await page.locator('.home-roamer-0').evaluate(el=>{const a=el.getAnimations()[0];a.pause();a.currentTime=0;const first=el.getBoundingClientRect().x;a.currentTime=2000;return Math.abs(el.getBoundingClientRect().x-first)<1;});assert.ok(still,'token pauses');
  for(const width of [1440,390]){await page.setViewportSize({width,height:950});for(const time of [0,10000,21000,33000,47000])assert.ok(await page.locator('.home-scene-viewport').evaluate((el,t)=>{const b=el.getBoundingClientRect();return [...el.querySelectorAll('.home-roamer')].every(token=>{const anim=token.getAnimations()[0];anim.pause();anim.currentTime=Math.min(t,anim.effect.getTiming().duration-1);const r=token.getBoundingClientRect();return r.left>=b.left-1&&r.right<=b.right+1&&r.top>=b.top-1&&r.bottom<=b.bottom+1;});},time));}
+ const continuity=await page.evaluate(()=>{
+  const tokens=[...document.querySelectorAll('.home-roamer')];
+  tokens.forEach(el=>{const anim=el.getAnimations()[0];anim.pause();anim.currentTime=anim.effect.getTiming().duration*.65;});
+  const before=tokens.map(el=>el.getBoundingClientRect().x);
+  document.activeElement?.blur();renderMain(true);
+  const after=[...document.querySelectorAll('.home-roamer')];
+  const unchanged=after.every((el,i)=>el===tokens[i]&&Math.abs(el.getBoundingClientRect().x-before[i])<1);
+  setHomeSceneStage('2');
+  return unchanged&&[...document.querySelectorAll('.home-roamer')].every((el,i)=>el===tokens[i]&&Math.abs(el.getBoundingClientRect().x-before[i])<1);
+ });assert.ok(continuity,'rerender and background change preserve exact token node and intermediate position');
+ await page.waitForTimeout(50);
+ assert.equal(await page.locator('.home-roamer-0').evaluate(el=>el.getAnimations().length),1,'observer preserves the running animation');
  const randomRoutes=await page.locator('.home-roamer-0').evaluate(el=>{const old=HOME_ROAMERS.get(el),oldAnimation=old.animation;homeRoamStop(el);homeRoamStart(el);const next=HOME_ROAMERS.get(el);const before=JSON.stringify(oldAnimation.effect.getKeyframes()),after=JSON.stringify(next.animation.effect.getKeyframes());return before!==after;});assert.ok(randomRoutes,'each route is independently randomized');
  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('.home-roamer-0').evaluate(el=>getComputedStyle(el).animationName),'none');
  await page.evaluate(()=>{pairHeadState().forId='another-pair';document.activeElement?.blur();renderMain(true);});assert.equal(await page.locator('.home-roamer').count(),0);

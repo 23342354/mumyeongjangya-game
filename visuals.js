@@ -420,14 +420,14 @@ function setHomeSceneStage(value){
  if(value!=='auto'&&(!/^[0-5]$/.test(String(value))||Number(value)>max))return;
  try{if(value==='auto')localStorage.removeItem(homeSceneKey());else localStorage.setItem(homeSceneKey(),String(value));}catch(_){toast('그림 선택을 저장하지 못했습니다. 브라우저 저장 설정을 확인해 주세요.','bad');return;}
  const old=document.querySelector('.home-scene-card');
- if(old)old.outerHTML=homeSceneHTML();
+ if(old)homeRoamPreserve(()=>{old.outerHTML=homeSceneHTML();});
  const select=document.querySelector('#home-scene-stage');if(select)select.focus();
 }
 function homeSceneTokensHTML(){
  const pair=typeof pairEnsure==='function'?pairEnsure().mine:null;
  const header=typeof pairHeadState==='function'?pairHeadState():null;
  if(!pair||!header||String(header.forId)!==String(pair.id))return '';
- return [0,1].map(i=>{const src=pairHeadImage(header.tokens?.[i]);return src?`<span class="home-roamer home-roamer-${i}" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span>`:'';}).join('');
+ return [0,1].map(i=>{const src=pairHeadImage(header.tokens?.[i]);return src?`<span class="home-roamer home-roamer-${i}" data-home-key="${esc(String(pair.id))}:${i}" aria-hidden="true"><img src="${src}" alt="" draggable="false"></span>`:'';}).join('');
 }
 function homeSceneHTML(){
  const hall=homeSceneHall(),h=homeOf(hall),choice=homeSceneStage();
@@ -444,7 +444,11 @@ function homeSceneHTML(){
 /* 각 토큰이 매번 새 목적지·속도·휴식 시간을 고릅니다. */
 const HOME_ROAMERS=new WeakMap();
 const HOME_ROAM_MOTION=matchMedia('(prefers-reduced-motion: reduce)');
-function homeRoamStop(el){const state=HOME_ROAMERS.get(el);HOME_ROAMERS.delete(el);if(state)state.animation?.cancel();}
+function homeRoamStop(el){
+ const state=HOME_ROAMERS.get(el);
+ if(state&&el.isConnected&&el.parentElement?.clientWidth){const x=parseFloat(getComputedStyle(el).left)/el.parentElement.clientWidth*100;if(Number.isFinite(x))el.style.left=x+'%';}
+ HOME_ROAMERS.delete(el);if(state)state.animation?.cancel();
+}
 function homeRoamNext(el,state){
  if(!el.isConnected||HOME_ROAMERS.get(el)!==state||HOME_ROAM_MOTION.matches){homeRoamStop(el);return;}
  let target=3+Math.random()*75;
@@ -460,10 +464,24 @@ function homeRoamNext(el,state){
 }
 function homeRoamStart(el){
  if(HOME_ROAMERS.has(el)||HOME_ROAM_MOTION.matches||!el.isConnected)return;
- const state={x:3+Math.random()*75,animation:null};el.style.left=state.x+'%';HOME_ROAMERS.set(el,state);homeRoamNext(el,state);
+ const previous=parseFloat(el.style.left);const state={x:Number.isFinite(previous)?Math.max(3,Math.min(78,previous)):3+Math.random()*75,animation:null};el.style.left=state.x+'%';HOME_ROAMERS.set(el,state);homeRoamNext(el,state);
 }
 function homeRoamVisit(node,action){if(node.nodeType!==1)return;if(node.matches('.home-roamer'))action(node);node.querySelectorAll('.home-roamer').forEach(action);}
-const HOME_ROAM_OBSERVER=new MutationObserver(changes=>{for(const change of changes){change.removedNodes.forEach(n=>homeRoamVisit(n,homeRoamStop));change.addedNodes.forEach(n=>homeRoamVisit(n,homeRoamStart));}});
+const HOME_ROAM_OBSERVER=new MutationObserver(changes=>{for(const change of changes){change.removedNodes.forEach(n=>homeRoamVisit(n,el=>{if(!el.isConnected)homeRoamStop(el);}));change.addedNodes.forEach(n=>homeRoamVisit(n,homeRoamStart));}});
 HOME_ROAM_OBSERVER.observe(document.getElementById('main'),{childList:true,subtree:true});
 HOME_ROAM_MOTION.addEventListener('change',()=>document.querySelectorAll('.home-roamer').forEach(el=>{homeRoamStop(el);if(!HOME_ROAM_MOTION.matches)homeRoamStart(el);}));
 document.addEventListener('visibilitychange',()=>document.querySelectorAll('.home-roamer').forEach(el=>{const a=HOME_ROAMERS.get(el)?.animation;if(a){if(document.hidden)a.pause();else a.play();}}));
+
+/* 화면 갱신과 단계 변경 때 같은 토큰 노드·진행 중인 동작을 재사용합니다. */
+function homeRoamPreserve(render){
+ const previous=[...document.querySelectorAll('#main .home-roamer')];
+ const result=render();
+ const available=new Map(previous.map(el=>[el.dataset.homeKey,el]));
+ document.querySelectorAll('#main .home-roamer').forEach(fresh=>{
+  const old=available.get(fresh.dataset.homeKey);
+  if(old&&old!==fresh&&old.querySelector('img')?.getAttribute('src')===fresh.querySelector('img')?.getAttribute('src')){fresh.replaceWith(old);available.delete(fresh.dataset.homeKey);}
+ });
+ return result;
+}
+const _homeRoamRenderMain=renderMain;
+renderMain=function(){return homeRoamPreserve(()=>_homeRoamRenderMain.apply(this,arguments));};
