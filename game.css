@@ -1517,3 +1517,8 @@ body.auth-gate #mobile-chat-toggle{
 @keyframes home-wander-a{0%,12%{left:3%}38%,51%{left:72%}75%,86%{left:30%}100%{left:3%}}
 @keyframes home-wander-b{0%,17%{left:72%}43%,58%{left:12%}79%,89%{left:49%}100%{left:72%}}
 @media(prefers-reduced-motion:reduce){.home-roamer{animation:none;left:25%;will-change:auto}.home-roamer-1{left:56%}}
+
+/* 원본 도트 모양을 유지하며 거친 확대와 빈 띠를 방지합니다. */
+.housing-overview .home-scene-art{position:relative;overflow:hidden}
+.housing-overview .home-scene-viewport{position:absolute;inset:0;width:100%;height:100%}
+.housing-overview .home-scene-art .home-scene-background{width:100%;height:100%;object-fit:cover;object-position:center;image-rendering:auto}
