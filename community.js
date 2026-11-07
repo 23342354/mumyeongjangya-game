@@ -2213,6 +2213,25 @@ const YOWA_DOLLS=[
  {n:"류쉬안",img:"assets/yowa-dolls/18.png"},
  {n:"렌야",img:"assets/yowa-dolls/10.png"},
 ];
+const YOWA_MARINE_DOLLS=[
+ {n:"아사기 (마린룩)",img:"assets/yowa-marine-dolls/01.png"},
+ {n:"타다시 (마린룩)",img:"assets/yowa-marine-dolls/02.png"},
+ {n:"오즈 (마린룩)",img:"assets/yowa-marine-dolls/03.png"},
+ {n:"큰요우 (마린룩)",img:"assets/yowa-marine-dolls/04.png"},
+ {n:"심우해 (마린룩)",img:"assets/yowa-marine-dolls/05.png"},
+ {n:"란위안 (마린룩)",img:"assets/yowa-marine-dolls/06.png"},
+ {n:"류쉬안 (마린룩)",img:"assets/yowa-marine-dolls/07.png"},
+ {n:"작은요우 (마린룩)",img:"assets/yowa-marine-dolls/08.png"},
+ {n:"신쥬 (마린룩)",img:"assets/yowa-marine-dolls/09.png"},
+ {n:"렌야 (마린룩)",img:"assets/yowa-marine-dolls/10.png"},
+ {n:"사쿠 (마린룩)",img:"assets/yowa-marine-dolls/11.png"},
+ {n:"킨 (마린룩)",img:"assets/yowa-marine-dolls/12.png"},
+ {n:"레이 (마린룩)",img:"assets/yowa-marine-dolls/13.png"},
+ {n:"르셀리아 (마린룩)",img:"assets/yowa-marine-dolls/14.png"},
+ {n:"윤세결 (마린룩)",img:"assets/yowa-marine-dolls/15.png"},
+ {n:"카논 (마린룩)",img:"assets/yowa-marine-dolls/16.png"},
+];
+const YOWA_DOLL_TOTAL=YOWA_DOLLS.length+YOWA_MARINE_DOLLS.length;
 const YOWA_DEX_REWARD_GROUPS={plush:"agi",doll:"res"};
 // 체력·이성 회복 아이템은 SHOP(p1/p2)에만 판매합니다.
 // 기존 소모품 소지 수량(S.inv.p1/p2)과 구매·사용 동작은 그대로 유지됩니다.
@@ -2223,6 +2242,9 @@ const YOWA_SPECIALS=[
  {id:"doll",n:"누군가를 닮은 영혼 인형",price:300,kind:"doll",
   img:"assets/pixel-life/wrapped-soul-doll.png",pixel:true,
   desc:"사무전의 재학생을 닮은 것 같다. 재봉선이 투박하며 애정이 느껴진다."},
+ {id:"marineDoll",n:"누군가를 닮은 인형 (마린룩 에디션)",price:300,kind:"doll",
+  img:"assets/pixel-life/marine-soul-doll.png",pixel:true,
+  desc:"세일러복을 입은 인형. 같은 옷차림으로도 저마다 다른 사무전 학생의 얼굴이 떠오른다. 마린룩 인형 16종 중 하나를 만날 수 있다."},
 ];
 
 function ensureV10(){
@@ -2327,11 +2349,11 @@ function yowaBuySpecial(id){
     dexAdd("plush",got.n);
     yowaRevealModal("누군가를 닮은 만두 말랑이",got,isNew,"말랑이 도감",`말랑이 도감 ${(S.dex.plush||[]).length} / ${YOWA_DUMPLINGS.length}`);
   }else if(item.kind==="doll"){
-    const got=pick(YOWA_DOLLS);
+    const got=pick(item.id==="marineDoll"?YOWA_MARINE_DOLLS:YOWA_DOLLS);
     const isNew=!(S.dex.doll||[]).includes(got.n);
     S.yowa.last={kind:"doll",name:got.n,img:got.img,time:Date.now()};
     dexAdd("doll",got.n);
-    yowaRevealModal("누군가를 닮은 영혼 인형",got,isNew,"영혼 인형 도감",`영혼 인형 도감 ${(S.dex.doll||[]).length} / ${YOWA_DOLLS.length}`);
+    yowaRevealModal(item.n,got,isNew,"영혼 인형 도감",`영혼 인형 도감 ${(S.dex.doll||[]).length} / ${YOWA_DOLL_TOTAL}`);
   }
   renderTop(); renderNav(); renderMain(); save();
 }
@@ -2360,8 +2382,8 @@ VIEWS.shop=()=>{
   </div>
   <div class="card pad" style="margin-bottom:14px">
     <div class="spread" style="margin-bottom:8px"><div class="sect-t" style="margin:0">여와의 진열대</div>
-      <div class="tiny muted">말랑이 ${S.dex.plush.length}/${YOWA_DUMPLINGS.length} · 영혼 인형 ${S.dex.doll.length}/${YOWA_DOLLS.length}</div></div>
-    <div class="grid g2">${YOWA_SPECIALS.map(yowaSpecialCard).join("")}</div>
+      <div class="tiny muted">말랑이 ${S.dex.plush.length}/${YOWA_DUMPLINGS.length} · 영혼 인형 ${S.dex.doll.length}/${YOWA_DOLL_TOTAL}</div></div>
+    <div class="grid g3">${YOWA_SPECIALS.map(yowaSpecialCard).join("")}</div>
   </div>
   <div class="grid g4" style="margin-bottom:14px">
     ${MART.map(m=>{
@@ -2452,7 +2474,9 @@ VIEWS.record=()=>{
       </div>`; }).join("")}</div>`;
   if(RECTAB==="만두 도감") body=`<div class="tiny muted" style="margin-bottom:10px">직접 빚어 본 만두의 속재료와 효과가 기록됩니다. ${S.dex.dish.length} / ${DISHES.length}</div>`+dexGrid(DISHES,"dish");
   if(RECTAB==="말랑이 도감") body=`<div class="tiny muted" style="margin-bottom:10px">여와의 상점에서 얻은 랜덤 만두 말랑이가 기록됩니다. ${S.dex.plush.length} / ${YOWA_DUMPLINGS.length} · 5종마다 <b>민첩 +1</b></div>`+yowaDexImageGrid(YOWA_DUMPLINGS,"plush","말랑이");
-  if(RECTAB==="영혼 인형 도감") body=`<div class="tiny muted" style="margin-bottom:10px">여와의 상점에서 얻은 영혼 인형이 기록됩니다. ${S.dex.doll.length} / ${YOWA_DOLLS.length} · 5종마다 <b>공명 +1</b></div>`+yowaDexImageGrid(YOWA_DOLLS,"doll","영혼 인형");
+  if(RECTAB==="영혼 인형 도감") body=`<div class="tiny muted" style="margin-bottom:10px">여와의 상점에서 얻은 영혼 인형이 기록됩니다. ${S.dex.doll.length} / ${YOWA_DOLL_TOTAL} · 5종마다 <b>공명 +1</b></div>`+yowaDexImageGrid(YOWA_DOLLS,"doll","영혼 인형")
+    +`<div class="sect-t" style="margin:18px 0 10px">마린룩 에디션 · ${YOWA_MARINE_DOLLS.filter(it=>S.dex.doll.includes(it.n)).length} / ${YOWA_MARINE_DOLLS.length}</div>`
+    +yowaDexImageGrid(YOWA_MARINE_DOLLS,"doll","마린룩 인형");
   if(RECTAB==="칭호 도감"){
     body=`<div class="tiny muted" style="margin-bottom:10px">${S.dex.title.length} / ${TITLES.length} · 누르면 학생증의 칭호가 바뀝니다</div>
     <div class="grid g4">${TITLES.map((t,i)=>{
@@ -2465,7 +2489,7 @@ VIEWS.record=()=>{
   if(RECTAB==="도감 점수"){
     const rows=[["악인 도감",S.dex.mon.length,MONS.length,6],["식물 도감",S.dex.plant.length,CROPS.length,5],
                 ["낚시 도감",S.dex.fish.length,FISHES.length,8],["만두 도감",S.dex.dish.length,DISHES.length,5],
-                ["말랑이 도감",S.dex.plush.length,YOWA_DUMPLINGS.length,5],["영혼 인형 도감",S.dex.doll.length,YOWA_DOLLS.length,5],
+                ["말랑이 도감",S.dex.plush.length,YOWA_DUMPLINGS.length,5],["영혼 인형 도감",S.dex.doll.length,YOWA_DOLL_TOTAL,5],
                 ["칭호 도감",S.dex.title.length,TITLES.length,4]];
     body=`<div class="card pad" style="margin-bottom:12px">
       <div class="spread"><div class="sect-t" style="margin:0">도감 점수</div>
