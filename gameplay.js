@@ -1262,18 +1262,22 @@ function enhance(slot, prot){
 }
 function sellGear(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
-  const it=S.bag[i]; const v=Math.round(gearScore(it)*0.9+it.lv*20);
+  const it=S.bag[i];
+  if(it.locked) return toast("잠긴 법구는 잠금을 해제한 뒤 판매할 수 있습니다.","bad");
+  const v=Math.round(gearScore(it)*0.9+it.lv*20);
   S.bag.splice(i,1); gainRin(v); toast(`륜 +${nf(v)}`); renderTop(); renderMain(); save();
 }
 function dismantle(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
-  const it=S.bag[i]; const d=Math.round(3+it.lv*.45+it.grade*7+it.enh*6);
+  const it=S.bag[i];
+  if(it.locked) return toast("잠긴 법구는 잠금을 해제한 뒤 분해할 수 있습니다.","bad");
+  const d=Math.round(3+it.lv*.45+it.grade*7+it.enh*6);
   S.bag.splice(i,1); S.mat.가루+=d; toast(`부적 +${d}`); renderMain(); save();
 }
 function bulkDo(kind,maxGrade){
   let n=0,gain=0;
   for(let i=S.bag.length-1;i>=0;i--){
-    const it=S.bag[i]; if(it.grade>maxGrade) continue;
+    const it=S.bag[i]; if(it.locked||it.grade>maxGrade) continue;
     if(kind==="sell"){ gain+=Math.round(gearScore(it)*0.9+it.lv*20); }
     else { gain+=Math.round(3+it.lv*.45+it.grade*7+it.enh*6); }
     S.bag.splice(i,1); n++;
@@ -1520,6 +1524,7 @@ function buyMarket(i){
 function listMine(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
   const it=S.bag[i];
+  if(it.locked) return toast("잠긴 법구는 잠금을 해제한 뒤 등록할 수 있습니다.","bad");
   const gross=Math.round(gearScore(it)*1.35+it.lv*120);
   const feeR=gross<=100000?.05:gross<=1000000?.07:.10;
   const net=Math.round(gross*(1-feeR));
@@ -1600,9 +1605,9 @@ function gearCard(it,where){
            <button class="btn sm" onclick="unequip('${it.slot}')">해제</button>
            <span class="tiny muted" style="margin-left:auto">성공 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust}</span>`
         : `<button class="btn sm pri" ${can?"":"disabled"} onclick="equip(${it.id})">${can?"장착":`Lv ${it.lv} 필요`}</button>
-           <button class="btn sm" onclick="sellGear(${it.id})">판매</button>
-           <button class="btn sm" onclick="dismantle(${it.id})">분해</button>
-           <button class="btn sm ghost" onclick="listMine(${it.id})">중개소에 내놓기</button>`}
+           <button class="btn sm" ${it.locked?"disabled":""} onclick="sellGear(${it.id})">판매</button>
+           <button class="btn sm" ${it.locked?"disabled":""} onclick="dismantle(${it.id})">분해</button>
+           <button class="btn sm ghost" ${it.locked?"disabled":""} onclick="listMine(${it.id})">중개소에 내놓기</button>`}
     </div></div>`;
 }
 /* Crests are permanent collectibles; only the equipped crest grants its effect. */
@@ -1635,7 +1640,19 @@ function crestPanel(){
 /* 법구 살펴보기: 비교 설정은 화면에만 적용합니다. */
 const GEAR_INSPECT={id:null,zero:false,compare:false};
 function gearInspectItem(){return [...Object.values(S.gear),...S.bag].find(it=>it&&String(it.id)===String(GEAR_INSPECT.id))||null;}
-function gearInspect(id){GEAR_INSPECT.id=id;renderMain();}
+function gearInspect(id){
+ GEAR_INSPECT.id=id==null||String(GEAR_INSPECT.id)===String(id)?null:id;
+ renderMain();
+}
+function toggleGearLock(id){
+ const it=[...Object.values(S.gear),...S.bag].find(item=>item&&String(item.id)===String(id));
+ if(!it)return;
+ it.locked=!it.locked;
+ renderMain();save();
+}
+function gearLockButton(it){
+ return `<button type="button" class="btn sm" aria-pressed="${!!it.locked}" onclick="toggleGearLock(${it.id})">${it.locked?'잠금 해제':'법구 잠금'}</button>`;
+}
 function gearInspectToggle(key,value){if(['zero','compare'].includes(key))GEAR_INSPECT[key]=!!value;renderMain();}
 function gearUnenhanced(it){
  if(!it)return {item:null,estimated:false};
@@ -1688,14 +1705,15 @@ function gearInspectHTML(location='any'){
  <hr class="gear-option-divider">
  ${!can?`<p class="tiny" style="color:var(--red)">Lv ${it.lv}부터 착용할 수 있습니다.</p>`:''}
  <div class="gear-detail-actions">
- ${equipped?`<button class="btn sm pri" onclick="enhance('${it.slot}')">각인 +${it.enh+1}</button><button class="btn sm" ${S.sari<3?'disabled':''} onclick="enhance('${it.slot}',true)">보호 각인 · 사리 3</button><button class="btn sm" onclick="unequip('${it.slot}')">해제</button>`:`<button class="btn sm pri" ${can?'':'disabled'} onclick="equip(${it.id})">${can?'장착':`Lv ${it.lv} 필요`}</button><button class="btn sm" onclick="sellGear(${it.id})">판매</button><button class="btn sm" onclick="dismantle(${it.id})">분해</button><button class="btn sm ghost" onclick="listMine(${it.id})">중개소에 내놓기</button>`}
+ ${gearLockButton(it)}
+ ${equipped?`<button class="btn sm pri" onclick="enhance('${it.slot}')">각인 +${it.enh+1}</button><button class="btn sm" ${S.sari<3?'disabled':''} onclick="enhance('${it.slot}',true)">보호 각인 · 사리 3</button><button class="btn sm" onclick="unequip('${it.slot}')">해제</button>`:`<button class="btn sm pri" ${can?'':'disabled'} onclick="equip(${it.id})">${can?'장착':`Lv ${it.lv} 필요`}</button><button class="btn sm" ${it.locked?"disabled":""} onclick="sellGear(${it.id})">판매</button><button class="btn sm" ${it.locked?"disabled":""} onclick="dismantle(${it.id})">분해</button><button class="btn sm ghost" ${it.locked?"disabled":""} onclick="listMine(${it.id})">중개소에 내놓기</button>`}
  ${it.opts.length?`<button class="btn sm" onclick="reforgeOpen(${it.id})">재련</button>`:''}</div>
  ${equipped?`<p class="tiny muted">각인 성공률 ${Math.round(enhRate(it)*100)}% · 륜 ${nf(enhCost(it).rin)} · 부적 ${enhCost(it).dust}<br>보호 각인은 사리 3개를 추가로 사용하며 반드시 성공합니다.</p>`:''}
  </section>`;
 }
 function gearMiniCard(it){
  const chosen=String(GEAR_INSPECT.id)===String(it.id),up=gearComparisonData(it,GEAR_INSPECT.zero).delta>0;
- return `<button type="button" class="gear-mini-card ${chosen?'selected':''}" style="--gear-grade:${GRADES[it.grade].c}" aria-pressed="${chosen}" onclick="gearInspect(${it.id})"><b>${esc(it.name)}${it.enh?` +${it.enh}`:''}${up?' <span class="gain" aria-label="전투력 상승">▲</span>':''}</b><span>${SLOTS.find(s=>s.k===it.slot)?.n} · Lv ${it.lv}${it.isNew?' · NEW':''}</span>${gearCanEquip(it)?'':`<span class="gear-mini-required">Lv. ${it.lv} 필요</span>`}</button>`;
+ return `<button type="button" class="gear-mini-card ${chosen?'selected':''}" style="--gear-grade:${GRADES[it.grade].c}" aria-pressed="${chosen}" onclick="gearInspect(${it.id})"><b>${esc(it.name)}${it.enh?` +${it.enh}`:''}${up?' <span class="gain" aria-label="전투력 상승">▲</span>':''}</b><span>${SLOTS.find(s=>s.k===it.slot)?.n} · Lv ${it.lv}${it.isNew?' · NEW':''}${it.locked?' · 🔒 잠김':''}</span>${gearCanEquip(it)?'':`<span class="gear-mini-required">Lv. ${it.lv} 필요</span>`}</button>`;
 }
 
 const GEAR_BROWSE={slot:'all',page:0};
@@ -1723,8 +1741,8 @@ VIEWS.gear=()=>{
  <div class="gear-workspace">${gearInspectHTML('bag')}<section class="card pad gear-inventory-panel">
  <div class="spread"><div class="sect-t">바랑 ${S.bag.length} / ${bagCapacity()}</div></div>
  ${gearBrowseHTML(true)}
- <hr class="hr"><div class="tiny muted">일괄 판매</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('sell',${g})">${GRADES[g].n} 이하 판매</button>`).join('')}</div>
- <div class="tiny muted">일괄 분해</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('dis',${g})">${GRADES[g].n} 이하 분해</button>`).join('')}</div>
+ <hr class="hr"><div class="tiny muted">일괄 판매 · 잠긴 법구 제외</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('sell',${g})">${GRADES[g].n} 이하 판매</button>`).join('')}</div>
+ <div class="tiny muted">일괄 분해 · 잠긴 법구 제외</div><div class="row gear-bulk-actions">${[0,1,2,3].map(g=>`<button class="btn sm" onclick="bulkDo('dis',${g})">${GRADES[g].n} 이하 분해</button>`).join('')}</div>
  </section></div>`;
 };
 function equipBest(){
@@ -2407,14 +2425,15 @@ VIEWS.market=()=>{
     <div class="sect-t">내 법구 내놓기 <span class="muted">즉시 거래 · 수수료 차감</span></div>
     ${S.bag.length?`<table class="t">
       ${[...S.bag].sort((a,b)=>gearScore(b)-gearScore(a)).slice(0,16).map(it=>{
-        const gross=Math.round(gearScore(it)*1.35+it.lv*120);
+        if(it.locked) return toast("잠긴 법구는 잠금을 해제한 뒤 등록할 수 있습니다.","bad");
+  const gross=Math.round(gearScore(it)*1.35+it.lv*120);
         const feeR=gross<=100000?.05:gross<=1000000?.07:.10;
         return `<tr><td><b style="color:${GRADES[it.grade].c}">${esc(it.name)}${it.enh?` +${it.enh}`:""}</b>
           <div class="tiny muted">${SLOTS.find(s=>s.k===it.slot).n} Lv ${it.lv}</div></td>
           <td class="tiny" style="color:var(--jade)">${gearLine(it)}</td>
           <td style="text-align:right" class="tiny muted">수수료 ${Math.round(feeR*100)}%</td>
           <td style="text-align:right"><b>${nf(Math.round(gross*(1-feeR)))}</b></td>
-          <td style="text-align:right"><button class="btn sm" onclick="listMine(${it.id})">내놓기</button></td></tr>`}).join("")}
+          <td style="text-align:right"><button class="btn sm" ${it.locked?"disabled":""} onclick="listMine(${it.id})">내놓기</button></td></tr>`}).join("")}
     </table>`:'<div class="tiny muted">바랑에 법구가 없습니다.</div>'}
   </div>`;
 };
@@ -4083,6 +4102,7 @@ const _listMine=listMine;
 listMine=function(id){
   const i=S.bag.findIndex(x=>x.id===id); if(i<0) return;
   const it=S.bag[i];
+  if(it.locked) return toast("잠긴 법구는 잠금을 해제한 뒤 등록할 수 있습니다.","bad");
   const gross=Math.round(gearScore(it)*1.35+it.lv*120);
   const baseFee=gross<=100000?.05:gross<=1000000?.07:.10;
   const feeR=Math.max(.01, baseFee-hallFee());
