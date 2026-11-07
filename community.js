@@ -3079,7 +3079,7 @@ function marketApplyInventory(inv){
 function marketCatalog(){
   const result=[];
   (S.bag||[]).forEach(it=>{
-    if(!it || it.bound || !SLOTS.some(s=>s.k===it.slot))return;
+    if(!it || it.bound || it.locked || !SLOTS.some(s=>s.k===it.slot))return;
     const sl=SLOTS.find(s=>s.k===it.slot);
     result.push({kind:"gear",key:String(it.id),name:String(it.name||"법구"),qty:1,
       info:`${sl.n} · Lv ${it.lv} · ${GRADES[it.grade]?.n||"일반"} · 전투력 ${nf(gearScore(it))}`,suggest:Math.max(100,Math.round(gearScore(it)*1.35+it.lv*120))});
