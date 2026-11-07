@@ -549,6 +549,7 @@ function pollAwake(){
    운영진이 따로 버전을 적어 넣을 필요는 없습니다. */
 /* User-facing release notices. Keep newest first; update with every shipped request. */
 const UPDATE_NOTICES=[
+ {id:"20261107-avatar-sync",date:"2026-11-07",title:"프로필 사진 반영 개선",items:["프로필 사진을 적용하거나 제거하면 바로 화면을 갱신하고 서버와 학생 명부에 동기화합니다."]},
  {id:"20261107-gear-lock",date:"2026-11-07",title:"법구 잠금과 정보 닫기",items:["법구 상세에서 잠그면 개별·일괄 판매와 분해, 중개소 등록에서 보호됩니다.","같은 법구를 다시 누르거나 닫기 버튼을 눌러 상세 정보를 닫을 수 있습니다."]},
  {id:'20261106-home-walk-continuity',date:'2026-11-06',title:'거처 토큰 순간이동 수정',items:['자동 화면 갱신이나 배경 단계 변경 때 토큰 위치가 새로 뽑히던 현상을 수정했습니다.','움직이던 위치와 경로를 이어서 유지하도록 바꿨습니다.']},
  {id:'20261106-home-random-walk',date:'2026-11-06',title:'거처 토큰의 자유로운 움직임',items:['두 토큰이 매번 무작위 목적지와 속도, 휴식 시간을 정해 각자 좌우로 움직입니다.','다른 화면으로 이동하면 동작을 정리하고, 숨겨진 탭에서는 잠시 멈춥니다.']},
@@ -3223,10 +3224,31 @@ function avatarHTML(size, borderCol){
 }
 function clearAvatar(){
   if(!confirm("두상 이미지를 지울까요? 기호 두상으로 돌아갑니다.")) return;
-  S.avImg=null; S.avSrc="";
-  renderTop(); renderNav(); drawMe(); save();
+  S.avSrc="";
+  saveAvatarImage(null);
 }
 
+let AVATAR_SYNC=Promise.resolve();
+function saveAvatarImage(image){
+  S.avImg=image;
+  save();
+  const state=S, account=typeof acctIn==="function"&&acctIn()?ACCT.id:null;
+  const rosterEntry=S.sb?.roster?.find(row=>String(row.id)===String(S.sb.id));
+  if(rosterEntry) rosterEntry.av_img=image||"";
+  closeModal(); renderTop(); renderNav(); renderMain(); drawMe();
+  AVATAR_SYNC=AVATAR_SYNC.catch(()=>{}).then(async()=>{
+    if(S!==state||S.avImg!==image||(account&&ACCT.id!==account))return;
+    const saved=!account||await acctPush(true);
+    if(S!==state||S.avImg!==image||(account&&ACCT.id!==account))return;
+    if(sbOn())await syncUp(true);
+    if(S!==state||S.avImg!==image||(account&&ACCT.id!==account))return;
+    if(!saved||S.sb?.raidPublishState==="error"){
+      toast("이 브라우저에는 반영했지만 서버 동기화에 실패했습니다.","bad");
+      return;
+    }
+    toast(image?"프로필 사진을 적용했습니다.":"프로필 사진을 제거했습니다.","good");
+  }).catch(()=>toast("프로필 사진을 서버와 동기화하지 못했습니다.","bad"));
+}
 let AV=null;
 function openAvatar(forCreate){
   AV={img:null, zoom:1, ox:0, oy:0, F:230, forCreate:!!forCreate, x:0, y:0, w:0, h:0};
@@ -3331,9 +3353,7 @@ function avApplySave(){
   try{ url=c.toDataURL("image/png"); }
   catch(e){ toast("그림을 저장하지 못했습니다.","bad"); return; }
   if(a.forCreate){ MK.avImg=url; closeModal(); drawCreate(); toast("두상을 설정했습니다."); return; }
-  S.avImg=url;
-  closeModal(); renderTop(); renderNav(); renderMain(); drawMe(); save();
-  toast("두상을 저장했습니다. 100×100으로 줄여 보관합니다.","good");
+  saveAvatarImage(url);
 }
 
 /* 확장(part2~7)이 모두 올라온 뒤에 시작합니다.
